@@ -4,7 +4,6 @@
 #   FloodRiskBackfillJob.perform_later
 class FloodRiskBackfillJob < ApplicationJob
   queue_as :default
-
   def perform
     datapoints = FloodRiskDatapoint.pluck(:id, :latitude, :longitude)
     if datapoints.empty?
