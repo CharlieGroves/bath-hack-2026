@@ -26,6 +26,7 @@ Rails.application.routes.draw do
         end
       end
       resources :air_quality_stations, only: [:show]
+      resources :flood_risk_datapoints, only: [:show]
     end
   end
 end
