@@ -1,110 +1,72 @@
-import { useEffect, useState } from 'react'
-import type { Property, PropertyLocationSearchResult } from '../types/property'
+import { useEffect, useState, useRef } from 'react'
+import type { Property } from '../types/property'
 
-interface PropertiesResponse {
-  properties: Property[]
-  total: number
-}
-
-interface SearchByLocationParams {
-  query: string
-  transportationType: string
-  travelTimeMinutes: number
+export interface MapBounds {
+  sw_lat: number
+  sw_lng: number
+  ne_lat: number
+  ne_lng: number
 }
 
 interface UsePropertiesResult {
   properties: Property[]
   total: number
   loading: boolean
-  searching: boolean
   error: string | null
-  searchResult: PropertyLocationSearchResult | null
-  searchByLocation: (params: SearchByLocationParams) => Promise<void>
-  resetSearch: () => void
 }
 
-export function useProperties(): UsePropertiesResult {
-  const [allProperties, setAllProperties] = useState<Property[]>([])
-  const [allTotal, setAllTotal] = useState(0)
+// Debounce delay in ms — avoids hammering the API while the map is mid-drag
+const DEBOUNCE_MS = 300
+
+export function useProperties(bounds: MapBounds | null): UsePropertiesResult {
   const [properties, setProperties] = useState<Property[]>([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [searching, setSearching] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [searchResult, setSearchResult] = useState<PropertyLocationSearchResult | null>(null)
+  const [total, setTotal]           = useState(0)
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+
+  const abortRef      = useRef<AbortController | null>(null)
+  const timerRef      = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hasLoadedOnce = useRef(false)
 
   useEffect(() => {
-    void loadAllProperties()
-  }, [])
+    if (!bounds) return
 
-  async function loadAllProperties() {
-    setLoading(true)
-    setError(null)
+    // Debounce
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      // Cancel any in-flight request
+      abortRef.current?.abort()
+      abortRef.current = new AbortController()
 
-    try {
-      const data = await fetchJson<PropertiesResponse>('/api/v1/properties')
-      setAllProperties(data.properties)
-      setAllTotal(data.total)
-      setProperties(data.properties)
-      setTotal(data.total)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load properties')
-    } finally {
-      setLoading(false)
+      const params = new URLSearchParams({
+        sw_lat: String(bounds.sw_lat),
+        sw_lng: String(bounds.sw_lng),
+        ne_lat: String(bounds.ne_lat),
+        ne_lng: String(bounds.ne_lng),
+      })
+
+      if (!hasLoadedOnce.current) setLoading(true)
+      fetch(`/api/v1/properties?${params}`, { signal: abortRef.current.signal })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return res.json()
+        })
+        .then(data => {
+          setProperties(data.properties)
+          setTotal(data.total)
+          setError(null)
+          hasLoadedOnce.current = true
+        })
+        .catch(err => {
+          if (err.name !== 'AbortError') setError(err.message)
+        })
+        .finally(() => setLoading(false))
+    }, DEBOUNCE_MS)
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }
+  }, [bounds?.sw_lat, bounds?.sw_lng, bounds?.ne_lat, bounds?.ne_lng])
 
-  async function searchByLocation({
-    query,
-    transportationType,
-    travelTimeMinutes,
-  }: SearchByLocationParams) {
-    setSearching(true)
-    setError(null)
-
-    const params = new URLSearchParams({
-      query,
-      transportation_type: transportationType,
-      travel_time_minutes: String(travelTimeMinutes),
-    })
-
-    try {
-      const data = await fetchJson<PropertyLocationSearchResult>(`/api/v1/properties/search?${params.toString()}`)
-      setSearchResult(data)
-      setProperties(data.properties)
-      setTotal(data.total)
-    } catch (err) {
-      setSearchResult(null)
-      setProperties(allProperties)
-      setTotal(allTotal)
-      setError(err instanceof Error ? err.message : 'Location search failed')
-    } finally {
-      setSearching(false)
-    }
-  }
-
-  function resetSearch() {
-    setSearchResult(null)
-    setProperties(allProperties)
-    setTotal(allTotal)
-    setError(null)
-  }
-
-  return { properties, total, loading, searching, error, searchResult, searchByLocation, resetSearch }
-}
-
-async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url)
-  const payload = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    const message =
-      payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string'
-        ? payload.error
-        : `HTTP ${response.status}`
-
-    throw new Error(message)
-  }
-
-  return payload as T
+  return { properties, total, loading, error }
 }

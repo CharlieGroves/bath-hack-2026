@@ -1,0 +1,288 @@
+/* ─── Settings page ──────────────────────────────────────────────────────── */
+
+.sp-shell {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Left nav ── */
+.sp-nav {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--t1);
+  display: flex;
+  flex-direction: column;
+  padding: 28px 0 24px;
+  overflow-y: auto;
+}
+
+.sp-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 22px 24px;
+  border-bottom: 1px solid rgba(216, 212, 188, 0.1);
+  margin-bottom: 16px;
+  font-family: var(--ff-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ash);
+  letter-spacing: 0.01em;
+}
+
+.sp-nav-list {
+  list-style: none;
+  flex: 1;
+}
+
+.sp-nav-item {
+  display: block;
+  width: 100%;
+  padding: 9px 22px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 0.84rem;
+  color: rgba(216, 212, 188, 0.55);
+  cursor: pointer;
+  transition: all 0.14s;
+}
+.sp-nav-item:hover {
+  color: var(--ash);
+  background: rgba(255,255,255,0.06);
+}
+
+.sp-nav-footer {
+  padding: 18px 22px 0;
+  border-top: 1px solid rgba(216, 212, 188, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sp-reset {
+  background: none;
+  border: 1px dashed rgba(216, 212, 188, 0.25);
+  border-radius: 6px;
+  color: rgba(216, 212, 188, 0.4);
+  font-size: 0.78rem;
+  padding: 7px 0;
+  cursor: pointer;
+  transition: all 0.14s;
+  width: 100%;
+}
+.sp-reset:hover {
+  border-color: var(--coal);
+  color: var(--coal);
+  border-style: solid;
+}
+
+.sp-close {
+  background: var(--ember);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 9px 0;
+  cursor: pointer;
+  transition: background 0.14s;
+  width: 100%;
+}
+.sp-close:hover { background: var(--glow) }
+
+/* ── Content ── */
+.sp-content {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--bg);
+}
+.sp-content::-webkit-scrollbar { width: 6px }
+.sp-content::-webkit-scrollbar-track { background: transparent }
+.sp-content::-webkit-scrollbar-thumb { background: var(--ash); border-radius: 3px }
+
+.sp-inner {
+  max-width: 720px;
+  padding: 40px 48px 80px;
+}
+
+/* ── Section ── */
+.sp-section {
+  padding-bottom: 40px;
+  margin-bottom: 40px;
+  border-bottom: 1px solid var(--hr);
+}
+.sp-section:last-child {
+  border-bottom: none;
+}
+
+.sp-heading {
+  font-family: var(--ff-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--t1);
+  margin-bottom: 5px;
+  line-height: 1.1;
+}
+
+.sp-sub {
+  font-size: 0.84rem;
+  color: var(--t3);
+  margin-bottom: 22px;
+  line-height: 1.5;
+}
+
+/* ── Labels ── */
+.sp-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--t3);
+  margin-bottom: 8px;
+}
+
+.sp-field-wrap {
+  display: block;
+}
+
+.sp-hint {
+  font-size: 0.74rem;
+  color: var(--t4);
+  margin-top: 6px;
+}
+
+/* ── Price boxes ── */
+.sp-row {
+  display: flex;
+  gap: 16px;
+}
+
+.sp-price-box {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--white);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.sp-price-box:focus-within { border-color: var(--ember) }
+
+.sp-prefix {
+  padding: 0 10px;
+  font-size: 0.9rem;
+  color: var(--t3);
+  border-right: 1px solid var(--border);
+  background: var(--sb-bg);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+}
+
+.sp-input {
+  border: none;
+  background: none;
+  outline: none;
+  padding: 11px 13px;
+  font-size: 0.9rem;
+  color: var(--t1);
+  width: 200px;
+}
+
+.sp-text-input {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--white);
+  font-size: 0.88rem;
+  color: var(--t1);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.sp-text-input:focus { border-color: var(--ember) }
+
+/* ── Pill row (beds) ── */
+.sp-pill-row {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.sp-pill {
+  padding: 7px 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--white);
+  font-size: 0.84rem;
+  color: var(--t2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sp-pill:hover:not(.sp-pill-on) { border-color: var(--flame); color: var(--ember) }
+.sp-pill-on {
+  background: var(--ember);
+  border-color: var(--ember);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ── Chip grid (types, tenures, must-haves) ── */
+.sp-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sp-chip {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--white);
+  font-size: 0.84rem;
+  color: var(--t2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sp-chip:hover:not(.sp-chip-on) { border-color: var(--flame); color: var(--ember) }
+.sp-chip-on {
+  background: rgba(231, 104, 20, 0.1);
+  border-color: var(--ember);
+  color: var(--ember);
+  font-weight: 600;
+}
+
+/* ── Situation grid ── */
+.sp-situation-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.sp-situation-btn {
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--white);
+  font-size: 0.9rem;
+  color: var(--t2);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+}
+.sp-situation-btn:hover:not(.sp-situation-on) {
+  border-color: var(--flame);
+  color: var(--ember);
+}
+.sp-situation-on {
+  background: rgba(231, 104, 20, 0.08);
+  border-color: var(--ember);
+  border-width: 2px;
+  color: var(--ember);
+  font-weight: 600;
+}

@@ -4,9 +4,13 @@ class Property < ApplicationRecord
 
   belongs_to :area_price_growth, optional: true
   has_one  :property_transport_snapshot, dependent: :destroy
+  has_one  :property_crime_snapshot, dependent: :destroy
   has_many :property_images, dependent: :destroy
+  has_many :property_nearest_stations, dependent: :destroy
 
-  after_commit :enqueue_transport_refresh, on: %i[create update], if: :transport_refresh_needed?
+  after_commit :enqueue_transport_refresh,        on: %i[create update], if: :transport_refresh_needed?
+  after_commit :enqueue_nearest_stations_refresh, on: %i[create update], if: :nearest_stations_refresh_needed?
+  after_commit :enqueue_crime_refresh,            on: %i[create update], if: :crime_refresh_needed?
 
   STATUSES       = %w[active under_offer sold let].freeze
   PROPERTY_TYPES = %w[flat terraced semi_detached detached bungalow land other].freeze
@@ -36,10 +40,13 @@ class Property < ApplicationRecord
     where(latitude: bounding_box.fetch(:south)..bounding_box.fetch(:north))
       .where(longitude: bounding_box.fetch(:west)..bounding_box.fetch(:east))
   }
+  scope :within_station_miles,   ->(m) { joins(:property_nearest_stations).where("property_nearest_stations.distance_miles <= ?", m).distinct }
+  scope :within_station_minutes, ->(t) { joins(:property_nearest_stations).where("property_nearest_stations.walking_minutes <= ?", t).distinct }
 
   # Returns a human-readable price string, e.g. "£450,000"
   def formatted_price
     return nil unless price_pence
+
     "£#{ActiveSupport::NumberHelper.number_to_delimited(price_pence / 100)}"
   end
 
@@ -57,5 +64,27 @@ class Property < ApplicationRecord
 
   def enqueue_transport_refresh
     PropertyTransportSnapshotJob.perform_later(id)
+  end
+
+  def nearest_stations_refresh_needed?
+    saved_change_to_raw_data? || property_nearest_stations.empty?
+  end
+
+  def enqueue_nearest_stations_refresh
+    PropertyNearestStationsJob.perform_later(id)
+  end
+
+  def crime_refresh_needed?
+    return false if latitude.blank? || longitude.blank?
+
+    saved_change_to_latitude? ||
+      saved_change_to_longitude? ||
+      property_crime_snapshot.nil? ||
+      property_crime_snapshot.fetched_at.nil? ||
+      property_crime_snapshot.fetched_at < 7.days.ago
+  end
+
+  def enqueue_crime_refresh
+    PropertyCrimeSnapshotJob.perform_later(id)
   end
 end

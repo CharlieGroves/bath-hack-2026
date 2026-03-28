@@ -1,164 +1,151 @@
-import type { FormEvent } from 'react'
-import { useState } from 'react'
-import PropertyMap from './PropertyMap'
-import { useProperties } from './hooks/useProperties'
+import { useState, useMemo } from 'react'
+import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
+import type { Property } from './types/property'
+import { useProperties, type MapBounds } from './hooks/useProperties'
+import LayoutSplit from './layouts/LayoutSplit'
+import PropertyPage from './components/PropertyPage'
 import './App.css'
 
-const TRANSPORT_OPTIONS = [
-  { value: 'driving', label: 'Driving' },
-  { value: 'walking', label: 'Walking' },
-  { value: 'cycling', label: 'Cycling' },
-]
-
-function formatCoordinate(value: number) {
-  return value.toFixed(4)
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function FlameIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg width={size} height={size * 1.2} viewBox="0 0 20 24" fill="none">
+      <path d="M10 1C10 1 3 9 3 15.5a7 7 0 0014 0C17 9.5 10 1 10 1z" fill="#E76814"/>
+      <path d="M10 9C10 9 7 13.5 7 16.5a3 3 0 006 0C13 13.5 10 9 10 9z" fill="#F25016"/>
+      <ellipse cx="10" cy="19" rx="2" ry="1.4" fill="#DC8236"/>
+    </svg>
+  )
 }
 
-function App() {
-  const { properties, total, loading, searching, error, searchResult, searchByLocation, resetSearch } = useProperties()
-  const [locationQuery, setLocationQuery] = useState('')
-  const [transportationType, setTransportationType] = useState('driving')
-  const [travelTimeMinutes, setTravelTimeMinutes] = useState(15)
-
-  const propertiesWithNoise = properties.filter((property) => property.noise?.status === 'ready').length
-  const hasActiveSearch = searchResult !== null
-  const hasValidTravelTime = Number.isFinite(travelTimeMinutes) && travelTimeMinutes >= 1 && travelTimeMinutes <= 120
-  const canSubmitSearch = locationQuery.trim().length > 0 && hasValidTravelTime && !searching
-
-  async function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    await searchByLocation({
-      query: locationQuery.trim(),
-      transportationType,
-      travelTimeMinutes,
-    })
-  }
-
-  if (loading) {
-    return (
-      <div className="app-shell app-shell--centered">
-        <p className="status-panel__loading">Loading properties...</p>
+function AppHeader() {
+  const navigate = useNavigate()
+  return (
+    <header className="header">
+      <div className="header-brand" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
+        <FlameIcon size={22} />
+        <span className="brand-name">Hearthstone</span>
       </div>
-    )
+      <div className="header-search-wrap">
+        <svg className="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <input className="header-search" type="text" placeholder="Where would you like to live?" />
+      </div>
+    </header>
+  )
+}
+
+// ─── Filter state ────────────────────────────────────────────────────────────
+export interface Filters {
+  minPrice:          number | ''
+  maxPrice:          number | ''
+  minBeds:           number
+  maxBeds:           number
+  types:             string[]
+  maxStationMinutes: number
+  maxCrimeRate:      number | ''
+}
+
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '' }
+
+type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
+
+// ─── Search page ─────────────────────────────────────────────────────────────
+function SearchPage() {
+  const navigate = useNavigate()
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
+  const { properties, total, loading, error } = useProperties(mapBounds)
+
+  const [filters, setFilters] = useState<Filters>(INIT)
+  const [sort, setSort]       = useState<SortKey>('newest')
+
+  const filtered = useMemo(() => {
+    const result = properties.filter((p: Property) => {
+      if (filters.minPrice !== '' && p.price < (filters.minPrice as number) * 100) return false
+      if (filters.maxPrice !== '' && p.price > (filters.maxPrice as number) * 100) return false
+      if (filters.minBeds > 0 && (p.bedrooms ?? 0) < filters.minBeds) return false
+      if (filters.maxBeds > 0 && (p.bedrooms ?? 0) > filters.maxBeds) return false
+      if (filters.types.length && !filters.types.includes(p.property_type)) return false
+      if (filters.maxStationMinutes > 0) {
+        const closest = Math.min(...(p.nearest_stations ?? []).map(s => s.walking_minutes))
+        if (!isFinite(closest) || closest > filters.maxStationMinutes) return false
+      }
+      if (filters.maxCrimeRate !== '') {
+        const avg = p.crime?.avg_monthly_crimes
+        if (avg == null || avg > (filters.maxCrimeRate as number)) return false
+      }
+      return true
+    })
+    return [...result].sort((a: Property, b: Property) => {
+      switch (sort) {
+        case 'price_asc':  return a.price - b.price
+        case 'price_desc': return b.price - a.price
+        case 'beds_asc':   return (a.bedrooms ?? 0) - (b.bedrooms ?? 0)
+        case 'beds_desc':  return (b.bedrooms ?? 0) - (a.bedrooms ?? 0)
+        case 'newest':     return new Date(b.listed_at).getTime() - new Date(a.listed_at).getTime()
+      }
+    })
+  }, [properties, filters, sort])
+
+  function setF<K extends keyof Filters>(k: K, v: Filters[K]) {
+    setFilters(f => ({ ...f, [k]: v }))
   }
+  function toggleType(t: string) {
+    setFilters(f => ({
+      ...f,
+      types: f.types.includes(t) ? f.types.filter(x => x !== t) : [...f.types, t],
+    }))
+  }
+
+  if (loading) return (
+    <div className="splash">
+      <FlameIcon size={40} />
+      <p className="splash-text">Finding your perfect home...</p>
+    </div>
+  )
+  if (error) return <div className="splash"><p>Error: {error}</p></div>
 
   return (
-    <div className="app-shell">
-      <div className="status-panel">
-        <p className="status-panel__eyebrow">TravelTime Isochrone Search</p>
-        <h1>Bath Properties Noise Map</h1>
-        <p className="status-panel__subtitle">
-          Search a place, send it to the Rails backend, call TravelTime, then return the actual reachable area and
-          only the properties inside it.
-        </p>
-
-        <form className="search-form" onSubmit={handleSearchSubmit}>
-          <div className="search-form__field">
-            <label htmlFor="location-query">Location</label>
-            <input
-              id="location-query"
-              name="location-query"
-              type="text"
-              value={locationQuery}
-              onChange={(event) => setLocationQuery(event.target.value)}
-              placeholder="Bath Abbey, Bristol Temple Meads, BA1..."
-            />
-          </div>
-
-          <div className="search-form__row">
-            <div className="search-form__field">
-              <label htmlFor="transportation-type">Mode</label>
-              <select
-                id="transportation-type"
-                name="transportation-type"
-                value={transportationType}
-                onChange={(event) => setTransportationType(event.target.value)}
-              >
-                {TRANSPORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="search-form__field">
-              <label htmlFor="travel-time-minutes">Minutes</label>
-              <input
-                id="travel-time-minutes"
-                name="travel-time-minutes"
-                type="number"
-                min={1}
-                max={120}
-                step={1}
-                value={travelTimeMinutes}
-                onChange={(event) => setTravelTimeMinutes(Number(event.target.value) || 0)}
-              />
-            </div>
-          </div>
-
-          <div className="search-form__actions">
-            <button className="search-button" type="submit" disabled={!canSubmitSearch}>
-              {searching ? 'Searching...' : 'Run Search'}
-            </button>
-            {hasActiveSearch ? (
-              <button className="clear-button" type="button" onClick={resetSearch}>
-                Clear
-              </button>
-            ) : null}
-          </div>
-        </form>
-
-        {error ? <p className="status-panel__error">{error}</p> : null}
-
-        <div className="status-panel__stats">
-          <p>
-            {total} properties shown, {propertiesWithNoise} with stored noise data.
-          </p>
-          <p>{hasActiveSearch ? 'Filtered to the current TravelTime isochrone.' : 'Showing the full property set.'}</p>
-        </div>
-
-        {searchResult ? (
-          <div className="search-summary">
-            <p className="search-summary__label">{searchResult.location.label}</p>
-            <p className="search-summary__meta">
-              {searchResult.transportation_type} · {searchResult.travel_time_seconds / 60} min
-            </p>
-            <div className="search-summary__grid">
-              <div className="search-summary__metric">
-                <span>North</span>
-                <strong>{formatCoordinate(searchResult.bounding_box.north)}</strong>
-              </div>
-              <div className="search-summary__metric">
-                <span>South</span>
-                <strong>{formatCoordinate(searchResult.bounding_box.south)}</strong>
-              </div>
-              <div className="search-summary__metric">
-                <span>East</span>
-                <strong>{formatCoordinate(searchResult.bounding_box.east)}</strong>
-              </div>
-              <div className="search-summary__metric">
-                <span>West</span>
-                <strong>{formatCoordinate(searchResult.bounding_box.west)}</strong>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="status-panel__hint">
-            The map will draw the TravelTime isochrone after you search and fit the viewport to the returned bounds.
-          </p>
-        )}
-      </div>
-      <div className="map-shell">
-        <PropertyMap
-          properties={properties}
-          boundingBox={searchResult?.bounding_box ?? null}
-          isochroneShells={searchResult?.isochrone_shells ?? null}
-          searchLocation={searchResult?.location ?? null}
-        />
-      </div>
+    <div className="shell" style={{ overflow: 'hidden' }}>
+      <LayoutSplit
+        properties={properties}
+        total={total}
+        filtered={filtered}
+        filters={filters}
+        sort={sort}
+        setF={setF}
+        toggleType={toggleType}
+        setFilters={setFilters}
+        setSort={s => setSort(s as SortKey)}
+        onBoundsChange={setMapBounds}
+        onSelectProperty={id => navigate(`/properties/${id}`)}
+      />
     </div>
   )
 }
 
-export default App
+// ─── Property detail page ─────────────────────────────────────────────────────
+function PropertyDetailPage() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  return (
+    <PropertyPage
+      propertyId={Number(id)}
+      onBack={() => navigate('/')}
+    />
+  )
+}
+
+// ─── Main App ────────────────────────────────────────────────────────────────
+export default function App() {
+  return (
+    <div className="app">
+      <AppHeader />
+      <Routes>
+        <Route path="/" element={<SearchPage />} />
+        <Route path="/properties/:id" element={<PropertyDetailPage />} />
+      </Routes>
+    </div>
+  )
+}
