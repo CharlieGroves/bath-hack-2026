@@ -2,9 +2,7 @@ class Property < ApplicationRecord
   extend FriendlyId
   friendly_id :rightmove_id, use: :slugged
 
-  has_one  :property_enrichment, dependent: :destroy
-  has_one  :property_embedding,  dependent: :destroy
-  has_many :property_images,     dependent: :destroy
+  has_many :property_images, dependent: :destroy
 
   STATUSES       = %w[active under_offer sold let].freeze
   PROPERTY_TYPES = %w[flat terraced semi_detached detached bungalow land other].freeze
@@ -21,8 +19,6 @@ class Property < ApplicationRecord
   scope :by_price_asc,  -> { order(price_pence: :asc) }
   scope :by_price_desc, -> { order(price_pence: :desc) }
 
-  scope :with_enrichment, -> { joins(:property_enrichment) }
-
   # Classical filter scopes — used by PropertySearch service
   scope :min_price,    ->(p) { where("price_pence >= ?", p) }
   scope :max_price,    ->(p) { where("price_pence <= ?", p) }
@@ -38,17 +34,4 @@ class Property < ApplicationRecord
     "£#{ActiveSupport::NumberHelper.number_to_delimited(price_pence / 100)}"
   end
 
-  # Text blob sent to ML service for embedding generation
-  def embedding_text
-    parts = [title, description]
-    parts << "Key features: #{key_features.join(', ')}" if key_features.any?
-    if property_enrichment
-      e = property_enrichment
-      parts << "#{e.distance_to_station_km&.round(1)}km to #{e.nearest_station_name}" if e.nearest_station_name
-      parts << "Crime: #{e.crime_rate_category}" if e.crime_rate_category
-      parts << "Flood risk: #{e.flood_risk}" if e.flood_risk
-      parts << "Nearest school Ofsted: #{e.nearest_school_ofsted}" if e.nearest_school_ofsted
-    end
-    parts.compact.join("\n")
-  end
 end

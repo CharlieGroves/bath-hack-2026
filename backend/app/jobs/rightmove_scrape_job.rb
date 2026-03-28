@@ -17,7 +17,6 @@ class RightmoveScrapeJob < ApplicationJob
     property.save!
 
     update_scrape_run(scrape_run_id, is_new)
-    enqueue_enrichment(property, is_new)
 
   rescue RightmoveScraper::ScrapingError => e
     Rails.logger.error("[RightmoveScrapeJob] #{rightmove_id}: #{e.message}")
@@ -26,14 +25,6 @@ class RightmoveScrapeJob < ApplicationJob
   end
 
   private
-
-  def enqueue_enrichment(property, is_new)
-    needs_enrichment = is_new ||
-                       property.property_enrichment.nil? ||
-                       property.property_enrichment.enriched_at < 7.days.ago
-
-    PropertyEnrichmentJob.perform_later(property.id) if needs_enrichment
-  end
 
   def update_scrape_run(scrape_run_id, is_new)
     return unless scrape_run_id
