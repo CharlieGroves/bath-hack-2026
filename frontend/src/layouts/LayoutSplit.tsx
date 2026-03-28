@@ -331,7 +331,7 @@ export default function LayoutSplit({
             <button
               type="button"
               className="l2-sb-primary"
-              onClick={onApplyLocationSearch}
+              onClick={() => onApplyLocationSearch()}
               disabled={!locationSearch.query.trim() || locationSearchLoading}
             >
               {locationSearchLoading ? 'Searching...' : 'Apply search'}

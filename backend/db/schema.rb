@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_220000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -47,7 +47,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_220000) do
     t.index ["google_place_id"], name: "index_estate_agents_on_google_place_id", unique: true
     t.index ["lookup_key"], name: "index_estate_agents_on_lookup_key", unique: true
   end
-  
+
   create_table "flood_risk_datapoints", force: :cascade do |t|
     t.decimal "latitude", precision: 10, scale: 7, null: false
     t.decimal "longitude", precision: 10, scale: 7, null: false
@@ -146,6 +146,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_220000) do
     t.integer "walking_minutes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "termini", default: [], array: true
     t.index ["property_id"], name: "index_property_nearest_stations_on_property_id"
   end
 

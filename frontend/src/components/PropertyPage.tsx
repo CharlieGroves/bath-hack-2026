@@ -226,6 +226,11 @@ function TransportSection({ property }: { property: PropertyDetail }) {
                 <span className="pp-station-badge">{fmtLabel(s.transport_type)}</span>
                 <span className="pp-station-dist">{Number(s.distance_miles).toFixed(1)} mi walk</span>
               </div>
+              {s.termini?.length > 0 && (
+                <div className="pp-station-termini">
+                  {s.termini.join(", ")}
+                </div>
+              )}
             </div>
           </div>
         ))}

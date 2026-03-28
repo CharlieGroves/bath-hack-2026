@@ -10,10 +10,17 @@ class PropertyNearestStationsJob < ApplicationJob
     return if stations.empty?
 
     property.property_nearest_stations.destroy_all
-    property.property_nearest_stations.create!(stations)
+    property.property_nearest_stations.create!(stations.map { |s| s.merge(termini: termini_for(s)) })
   end
 
   private
+
+  def termini_for(station)
+    return [] unless station[:transport_type] == "national_rail"
+
+    normalised = station[:name].to_s.sub(/ Station$/i, "").strip
+    ::STATION_TERMINI.fetch(normalised, [])
+  end
 
   def extract_stations(property, scraper)
     if property.raw_data.present?
