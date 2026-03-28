@@ -113,7 +113,7 @@ interface Props {
   onSelectProperty: (id: number) => void
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '' }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '' }
 
 const STATION_MINUTE_OPTIONS = [
   { value: 0,  label: 'Any' },
@@ -202,6 +202,27 @@ export default function LayoutSplit({
               placeholder="Max £"
               value={filters.maxPrice}
               onChange={e => setF('maxPrice', e.target.value === '' ? '' : +e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Price per sq ft</span>
+          <div className="l2-sb-row">
+            <input
+              className="l2-sb-input"
+              type="number"
+              placeholder="Min £"
+              value={filters.minPricePerSqft}
+              onChange={e => setF('minPricePerSqft', e.target.value === '' ? '' : +e.target.value)}
+            />
+            <span style={{ color: 'var(--t4)', fontSize: '0.75rem', flexShrink: 0 }}>—</span>
+            <input
+              className="l2-sb-input"
+              type="number"
+              placeholder="Max £"
+              value={filters.maxPricePerSqft}
+              onChange={e => setF('maxPricePerSqft', e.target.value === '' ? '' : +e.target.value)}
             />
           </div>
         </div>
