@@ -4,6 +4,7 @@ class Property < ApplicationRecord
 
   belongs_to :area_price_growth, optional: true
   belongs_to :estate_agent, optional: true
+  belongs_to :borough, optional: true
   has_one  :property_transport_snapshot, dependent: :destroy
   has_one  :property_crime_snapshot, dependent: :destroy
   has_many :property_images, dependent: :destroy
