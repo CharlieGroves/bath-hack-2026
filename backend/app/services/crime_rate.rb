@@ -18,6 +18,7 @@ class CrimeRate
   BASE = "https://data.police.uk/api/crimes-street".freeze
 
   class RequestError < StandardError; end
+  class RateLimitError < RequestError; end
 
   # @param category [String] crime category slug (path segment), e.g. "all-crime", "burglary"
   # @param lat [Numeric] latitude
@@ -55,6 +56,7 @@ class CrimeRate
       http.request(req)
     end
 
+    raise RateLimitError, "HTTP 429 for #{uri}" if response.code == "429"
     raise RequestError, "HTTP #{response.code} for #{uri}" unless response.is_a?(Net::HTTPSuccess)
 
     response.body

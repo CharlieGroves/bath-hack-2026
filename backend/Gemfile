@@ -49,6 +49,7 @@ gem "bootsnap", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 1.2"
 gem "sidekiq"
+gem "sidekiq-throttled"
 gem "madmin", "~> 1.2"
 gem "sitemap_generator"
 gem "aws-sdk-s3"
@@ -58,6 +59,7 @@ gem "stripe"
 
 gem "pg"
 gem "faraday"
+gem "csv"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem

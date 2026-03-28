@@ -28,6 +28,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
     t.index ["latitude", "longitude"], name: "index_air_quality_stations_on_latitude_and_longitude"
   end
 
+  create_table "area_price_growths", force: :cascade do |t|
+    t.string "area_slug", null: false
+    t.string "area_name", null: false
+    t.jsonb "yearly_growth_data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["area_slug"], name: "index_area_price_growths_on_area_slug", unique: true
+  end
+
   create_table "properties", force: :cascade do |t|
     t.string "rightmove_id", null: false
     t.string "slug", null: false
@@ -66,7 +75,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "air_quality_station_id"
+    t.bigint "area_price_growth_id"
     t.index ["air_quality_station_id"], name: "index_properties_on_air_quality_station_id"
+    t.index ["area_price_growth_id"], name: "index_properties_on_area_price_growth_id"
     t.index ["bedrooms"], name: "index_properties_on_bedrooms"
     t.index ["latitude", "longitude"], name: "index_properties_on_latitude_and_longitude"
     t.index ["listed_at"], name: "index_properties_on_listed_at"
@@ -79,6 +90,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
     t.index ["tenure"], name: "index_properties_on_tenure"
   end
 
+  create_table "property_crime_snapshots", force: :cascade do |t|
+    t.bigint "property_id", null: false
+    t.decimal "latitude", precision: 10, scale: 7
+    t.decimal "longitude", precision: 10, scale: 7
+    t.float "avg_monthly_crimes"
+    t.string "status", default: "pending", null: false
+    t.datetime "fetched_at"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["property_id"], name: "index_property_crime_snapshots_on_property_id", unique: true
+  end
+
   create_table "property_images", force: :cascade do |t|
     t.bigint "property_id", null: false
     t.string "url", null: false
@@ -86,6 +110,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["property_id"], name: "index_property_images_on_property_id"
+  end
+
+  create_table "property_nearest_stations", force: :cascade do |t|
+    t.bigint "property_id", null: false
+    t.string "name", null: false
+    t.decimal "distance_miles", precision: 5, scale: 2
+    t.string "transport_type"
+    t.integer "walking_minutes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["property_id"], name: "index_property_nearest_stations_on_property_id"
   end
 
   create_table "property_transport_snapshots", force: :cascade do |t|
@@ -106,6 +141,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
   end
 
   add_foreign_key "properties", "air_quality_stations"
+  add_foreign_key "properties", "area_price_growths"
+  add_foreign_key "property_crime_snapshots", "properties"
   add_foreign_key "property_images", "properties"
+  add_foreign_key "property_nearest_stations", "properties"
   add_foreign_key "property_transport_snapshots", "properties"
 end
