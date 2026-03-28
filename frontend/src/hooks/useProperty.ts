@@ -9,21 +9,15 @@ interface UsePropertyResult {
 
 export function useProperty(id: number | null): UsePropertyResult {
   const [property, setProperty] = useState<PropertyDetail | null>(null)
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState<string | null>(null)
+  const [resolvedId, setResolvedId] = useState<number | null>(null)
+  const [errorState, setErrorState] = useState<{ id: number; message: string } | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
-    if (id === null) {
-      setProperty(null)
-      return
-    }
+    if (id === null) return
 
     abortRef.current?.abort()
     abortRef.current = new AbortController()
-
-    setLoading(true)
-    setError(null)
 
     fetch(`/api/v1/properties/${id}`, { signal: abortRef.current.signal })
       .then(r => {
@@ -32,17 +26,28 @@ export function useProperty(id: number | null): UsePropertyResult {
       })
       .then(data => {
         setProperty(data)
-        setError(null)
+        setResolvedId(id)
+        setErrorState(null)
       })
       .catch(e => {
-        if (e.name !== 'AbortError') setError(e.message)
+        if (e.name !== 'AbortError') {
+          setResolvedId(id)
+          setErrorState({ id, message: e.message })
+        }
       })
-      .finally(() => setLoading(false))
 
     return () => {
       abortRef.current?.abort()
     }
   }, [id])
 
-  return { property, loading, error }
+  const loading = id !== null && resolvedId !== id
+  const error = id === null || errorState?.id !== id ? null : errorState.message
+  const resolvedProperty = id === null || resolvedId !== id || error ? null : property
+
+  return {
+    property: resolvedProperty,
+    loading,
+    error,
+  }
 }

@@ -66,6 +66,67 @@ module Api
         assert_not_includes ids, @active.rightmove_id
       end
 
+      test "GET /api/v1/properties/search returns the isochrone geometry and matching properties" do
+        inside = create(:property, rightmove_id: "300200100", latitude: 51.3810, longitude: -2.3610)
+        create(:property, rightmove_id: "300200101", latitude: 51.3890, longitude: -2.3490)
+
+        NominatimGeocoder.any_instance.stubs(:search!).with("Bath Abbey").returns(
+          { latitude: 51.3811, longitude: -2.3590, label: "Bath Abbey, Bath, UK" }
+        )
+        TravelTimeGateway.any_instance.stubs(:isochrone!).returns(
+          {
+            bounding_box: { north: 51.39, south: 51.37, east: -2.35, west: -2.37 },
+            shells: [
+              [
+                { latitude: 51.37, longitude: -2.37 },
+                { latitude: 51.37, longitude: -2.35 },
+                { latitude: 51.385, longitude: -2.36 }
+              ]
+            ]
+          }
+        )
+
+        get search_api_v1_properties_path,
+            params: { query: "Bath Abbey", travel_time_minutes: 10, transportation_type: "walking" },
+            as: :json
+
+        assert_response :success
+        assert_equal "Bath Abbey", response.parsed_body["query"]
+        assert_equal "Bath Abbey, Bath, UK", response.parsed_body["location"]["label"]
+        assert_equal 600, response.parsed_body["travel_time_seconds"]
+        assert_equal 51.39, response.parsed_body["bounding_box"]["north"]
+        assert_equal 1, response.parsed_body["isochrone_shells"].length
+        assert_equal [inside.rightmove_id], response.parsed_body["properties"].map { |property| property["rightmove_id"] }
+      end
+
+      test "GET /api/v1/properties/search returns 404 when the location cannot be found" do
+        NominatimGeocoder.any_instance.stubs(:search!).raises(
+          NominatimGeocoder::LocationNotFound,
+          'No location found for "Atlantis"'
+        )
+
+        get search_api_v1_properties_path, params: { query: "Atlantis" }, as: :json
+
+        assert_response :not_found
+        assert_equal 'No location found for "Atlantis"', response.parsed_body["error"]
+      end
+
+      test "GET /api/v1/properties/search returns 503 when TravelTime is not configured" do
+        NominatimGeocoder.any_instance.stubs(:search!).returns(
+          { latitude: 51.3811, longitude: -2.3590, label: "Bath Abbey, Bath, UK" }
+        )
+        TravelTimeGateway.any_instance.stubs(:isochrone!).raises(
+          TravelTimeGateway::ConfigError,
+          "TravelTime requires both TRAVELTIME_API_KEY and TRAVELTIME_APP_ID"
+        )
+
+        get search_api_v1_properties_path, params: { query: "Bath Abbey" }, as: :json
+
+        assert_response :service_unavailable
+        assert_equal "TravelTime requires both TRAVELTIME_API_KEY and TRAVELTIME_APP_ID",
+                     response.parsed_body["error"]
+      end
+
       # ------------------------------------------------------------------
       # show
       # ------------------------------------------------------------------

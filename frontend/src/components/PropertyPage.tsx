@@ -14,7 +14,9 @@ import './PropertyPage.css'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon   from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-delete (L.Icon.Default.prototype as any)._getIconUrl
+type LeafletDefaultIconPrototype = { _getIconUrl?: string }
+
+delete (L.Icon.Default.prototype as LeafletDefaultIconPrototype)._getIconUrl
 L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -268,17 +270,23 @@ function AreaGrowthChart({ property }: { property: PropertyDetail }) {
               axisLine={{ stroke: 'var(--border)' }}
             />
             <YAxis
-              tickFormatter={v => `${v > 0 ? '+' : ''}${v}%`}
+              tickFormatter={(value: number | string) => {
+                const numericValue = Number(value)
+                return `${numericValue > 0 ? '+' : ''}${numericValue}%`
+              }}
               tick={{ fontSize: 11, fill: 'var(--t3)', fontFamily: 'var(--ff-body)' }}
               tickLine={false}
               axisLine={false}
               width={52}
             />
             <Tooltip
-              formatter={(value: number) => [
-                `${value > 0 ? '+' : ''}${value.toFixed(1)}%`,
-                'Avg annual growth',
-              ]}
+              formatter={(value: number | string | readonly (number | string)[] | undefined) => {
+                const numericValue = Number(Array.isArray(value) ? value[0] : value ?? 0)
+                return [
+                  `${numericValue > 0 ? '+' : ''}${numericValue.toFixed(1)}%`,
+                  'Avg annual growth',
+                ]
+              }}
               contentStyle={{
                 background: 'var(--card-bg)',
                 border: '1px solid var(--border)',

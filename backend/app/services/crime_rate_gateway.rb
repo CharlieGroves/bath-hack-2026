@@ -59,5 +59,3 @@ class CrimeRateGateway
   end
   private_class_method :prior_full_months_before_current
 end
-
-

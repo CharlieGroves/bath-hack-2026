@@ -1,7 +1,12 @@
 import { useState, useMemo } from 'react'
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
 import type { Property } from './types/property'
-import { useProperties, type MapBounds } from './hooks/useProperties'
+import {
+  useProperties,
+  type LocationSearchParams,
+  type MapBounds,
+  type TransportationType,
+} from './hooks/useProperties'
 import LayoutSplit from './layouts/LayoutSplit'
 import PropertyPage from './components/PropertyPage'
 import './App.css'
@@ -51,6 +56,11 @@ export interface Filters {
 }
 
 const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0 }
+const DEFAULT_LOCATION_SEARCH: LocationSearchParams = {
+  query: '',
+  transportationType: 'driving',
+  travelTimeMinutes: 15,
+}
 
 type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
 
@@ -58,10 +68,14 @@ type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
 function SearchPage() {
   const navigate = useNavigate()
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
-  const { properties, total, loading, error } = useProperties(mapBounds)
-
   const [filters, setFilters] = useState<Filters>(INIT)
   const [sort, setSort]       = useState<SortKey>('newest')
+  const [locationSearchDraft, setLocationSearchDraft] = useState<LocationSearchParams>(DEFAULT_LOCATION_SEARCH)
+  const [appliedLocationSearch, setAppliedLocationSearch] = useState<LocationSearchParams | null>(null)
+  const { properties, total, loading, error, activeLocationSearch } = useProperties(mapBounds, appliedLocationSearch)
+  const locationSearchError = appliedLocationSearch ? error : null
+  const viewportError = appliedLocationSearch ? null : error
+  const locationSearchLoading = loading && appliedLocationSearch !== null
 
   const filtered = useMemo(() => {
     const result = properties.filter((p: Property) => {
@@ -110,20 +124,32 @@ function SearchPage() {
       types: f.types.includes(t) ? f.types.filter(x => x !== t) : [...f.types, t],
     }))
   }
+  function setLocationSearchField<K extends keyof LocationSearchParams>(key: K, value: LocationSearchParams[K]) {
+    setLocationSearchDraft(current => ({ ...current, [key]: value }))
+  }
+  function applyLocationSearch() {
+    const query = locationSearchDraft.query.trim()
+    if (!query) {
+      setAppliedLocationSearch(null)
+      return
+    }
 
-  if (loading) return (
-    <div className="splash">
-      <FlameIcon size={40} />
-      <p className="splash-text">Finding your perfect home...</p>
-    </div>
-  )
-  if (error) return <div className="splash"><p>Error: {error}</p></div>
+    setAppliedLocationSearch({
+      ...locationSearchDraft,
+      query,
+    })
+  }
+  function clearLocationSearch() {
+    setAppliedLocationSearch(null)
+    setLocationSearchDraft(current => ({ ...current, query: '' }))
+  }
 
   return (
     <div className="shell" style={{ overflow: 'hidden' }}>
       <LayoutSplit
         properties={properties}
         total={total}
+        loading={loading}
         filtered={filtered}
         filters={filters}
         sort={sort}
@@ -133,6 +159,16 @@ function SearchPage() {
         setSort={s => setSort(s as SortKey)}
         onBoundsChange={setMapBounds}
         onSelectProperty={id => navigate(`/properties/${id}`)}
+        viewportError={viewportError}
+        locationSearchError={locationSearchError}
+        locationSearchLoading={locationSearchLoading}
+        locationSearch={locationSearchDraft}
+        activeLocationSearch={activeLocationSearch}
+        onLocationQueryChange={value => setLocationSearchField('query', value)}
+        onTransportationTypeChange={value => setLocationSearchField('transportationType', value as TransportationType)}
+        onTravelTimeMinutesChange={value => setLocationSearchField('travelTimeMinutes', value)}
+        onApplyLocationSearch={applyLocationSearch}
+        onClearLocationSearch={clearLocationSearch}
       />
     </div>
   )
