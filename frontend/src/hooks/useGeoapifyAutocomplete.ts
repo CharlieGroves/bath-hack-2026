@@ -1,21 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 
-const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY?.trim()
 const MIN_QUERY_LENGTH = 3
 const DEBOUNCE_MS = 220
 
-interface GeoapifyAutocompleteResult {
-  place_id?: string
-  formatted?: string
-  address_line1?: string
-  address_line2?: string
-  lat?: number
-  lon?: number
-  result_type?: string
-}
-
 interface GeoapifyAutocompleteResponse {
-  results?: GeoapifyAutocompleteResult[]
+  enabled?: boolean
+  suggestions?: Array<{
+    id?: string
+    label?: string
+    secondary_label?: string | null
+    latitude?: number | null
+    longitude?: number | null
+    result_type?: string | null
+  }>
 }
 
 export interface GeoapifySuggestion {
@@ -33,18 +30,18 @@ interface UseGeoapifyAutocompleteResult {
   enabled: boolean
 }
 
-function toSuggestion(result: GeoapifyAutocompleteResult, index: number): GeoapifySuggestion | null {
-  const label = result.formatted?.trim() || result.address_line1?.trim()
+function toSuggestion(result: NonNullable<GeoapifyAutocompleteResponse["suggestions"]>[number], index: number): GeoapifySuggestion | null {
+  const label = result.label?.trim()
   if (!label) return null
 
-  const secondaryLabel = result.address_line2?.trim()
+  const secondaryLabel = result.secondary_label?.trim()
 
   return {
-    id: result.place_id ?? `${label}-${index}`,
+    id: result.id ?? `${label}-${index}`,
     label,
     secondaryLabel: secondaryLabel && secondaryLabel !== label ? secondaryLabel : null,
-    latitude: typeof result.lat === 'number' ? result.lat : null,
-    longitude: typeof result.lon === 'number' ? result.lon : null,
+    latitude: typeof result.latitude === 'number' ? result.latitude : null,
+    longitude: typeof result.longitude === 'number' ? result.longitude : null,
     resultType: result.result_type?.trim() || null,
   }
 }
@@ -52,14 +49,14 @@ function toSuggestion(result: GeoapifyAutocompleteResult, index: number): Geoapi
 export function useGeoapifyAutocomplete(query: string): UseGeoapifyAutocompleteResult {
   const [suggestions, setSuggestions] = useState<GeoapifySuggestion[]>([])
   const [loading, setLoading] = useState(false)
+  const [enabled, setEnabled] = useState(true)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     const trimmedQuery = query.trim()
-    const enabled = Boolean(GEOAPIFY_API_KEY)
 
-    if (!enabled || trimmedQuery.length < MIN_QUERY_LENGTH) {
+    if (trimmedQuery.length < MIN_QUERY_LENGTH) {
       abortRef.current?.abort()
       if (timerRef.current) clearTimeout(timerRef.current)
       queueMicrotask(() => {
@@ -77,23 +74,24 @@ export function useGeoapifyAutocomplete(query: string): UseGeoapifyAutocompleteR
       abortRef.current = controller
       setLoading(true)
 
-      const params = new URLSearchParams({
-        text: trimmedQuery,
-        format: 'json',
-        lang: 'en',
-        limit: '6',
-        apiKey: GEOAPIFY_API_KEY!,
-      })
+      const params = new URLSearchParams({ query: trimmedQuery })
 
-      fetch(`https://api.geoapify.com/v1/geocode/autocomplete?${params.toString()}`, {
+      fetch(`/api/v1/location_autocomplete?${params.toString()}`, {
         signal: controller.signal,
       })
         .then(async response => {
-          if (!response.ok) throw new Error(`HTTP ${response.status}`)
-          return response.json() as Promise<GeoapifyAutocompleteResponse>
+          const payload = await response.json().catch(() => null) as GeoapifyAutocompleteResponse | null
+          if (!response.ok) {
+            if (payload?.enabled === false) setEnabled(false)
+            throw new Error(`HTTP ${response.status}`)
+          }
+
+          return payload
         })
         .then(data => {
-          const nextSuggestions = (data.results ?? [])
+          setEnabled(data?.enabled !== false)
+
+          const nextSuggestions = (data?.suggestions ?? [])
             .map(toSuggestion)
             .filter((suggestion): suggestion is GeoapifySuggestion => suggestion != null)
 
@@ -116,6 +114,6 @@ export function useGeoapifyAutocomplete(query: string): UseGeoapifyAutocompleteR
   return {
     suggestions,
     loading,
-    enabled: Boolean(GEOAPIFY_API_KEY),
+    enabled,
   }
 }
