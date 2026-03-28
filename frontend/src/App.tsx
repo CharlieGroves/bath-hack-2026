@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { Property } from './types/property'
-import { useProperties } from './hooks/useProperties'
+import { useProperties, type MapBounds } from './hooks/useProperties'
 import LayoutSplit from './layouts/LayoutSplit'
 import './App.css'
 
@@ -17,20 +17,22 @@ function FlameIcon({ size = 24 }: { size?: number }) {
 
 // ─── Filter state ────────────────────────────────────────────────────────────
 export interface Filters {
-  minPrice: number | ''
-  maxPrice: number | ''
-  minBeds:  number
-  maxBeds:  number
-  types:    string[]
+  minPrice:         number | ''
+  maxPrice:         number | ''
+  minBeds:          number
+  maxBeds:          number
+  types:            string[]
+  maxStationMinutes: number
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [] }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0 }
 
 type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
 
 // ─── Main App ────────────────────────────────────────────────────────────────
 export default function App() {
-  const { properties, loading, error } = useProperties()
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
+  const { properties, total, loading, error } = useProperties(mapBounds)
 
   const [filters, setFilters] = useState<Filters>(INIT)
   const [sort, setSort]       = useState<SortKey>('newest')
@@ -42,6 +44,10 @@ export default function App() {
       if (filters.minBeds > 0 && (p.bedrooms ?? 0) < filters.minBeds) return false
       if (filters.maxBeds > 0 && (p.bedrooms ?? 0) > filters.maxBeds) return false
       if (filters.types.length && !filters.types.includes(p.property_type)) return false
+      if (filters.maxStationMinutes > 0) {
+        const closest = Math.min(...(p.nearest_stations ?? []).map(s => s.walking_minutes))
+        if (!isFinite(closest) || closest > filters.maxStationMinutes) return false
+      }
       return true
     })
     return [...result].sort((a: Property, b: Property) => {
@@ -93,6 +99,7 @@ export default function App() {
       <div className="shell" style={{ overflow: 'hidden' }}>
         <LayoutSplit
           properties={properties}
+          total={total}
           filtered={filtered}
           filters={filters}
           sort={sort}
@@ -100,7 +107,7 @@ export default function App() {
           toggleType={toggleType}
           setFilters={setFilters}
           setSort={s => setSort(s as SortKey)}
-
+          onBoundsChange={setMapBounds}
         />
       </div>
     </div>

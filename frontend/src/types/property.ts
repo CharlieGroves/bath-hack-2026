@@ -1,3 +1,10 @@
+export interface NearestStation {
+  name: string
+  distance_miles: number
+  walking_minutes: number
+  transport_type: string
+}
+
 export interface NoiseSection {
   covered: boolean
   easting?: number
@@ -30,4 +37,5 @@ export interface Property {
   longitude: number
   photo_url: string | null
   noise: PropertyNoise | null
+  nearest_stations: NearestStation[]
 }
