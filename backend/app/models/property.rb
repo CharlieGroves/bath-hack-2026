@@ -2,6 +2,7 @@ class Property < ApplicationRecord
   extend FriendlyId
   friendly_id :rightmove_id, use: :slugged
 
+  belongs_to :area_price_growth, optional: true
   has_one  :property_transport_snapshot, dependent: :destroy
   has_many :property_images, dependent: :destroy
 

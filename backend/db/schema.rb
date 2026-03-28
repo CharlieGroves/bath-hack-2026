@@ -10,9 +10,18 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_160000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "area_price_growths", force: :cascade do |t|
+    t.string "area_slug", null: false
+    t.string "area_name", null: false
+    t.jsonb "yearly_growth_data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["area_slug"], name: "index_area_price_growths_on_area_slug", unique: true
+  end
 
   create_table "properties", force: :cascade do |t|
     t.string "rightmove_id", null: false
@@ -51,6 +60,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_160000) do
     t.jsonb "raw_data"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "area_price_growth_id"
+    t.index ["area_price_growth_id"], name: "index_properties_on_area_price_growth_id"
     t.index ["bedrooms"], name: "index_properties_on_bedrooms"
     t.index ["latitude", "longitude"], name: "index_properties_on_latitude_and_longitude"
     t.index ["listed_at"], name: "index_properties_on_listed_at"
@@ -89,6 +100,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_160000) do
     t.index ["status"], name: "index_property_transport_snapshots_on_status"
   end
 
+  add_foreign_key "properties", "area_price_growths"
   add_foreign_key "property_images", "properties"
   add_foreign_key "property_transport_snapshots", "properties"
 end
