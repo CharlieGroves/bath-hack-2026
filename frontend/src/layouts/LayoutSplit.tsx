@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Rectangle, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import type { Property } from '../types/property'
+import type { BoundingBox, Property } from '../types/property'
 import type { Filters } from '../App'
-import type { MapBounds } from '../hooks/useProperties'
+import type { ActiveLocationSearch, LocationSearchParams, MapBounds, TransportationType } from '../hooks/useProperties'
 import './layouts.css'
 import '../App.css'
 
@@ -12,7 +12,9 @@ import '../App.css'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon   from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-delete (L.Icon.Default.prototype as any)._getIconUrl
+type LeafletDefaultIconPrototype = { _getIconUrl?: string }
+
+delete (L.Icon.Default.prototype as LeafletDefaultIconPrototype)._getIconUrl
 L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow })
 
 function fmtPrice(pence: number) {
@@ -49,18 +51,80 @@ function MapResizer() {
 function MapBoundsTracker({ onChange }: { onChange: (b: MapBounds) => void }) {
   const map = useMap()
 
-  const emit = () => {
-    const b = map.getBounds()
+  useEffect(() => {
+    const bounds = map.getBounds()
     onChange({
-      sw_lat: b.getSouth(),
-      sw_lng: b.getWest(),
-      ne_lat: b.getNorth(),
-      ne_lng: b.getEast(),
+      sw_lat: bounds.getSouth(),
+      sw_lng: bounds.getWest(),
+      ne_lat: bounds.getNorth(),
+      ne_lng: bounds.getEast(),
     })
-  }
+  }, [map, onChange])
 
-  useEffect(() => { emit() }, [map])
-  useMapEvents({ moveend: emit, zoomend: emit })
+  useMapEvents({
+    moveend() {
+      const bounds = map.getBounds()
+      onChange({
+        sw_lat: bounds.getSouth(),
+        sw_lng: bounds.getWest(),
+        ne_lat: bounds.getNorth(),
+        ne_lng: bounds.getEast(),
+      })
+    },
+    zoomend() {
+      const bounds = map.getBounds()
+      onChange({
+        sw_lat: bounds.getSouth(),
+        sw_lng: bounds.getWest(),
+        ne_lat: bounds.getNorth(),
+        ne_lng: bounds.getEast(),
+      })
+    },
+  })
+  return null
+}
+
+function leafletBoundsFromBoundingBox(boundingBox: BoundingBox) {
+  return [
+    [boundingBox.south, boundingBox.west],
+    [boundingBox.north, boundingBox.east],
+  ] as [[number, number], [number, number]]
+}
+
+function SearchBoundingBox({ boundingBox }: { boundingBox: BoundingBox | null }) {
+  if (!boundingBox) return null
+
+  return (
+    <Rectangle
+      bounds={leafletBoundsFromBoundingBox(boundingBox)}
+      pathOptions={{
+        color: '#E76814',
+        weight: 2,
+        opacity: 0.95,
+        fillColor: '#E76814',
+        fillOpacity: 0.08,
+        dashArray: '8 6',
+      }}
+    />
+  )
+}
+
+function MapSearchFitBounds({ boundingBox }: { boundingBox: BoundingBox | null }) {
+  const map = useMap()
+  const north = boundingBox?.north
+  const south = boundingBox?.south
+  const east = boundingBox?.east
+  const west = boundingBox?.west
+
+  useEffect(() => {
+    if (north == null || south == null || east == null || west == null) return
+
+    map.fitBounds(leafletBoundsFromBoundingBox({ north, south, east, west }), {
+      padding: [28, 28],
+      maxZoom: 13,
+    })
+  }, [map, north, south, east, west])
+
   return null
 }
 
@@ -88,6 +152,16 @@ interface Props {
   setSort: (s: string) => void
   onBoundsChange: (b: MapBounds) => void
   onSelectProperty: (id: number) => void
+  viewportError: string | null
+  locationSearchError: string | null
+  locationSearchLoading: boolean
+  locationSearch: LocationSearchParams
+  activeLocationSearch: ActiveLocationSearch | null
+  onLocationQueryChange: (value: string) => void
+  onTransportationTypeChange: (value: TransportationType) => void
+  onTravelTimeMinutesChange: (value: number) => void
+  onApplyLocationSearch: () => void
+  onClearLocationSearch: () => void
 }
 
 const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '' }
@@ -101,6 +175,21 @@ const STATION_MINUTE_OPTIONS = [
   { value: 30, label: '30 min' },
 ]
 
+const TRAVEL_TIME_OPTIONS = [
+  { value: 5, label: '5 min' },
+  { value: 10, label: '10 min' },
+  { value: 15, label: '15 min' },
+  { value: 20, label: '20 min' },
+  { value: 30, label: '30 min' },
+  { value: 45, label: '45 min' },
+]
+
+const TRANSPORTATION_OPTIONS: { value: TransportationType; label: string }[] = [
+  { value: 'driving', label: 'Driving' },
+  { value: 'walking', label: 'Walking' },
+  { value: 'cycling', label: 'Cycling' },
+]
+
 const PROPERTY_TYPES = [
   { id: 'flat',          label: 'Flat' },
   { id: 'terraced',      label: 'Terraced' },
@@ -111,7 +200,27 @@ const PROPERTY_TYPES = [
 ]
 
 export default function LayoutSplit({
-  filtered, filters, sort, setF, toggleType, setFilters, setSort, properties, total, onBoundsChange, onSelectProperty,
+  filtered,
+  filters,
+  sort,
+  setF,
+  toggleType,
+  setFilters,
+  setSort,
+  properties,
+  total,
+  onBoundsChange,
+  onSelectProperty,
+  viewportError,
+  locationSearchError,
+  locationSearchLoading,
+  locationSearch,
+  activeLocationSearch,
+  onLocationQueryChange,
+  onTransportationTypeChange,
+  onTravelTimeMinutesChange,
+  onApplyLocationSearch,
+  onClearLocationSearch,
 }: Props) {
   const [hoveredId, setHoveredId]     = useState<number | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -126,6 +235,9 @@ export default function LayoutSplit({
   }, [properties])
 
   const mapItems = filtered.filter(p => p.latitude != null && p.longitude != null)
+  const locationSearchHint = activeLocationSearch
+    ? `${activeLocationSearch.travelTimeMinutes} min ${fmtLabel(activeLocationSearch.transportationType)} from ${activeLocationSearch.location.label}`
+    : null
 
   return (
     <div className="l2-shell">
@@ -148,6 +260,68 @@ export default function LayoutSplit({
         </button>
 
         {sidebarOpen && <div className="l2-sb-body">
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Distance from place</span>
+          <input
+            className="l2-sb-text-input"
+            type="text"
+            placeholder="King's Cross, SW1, Canary Wharf..."
+            value={locationSearch.query}
+            onChange={e => onLocationQueryChange(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') onApplyLocationSearch()
+            }}
+          />
+          <div className="l2-sb-search-grid">
+            <select
+              className="l2-sb-select"
+              value={locationSearch.transportationType}
+              onChange={e => onTransportationTypeChange(e.target.value as TransportationType)}
+            >
+              {TRANSPORTATION_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <select
+              className="l2-sb-select"
+              value={locationSearch.travelTimeMinutes}
+              onChange={e => onTravelTimeMinutesChange(Number(e.target.value))}
+            >
+              {TRAVEL_TIME_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="l2-sb-actions">
+            <button
+              className="l2-sb-primary"
+              onClick={onApplyLocationSearch}
+              disabled={!locationSearch.query.trim() || locationSearchLoading}
+            >
+              {locationSearchLoading ? 'Searching...' : 'Apply search'}
+            </button>
+            {activeLocationSearch && (
+              <button className="l2-sb-secondary" onClick={onClearLocationSearch}>
+                Clear
+              </button>
+            )}
+          </div>
+          {activeLocationSearch ? (
+            <div className="l2-sb-search-state">
+              <div className="l2-sb-search-title">{activeLocationSearch.location.label}</div>
+              <div className="l2-sb-search-meta">
+                {activeLocationSearch.travelTimeMinutes} min {fmtLabel(activeLocationSearch.transportationType)}
+              </div>
+              <div className="l2-sb-search-meta">Bounding box shown on the map</div>
+            </div>
+          ) : (
+            <p className="l2-sb-hint">Search a place to filter homes by travel time and draw the returned bounding box on the map.</p>
+          )}
+          {locationSearchError && (
+            <p className="l2-sb-error">{locationSearchError}</p>
+          )}
+        </div>
 
         <div className="l2-sb-section">
           <span className="l2-sb-label">Sort</span>
@@ -270,9 +444,14 @@ export default function LayoutSplit({
       {/* List panel */}
       <div className="l2-left">
         <div className="l2-count">
-          {filtered.length.toLocaleString()} of {total.toLocaleString()} homes in view
+          {activeLocationSearch
+            ? `${filtered.length.toLocaleString()} of ${total.toLocaleString()} homes matching ${locationSearchHint}`
+            : `${filtered.length.toLocaleString()} of ${total.toLocaleString()} homes in view`}
           {total > properties.length && (
             <span className="l2-count-hint"> &mdash; showing first {properties.length.toLocaleString()}, zoom in to see more</span>
+          )}
+          {viewportError && (
+            <div className="l2-count-error">{viewportError}</div>
           )}
         </div>
 
@@ -331,10 +510,12 @@ export default function LayoutSplit({
         <MapContainer center={[51.5074, -0.1278]} zoom={11} style={{ height: '100%', width: '100%' }}>
           <MapResizer />
           <MapBoundsTracker onChange={onBoundsChange} />
+          <MapSearchFitBounds boundingBox={activeLocationSearch?.boundingBox ?? null} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
+          <SearchBoundingBox boundingBox={activeLocationSearch?.boundingBox ?? null} />
           {mapItems.map(p => (
             <Marker
               key={p.id}

@@ -38,6 +38,19 @@ export interface AreaPriceGrowth {
   yearly_growth_data: Record<string, YearlyGrowthEntry>
 }
 
+export interface BoundingBox {
+  north: number
+  south: number
+  east: number
+  west: number
+}
+
+export interface SearchLocation {
+  latitude: number
+  longitude: number
+  label: string
+}
+
 // Matches the shape returned by API::V1::PropertiesController#property_detail
 export interface PropertyDetail {
   id: number
