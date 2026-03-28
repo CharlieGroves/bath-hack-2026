@@ -15,10 +15,16 @@ module Api
 
       def borough_payload(b)
         {
-          id:            b.id,
-          name:          b.name,
-          nte_score:     b.nte_score,
-          nte_score_raw: b.nte_score_raw
+          id:                          b.id,
+          name:                        b.name,
+          nte_score:                   b.nte_score,
+          nte_score_raw:               b.nte_score_raw,
+          life_satisfaction_score:     b.life_satisfaction_score,
+          life_satisfaction_score_raw: b.life_satisfaction_score_raw,
+          happiness_score:             b.happiness_score,
+          happiness_score_raw:         b.happiness_score_raw,
+          anxiety_score:               b.anxiety_score,
+          anxiety_score_raw:           b.anxiety_score_raw
         }
       end
     end

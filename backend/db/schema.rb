@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_240001) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_250000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -43,6 +43,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_240001) do
     t.float "nte_score", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.float "life_satisfaction_score_raw"
+    t.float "life_satisfaction_score"
+    t.float "happiness_score_raw"
+    t.float "happiness_score"
+    t.float "anxiety_score_raw"
+    t.float "anxiety_score"
     t.index ["name"], name: "index_boroughs_on_name", unique: true
   end
 
