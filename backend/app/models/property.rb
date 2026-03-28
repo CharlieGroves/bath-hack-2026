@@ -3,6 +3,7 @@ class Property < ApplicationRecord
   friendly_id :rightmove_id, use: :slugged
 
   belongs_to :area_price_growth, optional: true
+  belongs_to :estate_agent, optional: true
   has_one  :property_transport_snapshot, dependent: :destroy
   has_one  :property_crime_snapshot, dependent: :destroy
   has_many :property_images, dependent: :destroy
@@ -12,6 +13,7 @@ class Property < ApplicationRecord
   after_commit :enqueue_transport_refresh,        on: %i[create update], if: :transport_refresh_needed?
   after_commit :enqueue_nearest_stations_refresh, on: %i[create update], if: :nearest_stations_refresh_needed?
   after_commit :enqueue_crime_refresh,            on: %i[create update], if: :crime_refresh_needed?
+  after_commit :enqueue_estate_agent_resolution, on: %i[create update], if: :estate_agent_resolution_needed?
 
   STATUSES       = %w[active under_offer sold let].freeze
   PROPERTY_TYPES = %w[flat terraced semi_detached detached bungalow land other].freeze
@@ -88,5 +90,15 @@ class Property < ApplicationRecord
 
   def enqueue_crime_refresh
     PropertyCrimeSnapshotJob.perform_later(id)
+  end
+
+  def estate_agent_resolution_needed?
+    return false if agent_name.blank?
+
+    estate_agent_id.nil? || previous_changes.key?("agent_name")
+  end
+
+  def enqueue_estate_agent_resolution
+    EstateAgentLinkJob.perform_later(id)
   end
 end
