@@ -196,7 +196,8 @@ module Api
               }
             },
           area_price_growth: area_price_growth_payload(property.area_price_growth),
-          air_quality:       air_quality_payload(property.air_quality_station)
+          air_quality:       air_quality_payload(property.air_quality_station),
+          ml_forecast:       Ml::HousePriceForecastService.new(property).call
         }
       end
 

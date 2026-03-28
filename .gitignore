@@ -1,3 +1,7 @@
 backend/dump.rdb
 backend/.env
 frontend/.env
+ml-training/__pycache__/
+ml-training/data/*.json
+ml-training/artifacts/latest/property_forecasts.json
+ml-training/artifacts/latest/training_predictions.json

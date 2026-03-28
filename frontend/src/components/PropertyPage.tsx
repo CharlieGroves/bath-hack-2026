@@ -35,6 +35,11 @@ function fmtDate(iso: string | null) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+function fmtPct(value: number | null | undefined, digits = 1) {
+  if (value == null || Number.isNaN(value)) return '—'
+  return `${value > 0 ? '+' : ''}${value.toFixed(digits)}%`
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function BackBar({ onBack }: { onBack: () => void }) {
@@ -314,6 +319,74 @@ function AreaGrowthChart({ property }: { property: PropertyDetail }) {
   )
 }
 
+function ForecastSection({ property }: { property: PropertyDetail }) {
+  const forecast = property.ml_forecast
+  if (!forecast) return null
+
+  const deltaPence = forecast.predicted_future_price_pence - forecast.current_price_pence
+  const rmse = forecast.training_summary.holdout_rmse_pounds
+  const areaName = forecast.growth_reference.matched_area_name ?? 'London-wide fallback'
+
+  return (
+    <section className="pp-section">
+      <h2 className="pp-section-heading">1-year ML forecast</h2>
+      <p className="pp-section-sub">
+        Trained on {forecast.training_summary.sample_count} current listings using recent area growth priors.
+      </p>
+
+      <div className="pp-forecast-card">
+        <div className="pp-forecast-grid">
+          <div className="pp-forecast-stat">
+            <div className="pp-forecast-label">Current asking price</div>
+            <div className="pp-forecast-value">{fmtPrice(forecast.current_price_pence)}</div>
+          </div>
+          <div className="pp-forecast-stat">
+            <div className="pp-forecast-label">Predicted in {forecast.prediction_horizon_months}m</div>
+            <div className="pp-forecast-value pp-forecast-value-strong">
+              {fmtPrice(forecast.predicted_future_price_pence)}
+            </div>
+          </div>
+          <div className="pp-forecast-stat">
+            <div className="pp-forecast-label">Expected move</div>
+            <div className={`pp-forecast-value ${deltaPence >= 0 ? 'pp-forecast-up' : 'pp-forecast-down'}`}>
+              {fmtPrice(deltaPence)}
+              <span className="pp-forecast-inline">{fmtPct(forecast.predicted_growth_pct)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="pp-forecast-meta">
+          <span>Area prior {fmtPct(forecast.growth_reference.growth_prior_pct)} · {areaName}</span>
+          <span>Holdout RMSE about £{Math.round(rmse).toLocaleString('en-GB')}</span>
+        </div>
+
+        {forecast.attributions.length > 0 && (
+          <div className="pp-forecast-attribs">
+            <div className="pp-forecast-attrib-heading">Top integrated gradients</div>
+            <div className="pp-forecast-attrib-list">
+              {forecast.attributions.slice(0, 6).map((item) => (
+                <div key={item.feature} className="pp-forecast-attrib-row">
+                  <div>
+                    <div className="pp-forecast-attrib-label">{item.label}</div>
+                    <div className="pp-forecast-attrib-meta">
+                      {(item.share_of_abs * 100).toFixed(0)}% of absolute attribution
+                    </div>
+                  </div>
+                  <div className={item.direction === 'up' ? 'pp-forecast-up' : 'pp-forecast-down'}>
+                    {item.direction === 'up' ? 'Raises forecast' : 'Lowers forecast'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="pp-forecast-note">{forecast.target_note}</div>
+      </div>
+    </section>
+  )
+}
+
 const DAQI_COLORS: Record<string, string> = {
   Low:        '#22c55e',
   Moderate:   '#f59e0b',
@@ -458,6 +531,7 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
         <div className="pp-body">
           <div className="pp-main">
             <CoreDetails property={property} />
+            <ForecastSection property={property} />
             <KeyFeatures property={property} />
             <Description property={property} />
             <TransportSection property={property} />
