@@ -2,10 +2,7 @@ import { useState, useMemo } from 'react'
 import type { Property } from './types/property'
 import { useProperties } from './hooks/useProperties'
 import { useSettings } from './hooks/useSettings'
-import LayoutTopBar  from './layouts/LayoutTopBar'
-import LayoutSplit   from './layouts/LayoutSplit'
-import LayoutMasonry from './layouts/LayoutMasonry'
-import LayoutList    from './layouts/LayoutList'
+import LayoutSplit from './layouts/LayoutSplit'
 import SettingsPage  from './SettingsPage'
 import './App.css'
 
@@ -39,15 +36,7 @@ export interface Filters {
 
 const INIT: Filters = { minPrice: '', maxPrice: '', maxBeds: 0, types: [] }
 
-type Layout = 'topbar' | 'split' | 'masonry' | 'list'
 type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
-
-const LAYOUTS: { id: Layout; label: string }[] = [
-  { id: 'topbar',  label: '1 — Top bar' },
-  { id: 'split',   label: '2 — Split' },
-  { id: 'masonry', label: '3 — Editorial' },
-  { id: 'list',    label: '4 — List' },
-]
 
 // ─── Main App ────────────────────────────────────────────────────────────────
 export default function App() {
@@ -56,7 +45,6 @@ export default function App() {
 
   const [filters, setFilters] = useState<Filters>(INIT)
   const [sort, setSort]       = useState<SortKey>('newest')
-  const [layout, setLayout]   = useState<Layout>('split')
   const [page, setPage]       = useState<'search' | 'settings'>('search')
 
   const filtered = useMemo(() => {
@@ -128,18 +116,6 @@ export default function App() {
         )}
 
         <div className="header-actions">
-          {page === 'search' && (
-            <div className="layout-picker">
-              {LAYOUTS.map(l => (
-                <button
-                  key={l.id}
-                  className={`lp-btn ${layout === l.id ? 'lp-on' : ''}`}
-                  onClick={() => setLayout(l.id)}
-                >{l.label}</button>
-              ))}
-            </div>
-          )}
-
           <button
             className={`settings-btn ${page === 'settings' ? 'settings-btn-on' : ''}`}
             onClick={() => setPage(p => p === 'settings' ? 'search' : 'settings')}
@@ -155,12 +131,7 @@ export default function App() {
         {page === 'settings' ? (
           <SettingsPage {...settingsProps} />
         ) : (
-          <>
-            {layout === 'topbar'  && <LayoutTopBar  {...sharedProps} />}
-            {layout === 'split'   && <LayoutSplit   {...sharedProps} />}
-            {layout === 'masonry' && <LayoutMasonry {...sharedProps} />}
-            {layout === 'list'    && <LayoutList    {...sharedProps} />}
-          </>
+          <LayoutSplit {...sharedProps} />
         )}
       </div>
     </div>
