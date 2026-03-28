@@ -1,0 +1,9 @@
+<% content_for :title, "New property" %>
+
+<div class="w-full max-w-3xl">
+  <div class="flex items-center gap-4 mb-6">
+    <%= link_to "← Properties", properties_path, class: "text-gray-500 hover:underline text-sm" %>
+    <h1 class="text-2xl font-bold">New property</h1>
+  </div>
+  <%= render "form", property: @property %>
+</div>

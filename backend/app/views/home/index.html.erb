@@ -1,0 +1,77 @@
+<% content_for :title, "Bath Hack 2026" %>
+
+<div class="w-full">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold">Bath Hack 2026</h1>
+    <p class="text-gray-500 mt-1">Property data dashboard</p>
+  </div>
+
+  <%# Stats row %>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white border rounded-lg p-5">
+      <div class="text-3xl font-bold text-blue-600"><%= @total_properties %></div>
+      <div class="text-sm text-gray-500 mt-1">Total properties</div>
+    </div>
+    <div class="bg-white border rounded-lg p-5">
+      <div class="text-3xl font-bold text-green-600"><%= @by_status["active"] || 0 %></div>
+      <div class="text-sm text-gray-500 mt-1">Active listings</div>
+    </div>
+    <div class="bg-white border rounded-lg p-5">
+      <div class="text-3xl font-bold text-yellow-600"><%= @by_status["under_offer"] || 0 %></div>
+      <div class="text-sm text-gray-500 mt-1">Under offer</div>
+    </div>
+    <div class="bg-white border rounded-lg p-5">
+      <div class="text-3xl font-bold text-gray-700">
+        <%= @avg_price_pence ? "£#{ActiveSupport::NumberHelper.number_to_delimited(@avg_price_pence / 100)}" : "—" %>
+      </div>
+      <div class="text-sm text-gray-500 mt-1">Average price</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <%# Recent properties %>
+    <div class="md:col-span-2 bg-white border rounded-lg p-5">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-semibold">Recent properties</h2>
+        <%= link_to "View all →", properties_path, class: "text-sm text-blue-600 hover:underline" %>
+      </div>
+      <% if @recent_properties.any? %>
+        <ul class="divide-y">
+          <% @recent_properties.each do |p| %>
+            <li class="py-3 flex justify-between items-start">
+              <div>
+                <%= link_to p.address_line_1 || p.rightmove_id, p, class: "font-medium text-blue-600 hover:underline" %>
+                <div class="text-xs text-gray-400"><%= [p.property_type&.humanize, p.bedrooms ? "#{p.bedrooms} bed" : nil].compact.join(" · ") %></div>
+              </div>
+              <div class="text-sm font-medium text-gray-700"><%= p.formatted_price %></div>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="text-sm text-gray-400 py-4">No properties yet. <a href="<%= new_property_path %>", class="text-blue-600 hover:underline">Add one</a> or run the seed task.</p>
+      <% end %>
+    </div>
+
+    <%# By type breakdown %>
+    <div class="bg-white border rounded-lg p-5">
+      <h2 class="font-semibold mb-4">By property type</h2>
+      <% if @by_type.any? %>
+        <ul class="space-y-2">
+          <% @by_type.sort_by { |_, v| -v }.each do |type, count| %>
+            <li class="flex justify-between items-center text-sm">
+              <span class="text-gray-700"><%= type&.humanize || "Unknown" %></span>
+              <span class="font-medium"><%= count %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="text-sm text-gray-400">No data yet.</p>
+      <% end %>
+
+      <div class="mt-6 pt-4 border-t space-y-2">
+        <%= link_to "Browse properties", properties_path, class: "block text-center bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm" %>
+        <%= link_to "Add property", new_property_path, class: "block text-center border py-2 rounded hover:bg-gray-50 text-sm" %>
+      </div>
+    </div>
+  </div>
+</div>

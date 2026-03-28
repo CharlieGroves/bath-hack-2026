@@ -35,7 +35,7 @@ class Property < ApplicationRecord
   # Returns a human-readable price string, e.g. "£450,000"
   def formatted_price
     return nil unless price_pence
-    "£#{(price_pence / 100).to_s(:delimited)}"
+    "£#{ActiveSupport::NumberHelper.number_to_delimited(price_pence / 100)}"
   end
 
   # Text blob sent to ML service for embedding generation

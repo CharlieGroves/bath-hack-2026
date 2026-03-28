@@ -1,0 +1,72 @@
+<% content_for :title, @property.title || @property.address_line_1 %>
+
+<div class="w-full max-w-3xl">
+  <div class="flex items-start justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold"><%= @property.address_line_1 %></h1>
+      <p class="text-gray-500"><%= [@property.town, @property.postcode].compact.join(", ") %></p>
+    </div>
+    <div class="flex gap-2">
+      <%= link_to "Edit", edit_property_path(@property), class: "bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" %>
+      <%= button_to "Delete", property_path(@property), method: :delete,
+          data: { turbo_confirm: "Delete this property?" },
+          class: "bg-red-100 text-red-600 px-4 py-2 rounded hover:bg-red-200 cursor-pointer" %>
+    </div>
+  </div>
+
+  <%# Photos %>
+  <% if @property.photo_urls.any? %>
+    <div class="flex gap-2 overflow-x-auto mb-6">
+      <% @property.photo_urls.first(5).each do |url| %>
+        <img src="<%= url %>" class="h-48 rounded object-cover flex-shrink-0" alt="Property photo">
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="grid grid-cols-2 gap-4 mb-6">
+    <div class="bg-gray-50 rounded-lg p-4">
+      <div class="text-2xl font-bold text-blue-700"><%= @property.formatted_price %></div>
+      <div class="text-sm text-gray-500"><%= @property.price_qualifier %></div>
+    </div>
+    <div class="bg-gray-50 rounded-lg p-4 space-y-1 text-sm">
+      <div><span class="font-medium">Type:</span> <%= @property.property_type&.humanize %></div>
+      <div><span class="font-medium">Beds:</span> <%= @property.bedrooms %></div>
+      <div><span class="font-medium">Baths:</span> <%= @property.bathrooms %></div>
+      <div><span class="font-medium">Size:</span> <%= @property.size_sqft ? "#{@property.size_sqft} sqft" : "—" %></div>
+    </div>
+    <div class="bg-gray-50 rounded-lg p-4 space-y-1 text-sm">
+      <div><span class="font-medium">Tenure:</span> <%= @property.tenure&.humanize || "—" %></div>
+      <div><span class="font-medium">EPC:</span> <%= @property.epc_rating || "—" %></div>
+      <div><span class="font-medium">Council tax:</span> Band <%= @property.council_tax_band || "—" %></div>
+      <div><span class="font-medium">Status:</span> <%= @property.status&.humanize %></div>
+    </div>
+    <div class="bg-gray-50 rounded-lg p-4 space-y-1 text-sm">
+      <div><span class="font-medium">Agent:</span> <%= @property.agent_name || "—" %></div>
+      <div><span class="font-medium">Phone:</span> <%= @property.agent_phone || "—" %></div>
+      <div><span class="font-medium">Listed:</span> <%= @property.listed_at&.strftime("%d %b %Y") || "—" %></div>
+      <% if @property.listing_url.present? %>
+        <div><%= link_to "View on Rightmove →", @property.listing_url, target: "_blank", class: "text-blue-600 hover:underline" %></div>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @property.description.present? %>
+    <div class="mb-6">
+      <h2 class="font-semibold mb-2">Description</h2>
+      <p class="text-sm text-gray-700 leading-relaxed"><%= @property.description %></p>
+    </div>
+  <% end %>
+
+  <% if @property.key_features.any? %>
+    <div class="mb-6">
+      <h2 class="font-semibold mb-2">Key features</h2>
+      <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+        <% @property.key_features.each do |f| %>
+          <li><%= f %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%= link_to "← Back to properties", properties_path, class: "text-gray-500 hover:underline text-sm" %>
+</div>

@@ -1,0 +1,150 @@
+<%= form_with model: property, class: "space-y-6" do |f| %>
+  <% if property.errors.any? %>
+    <div class="bg-red-50 border border-red-200 rounded p-4 text-sm text-red-700">
+      <ul class="list-disc list-inside space-y-1">
+        <% property.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <fieldset class="border rounded-lg p-4 space-y-3">
+    <legend class="font-semibold px-1">Identity</legend>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <%= f.label :rightmove_id, class: "block text-sm font-medium mb-1" %>
+        <%= f.text_field :rightmove_id, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :listing_url, class: "block text-sm font-medium mb-1" %>
+        <%= f.url_field :listing_url, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+    </div>
+    <div>
+      <%= f.label :title, class: "block text-sm font-medium mb-1" %>
+      <%= f.text_field :title, class: "w-full border rounded px-3 py-2 text-sm" %>
+    </div>
+  </fieldset>
+
+  <fieldset class="border rounded-lg p-4 space-y-3">
+    <legend class="font-semibold px-1">Location</legend>
+    <div>
+      <%= f.label :address_line_1, class: "block text-sm font-medium mb-1" %>
+      <%= f.text_field :address_line_1, class: "w-full border rounded px-3 py-2 text-sm" %>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <%= f.label :town, class: "block text-sm font-medium mb-1" %>
+        <%= f.text_field :town, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :postcode, class: "block text-sm font-medium mb-1" %>
+        <%= f.text_field :postcode, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :latitude, class: "block text-sm font-medium mb-1" %>
+        <%= f.number_field :latitude, step: "any", class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :longitude, class: "block text-sm font-medium mb-1" %>
+        <%= f.number_field :longitude, step: "any", class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="border rounded-lg p-4 space-y-3">
+    <legend class="font-semibold px-1">Price</legend>
+    <div class="grid grid-cols-3 gap-4">
+      <div>
+        <%= f.label :price_pence, class: "block text-sm font-medium mb-1" %>
+        <%= f.number_field :price_pence, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :price_qualifier, class: "block text-sm font-medium mb-1" %>
+        <%= f.text_field :price_qualifier, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :price_per_sqft_pence, class: "block text-sm font-medium mb-1" %>
+        <%= f.number_field :price_per_sqft_pence, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="border rounded-lg p-4 space-y-3">
+    <legend class="font-semibold px-1">Property details</legend>
+    <div class="grid grid-cols-3 gap-4">
+      <div>
+        <%= f.label :property_type, class: "block text-sm font-medium mb-1" %>
+        <%= f.select :property_type, Property::PROPERTY_TYPES.map { |t| [t.humanize, t] },
+            { include_blank: "Select…" }, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :bedrooms, class: "block text-sm font-medium mb-1" %>
+        <%= f.number_field :bedrooms, min: 0, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :bathrooms, class: "block text-sm font-medium mb-1" %>
+        <%= f.number_field :bathrooms, min: 0, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :size_sqft, class: "block text-sm font-medium mb-1" %>
+        <%= f.number_field :size_sqft, min: 0, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :tenure, class: "block text-sm font-medium mb-1" %>
+        <%= f.select :tenure, Property::TENURES.map { |t| [t.humanize, t] },
+            { include_blank: "Unknown" }, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :lease_years_remaining, class: "block text-sm font-medium mb-1" %>
+        <%= f.number_field :lease_years_remaining, min: 0, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="border rounded-lg p-4 space-y-3">
+    <legend class="font-semibold px-1">Running costs</legend>
+    <div class="grid grid-cols-3 gap-4">
+      <div>
+        <%= f.label :epc_rating, class: "block text-sm font-medium mb-1" %>
+        <%= f.select :epc_rating, Property::EPC_RATINGS,
+            { include_blank: "Unknown" }, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :council_tax_band, class: "block text-sm font-medium mb-1" %>
+        <%= f.select :council_tax_band, Property::COUNCIL_BANDS,
+            { include_blank: "Unknown" }, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :service_charge_annual_pence, class: "block text-sm font-medium mb-1" %>
+        <%= f.number_field :service_charge_annual_pence, min: 0, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="border rounded-lg p-4 space-y-3">
+    <legend class="font-semibold px-1">Status & listing</legend>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <%= f.label :status, class: "block text-sm font-medium mb-1" %>
+        <%= f.select :status, Property::STATUSES.map { |s| [s.humanize, s] },
+            {}, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :listed_at, class: "block text-sm font-medium mb-1" %>
+        <%= f.date_field :listed_at, class: "w-full border rounded px-3 py-2 text-sm" %>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="border rounded-lg p-4 space-y-3">
+    <legend class="font-semibold px-1">Description</legend>
+    <%= f.text_area :description, rows: 5, class: "w-full border rounded px-3 py-2 text-sm" %>
+  </fieldset>
+
+  <div class="flex gap-3">
+    <%= f.submit class: "bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 cursor-pointer" %>
+    <%= link_to "Cancel", property.persisted? ? property : properties_path, class: "px-6 py-2 rounded border hover:bg-gray-50" %>
+  </div>
+<% end %>
