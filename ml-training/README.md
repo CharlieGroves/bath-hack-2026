@@ -1,27 +1,21 @@
 # ML Training
 
-This folder contains the local training and inference pipeline for the one-year house-price forecast shown on the property detail page.
+This folder contains the local training and inference pipeline for the one-year price forecast shown on the property detail page.
 
-## What the model does
+## Training basis
 
-- Collects the current property records from the Rails database.
-- Builds a feature set from each house's structured fields, transport/noise/crime/air-quality enrichments, and a recent area growth prior.
-- Trains a small PyTorch MLP to predict a proxy one-year-forward price.
-- Runs Integrated Gradients on each prediction so the app can show feature-level attribution for a clicked house.
+The model is now trained on official historical data:
 
-## Important limitation
+- HM Land Registry Price Paid Data transactions for London local authorities, filtered from yearly files for `2020` through `2024`.
+- HM Land Registry UK HPI data, using the latest bundled file in this pipeline for `2025-12`.
 
-The repo does not currently store realized house prices one year later. Because of that, the training target is a proxy:
+For each historical sale, the one-year-forward target is built from the actual subsequent UK HPI movement for that same London area and property type, applied to the historical sale price.
 
-- `future_price ≈ current_asking_price * (1 + recent_area_growth_prior)`
-
-The growth prior comes from [`backend/data/london_area_house_growth_per_year.csv`](/Users/aonghus/Documents/bath-hack-2026/backend/data/london_area_house_growth_per_year.csv), filtered to recent sane values and clipped to avoid the extreme outliers in that file.
-
-This means the pipeline is useful for local experimentation and UI integration, but not for claiming production-quality forecasting accuracy.
+This is materially better than the earlier proxy based only on current listings and a growth prior, but it is still not a perfect observed repeat-sale target for the exact same house.
 
 ## Commands
 
-Export the current dataset:
+Export the current property dataset from Rails:
 
 ```bash
 python3 ml-training/collect_dataset.py
@@ -39,13 +33,18 @@ Run inference for one property payload:
 python3 ml-training/infer_property.py --input path/to/property.json
 ```
 
-Artifacts are written to [`ml-training/artifacts/latest`](/Users/aonghus/Documents/bath-hack-2026/ml-training/artifacts/latest).
+Runtime artifacts used by the app are stored in [ml-training/artifacts/latest](/Users/aonghus/Documents/bath-hack-2026/ml-training/artifacts/latest).
 
-## Better historical data to add next
+Downloaded historical caches are written under `ml-training/data/historical/` and are ignored by git.
 
-- Land Registry sale-price history joined to each property or postcode.
-- Relisting/sold outcomes so the target is an observed forward price, not a proxy.
-- More complete postcode or borough labels for every listing.
-- Interest rates, mortgage affordability, and local supply/demand indicators by month.
-- Planning applications, school scores, and deprivation indices at postcode/LSOA level.
-- More complete enrichment coverage for crime, transport, noise, EPC, and air quality.
+## Current limitation
+
+The historical sales data does not carry the same house-level detail we have on current listings, such as bedrooms, bathrooms, listing photos, and most Rightmove-only metadata. So the current historical model is strongest on market context, price level, property type, and postcode/borough context, and weaker on rich house-specific attributes.
+
+## Best next data to add
+
+- Exact sold-price histories matched to the same address over time.
+- EPC/open property records to recover floor area and other structured house traits for historical sales.
+- Interest-rate, affordability, and supply-demand features by month.
+- Local planning, school, and deprivation datasets at postcode or LSOA level.
+- More complete enrichment coverage for the current-property side: crime, stations, air quality, and noise.

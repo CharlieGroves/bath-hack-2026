@@ -325,13 +325,14 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
 
   const deltaPence = forecast.predicted_future_price_pence - forecast.current_price_pence
   const rmse = forecast.training_summary.holdout_rmse_pounds
-  const areaName = forecast.growth_reference.matched_area_name ?? 'London-wide fallback'
+  const areaName = forecast.historical_context.area_name
+  const localHpi = forecast.historical_context.local_hpi_yoy_pct
 
   return (
     <section className="pp-section">
       <h2 className="pp-section-heading">1-year ML forecast</h2>
       <p className="pp-section-sub">
-        Trained on {forecast.training_summary.sample_count} current listings using recent area growth priors.
+        Trained on {forecast.training_summary.sample_count.toLocaleString('en-GB')} historical London sales.
       </p>
 
       <div className="pp-forecast-card">
@@ -356,7 +357,9 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
         </div>
 
         <div className="pp-forecast-meta">
-          <span>Area prior {fmtPct(forecast.growth_reference.growth_prior_pct)} · {areaName}</span>
+          <span>
+            Local HPI trend {fmtPct(localHpi)} · {areaName} · {forecast.historical_context.latest_hpi_period}
+          </span>
           <span>Holdout RMSE about £{Math.round(rmse).toLocaleString('en-GB')}</span>
         </div>
 

@@ -52,11 +52,11 @@ export interface MlForecastAttribution {
   share_of_abs: number
 }
 
-export interface MlGrowthReference {
-  matched_area_slug: string
-  matched_area_name: string | null
-  growth_prior_pct: number
-  growth_source: string
+export interface MlHistoricalContext {
+  area_slug: string
+  area_name: string
+  latest_hpi_period: string
+  local_hpi_yoy_pct: number | null
 }
 
 export interface MlTrainingSummary {
@@ -76,7 +76,7 @@ export interface MlForecast {
   predicted_future_price_pence: number
   predicted_growth_pct: number | null
   baseline_prediction_pence: number
-  growth_reference: MlGrowthReference
+  historical_context: MlHistoricalContext
   training_summary: MlTrainingSummary
   target_note: string
   attributions: MlForecastAttribution[]
