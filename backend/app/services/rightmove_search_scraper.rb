@@ -14,7 +14,8 @@ require "uri"
 #   ids = scraper.property_ids(url, limit: 50)
 #   # => ["172607297", "143221054", ...]
 class RightmoveSearchScraper
-  PAGE_SIZE = 25
+  PAGE_SIZE  = 25
+  MAX_INDEX  = 1000 # Rightmove redirects beyond this
 
   class ScrapingError < StandardError; end
 
@@ -27,11 +28,14 @@ class RightmoveSearchScraper
       page_ids, total = fetch_page(url, index)
       ids.concat(page_ids)
 
+      puts "  Page #{index / PAGE_SIZE + 1}: #{page_ids.length} IDs (#{ids.length}/#{[limit, total].min} total)"
+
       break if ids.length >= limit
       break if ids.length >= total
       break if page_ids.empty?
 
       index += PAGE_SIZE
+      break if index > MAX_INDEX
     end
 
     ids.first(limit)
@@ -66,6 +70,7 @@ class RightmoveSearchScraper
       f.headers["User-Agent"]      = "Mozilla/5.0 (compatible; Bath-Hack-Bot/1.0)"
       f.headers["Accept"]          = "text/html,application/xhtml+xml"
       f.headers["Accept-Language"] = "en-GB,en;q=0.9"
+      f.response :follow_redirects
     end
 
     response = conn.get(url)
