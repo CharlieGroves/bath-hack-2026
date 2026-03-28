@@ -24,6 +24,7 @@ Rails.application.routes.draw do
           get :heatmap
         end
       end
+      resources :air_quality_stations, only: [:show]
     end
   end
 end
