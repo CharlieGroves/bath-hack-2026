@@ -1,0 +1,5 @@
+web: bin/rails server
+redis: redis-server --port 6381
+worker: bundle exec sidekiq
+web: cd ../frontend && npm run dev
+css: bin/rails tailwindcss:watch
