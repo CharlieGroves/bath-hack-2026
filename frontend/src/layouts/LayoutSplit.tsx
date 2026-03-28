@@ -113,7 +113,7 @@ interface Props {
   onSelectProperty: (id: number) => void
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '' }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0 }
 
 const STATION_MINUTE_OPTIONS = [
   { value: 0,  label: 'Any' },
@@ -289,6 +289,38 @@ export default function LayoutSplit({
           </div>
         </div>
         )}
+
+        <div className="l2-sb-section">
+          <div className="l2-sb-slider-header">
+            <span className="l2-sb-label" style={{ marginBottom: 0 }}>Air quality (DAQI)</span>
+            <span className="l2-sb-slider-value">
+              {filters.maxDaqi === 0 || filters.maxDaqi >= 5 ? 'Any' : `up to ${filters.maxDaqi}`}
+            </span>
+          </div>
+          {(() => {
+            const val = filters.maxDaqi === 0 ? 5 : filters.maxDaqi
+            const pct = Math.round(((val - 1) / (5 - 1)) * 100)
+            return (
+              <input
+                className="l2-sb-slider"
+                type="range"
+                min={1}
+                max={5}
+                step={1}
+                value={val}
+                style={{ '--slider-pct': pct } as React.CSSProperties}
+                onChange={e => {
+                  const v = +e.target.value
+                  setF('maxDaqi', v >= 5 ? 0 : v)
+                }}
+              />
+            )
+          })()}
+          <div className="l2-sb-slider-range">
+            <span>1 (cleanest)</span>
+            <span>5 (moderate)</span>
+          </div>
+        </div>
 
         <div className="l2-sb-section">
           <span className="l2-sb-label">Walk to station</span>

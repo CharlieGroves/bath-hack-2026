@@ -47,9 +47,10 @@ export interface Filters {
   maxCrimeRate:      number | ''
   minPricePerSqft:   number | ''
   maxPricePerSqft:   number | ''
+  maxDaqi:           number
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '' }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0 }
 
 type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
 
@@ -82,6 +83,10 @@ function SearchPage() {
       }
       if (filters.maxPricePerSqft !== '') {
         if (p.price_per_sqft == null || p.price_per_sqft > (filters.maxPricePerSqft as number) * 100) return false
+      }
+      if (filters.maxDaqi > 0) {
+        const idx = p.air_quality?.daqi_index
+        if (idx == null || idx > filters.maxDaqi) return false
       }
       return true
     })

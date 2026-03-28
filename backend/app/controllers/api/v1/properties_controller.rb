@@ -6,13 +6,14 @@ module Api
 
       # GET /api/v1/properties
       def index
-        properties = Property.includes(:property_transport_snapshot, :property_crime_snapshot, :property_nearest_stations).order(created_at: :desc)
+        properties = Property.includes(:property_transport_snapshot, :property_crime_snapshot, :property_nearest_stations, :air_quality_station).order(created_at: :desc)
         properties = properties.where(status: params[:status])               if params[:status].present?
         properties = properties.where(property_type: params[:property_type]) if params[:property_type].present?
         properties = properties.min_price(params[:min_price].to_i)           if params[:min_price].present?
         properties = properties.max_price(params[:max_price].to_i)           if params[:max_price].present?
         properties = properties.min_beds(params[:min_beds].to_i)             if params[:min_beds].present?
         properties = properties.max_beds(params[:max_beds].to_i)             if params[:max_beds].present?
+        properties = properties.max_daqi(params[:max_daqi].to_i)             if params[:max_daqi].present?
 
         if params[:sw_lat].present? && params[:sw_lng].present? &&
            params[:ne_lat].present? && params[:ne_lng].present?
@@ -64,7 +65,7 @@ module Api
 
       def set_property
         @property = Property
-          .includes(:property_nearest_stations, :area_price_growth, :property_transport_snapshot)
+          .includes(:property_nearest_stations, :area_price_growth, :property_transport_snapshot, :air_quality_station)
           .friendly.find(params[:id])
       end
 
@@ -102,6 +103,7 @@ module Api
           photo_url:        p.photo_urls.first,
           noise:            noise_payload(p.property_transport_snapshot),
           crime:            crime_payload(p.property_crime_snapshot),
+          air_quality:      air_quality_payload(p.air_quality_station),
           nearest_stations: p.property_nearest_stations.sort_by(&:distance_miles).map { |s|
             { name: s.name, distance_miles: s.distance_miles, walking_minutes: s.walking_minutes, transport_type: s.transport_type }
           }
@@ -131,6 +133,7 @@ module Api
                 walking_minutes: s.walking_minutes, transport_type: s.transport_type }
             },
           area_price_growth: area_price_growth_payload(p.area_price_growth),
+          air_quality:       air_quality_payload(p.air_quality_station),
         }
       end
 
@@ -161,6 +164,11 @@ module Api
           avg_monthly_crimes: snapshot.avg_monthly_crimes,
           fetched_at:         snapshot.fetched_at
         }
+      end
+
+      def air_quality_payload(station)
+        return nil unless station&.daqi_index
+        { daqi_index: station.daqi_index, daqi_band: station.daqi_band, station_name: station.name }
       end
     end
   end
