@@ -644,6 +644,12 @@
   color: var(--t4);
 }
 
+.l2-count-status {
+  margin-left: 8px;
+  color: var(--ember);
+  font-weight: 600;
+}
+
 .l2-count-error {
   margin-top: 4px;
   font-size: 0.7rem;

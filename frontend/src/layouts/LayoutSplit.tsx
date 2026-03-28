@@ -151,6 +151,7 @@ const pinActive = L.divIcon({
 interface Props {
   properties: Property[]
   total: number
+  loading: boolean
   filtered: Property[]
   filters: Filters
   sort: string
@@ -209,6 +210,7 @@ export default function LayoutSplit({
   setSort,
   properties,
   total,
+  loading,
   onBoundsChange,
   onSelectProperty,
   viewportError,
@@ -244,6 +246,7 @@ export default function LayoutSplit({
       {/* Sidebar */}
       <div className={`l2-sidebar ${sidebarOpen ? '' : 'l2-sidebar-collapsed'}`}>
         <button
+          type="button"
           className="l2-sb-toggle"
           onClick={() => setSidebarOpen(o => !o)}
           title={sidebarOpen ? 'Hide filters' : 'Show filters'}
@@ -301,6 +304,7 @@ export default function LayoutSplit({
           </div>
           <div className="l2-sb-actions">
             <button
+              type="button"
               className="l2-sb-primary"
               onClick={onApplyLocationSearch}
               disabled={!locationSearch.query.trim() || locationSearchLoading}
@@ -308,7 +312,7 @@ export default function LayoutSplit({
               {locationSearchLoading ? 'Searching...' : 'Apply search'}
             </button>
             {activeLocationSearch && (
-              <button className="l2-sb-secondary" onClick={onClearLocationSearch}>
+              <button type="button" className="l2-sb-secondary" onClick={onClearLocationSearch}>
                 Clear
               </button>
             )}
@@ -366,6 +370,7 @@ export default function LayoutSplit({
           <div className="l2-sb-pills">
             {[0, 1, 2, 3, 4, 5].map(n => (
               <button
+                type="button"
                 key={n}
                 className={`l2-sb-pill ${filters.minBeds === n ? 'on' : ''}`}
                 onClick={() => setF('minBeds', n)}
@@ -379,6 +384,7 @@ export default function LayoutSplit({
           <div className="l2-sb-chips">
             {PROPERTY_TYPES.map(t => (
               <button
+                type="button"
                 key={t.id}
                 className={`l2-sb-chip ${filters.types.includes(t.id) ? 'on' : ''}`}
                 onClick={() => toggleType(t.id)}
@@ -429,6 +435,7 @@ export default function LayoutSplit({
           <div className="l2-sb-pills">
             {STATION_MINUTE_OPTIONS.map(opt => (
               <button
+                type="button"
                 key={opt.value}
                 className={`l2-sb-pill ${filters.maxStationMinutes === opt.value ? 'on' : ''}`}
                 onClick={() => setF('maxStationMinutes', opt.value)}
@@ -438,7 +445,7 @@ export default function LayoutSplit({
         </div>
 
         <div className="l2-sb-section">
-          <button className="l2-sb-reset" onClick={() => setFilters(INIT)}>
+          <button type="button" className="l2-sb-reset" onClick={() => setFilters(INIT)}>
             Reset filters
           </button>
         </div>
@@ -453,6 +460,11 @@ export default function LayoutSplit({
           {activeLocationSearch
             ? `${filtered.length.toLocaleString()} of ${total.toLocaleString()} homes matching ${locationSearchHint}`
             : `${filtered.length.toLocaleString()} of ${total.toLocaleString()} homes in view`}
+          {loading && (
+            <span className="l2-count-status">
+              {activeLocationSearch ? ' Updating search...' : ' Loading homes...'}
+            </span>
+          )}
           {total > properties.length && (
             <span className="l2-count-hint"> &mdash; showing first {properties.length.toLocaleString()}, zoom in to see more</span>
           )}
@@ -500,6 +512,7 @@ export default function LayoutSplit({
             <div className="l2-empty">
               <span>Nothing matches your search just yet.</span>
               <button
+                type="button"
                 className="reset-btn"
                 style={{ display: 'inline-block', width: 'auto', marginTop: 4, padding: '6px 16px', fontStyle: 'normal', fontFamily: 'var(--ff-body)', fontSize: '0.8rem' }}
                 onClick={() => setFilters(INIT)}

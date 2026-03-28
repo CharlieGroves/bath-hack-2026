@@ -131,18 +131,12 @@ function SearchPage() {
     setLocationSearchDraft(current => ({ ...current, query: '' }))
   }
 
-  if (loading && properties.length === 0 && !error) return (
-    <div className="splash">
-      <FlameIcon size={40} />
-      <p className="splash-text">Finding your perfect home...</p>
-    </div>
-  )
-
   return (
     <div className="shell" style={{ overflow: 'hidden' }}>
       <LayoutSplit
         properties={properties}
         total={total}
+        loading={loading}
         filtered={filtered}
         filters={filters}
         sort={sort}
