@@ -1,44 +1,29 @@
 require "test_helper"
-require "cgi"
-require "uri"
-
 class TransportGatewayTest < ActiveSupport::TestCase
   setup do
     Rails.cache.clear
   end
 
   test "fetch returns normalized transport sections" do
-    stub_request(:get, %r{\Ahttps://environment\.data\.gov\.uk/geoservices/datasets/.+/wcs\z})
-      .to_return do |request|
-        params = CGI.parse(URI(request.uri).query)
-        coverage_id = params.fetch("coverageId").first
+    flight_gateway = mock
+    rail_gateway = mock
+    road_gateway = mock
 
-        value = case coverage_id
-                when /Airport_Noise_ALL_Lden/ then 64.4
-                when /Airport_Noise_ALL_Lday/ then 61.2
-                when /Airport_Noise_ALL_Leve/ then 58.1
-                when /Airport_Noise_ALL_Lnight/ then 53.7
-                when /Airport_Noise_ALL_LAeq16hr/ then 60.5
-                when /Rail_Noise_Lden_England_Round_4_All/ then 55.8
-                when /Rail_Noise_Lday_England_Round_4_All/ then 53.2
-                when /Rail_Noise_Leve_England_Round_4_All/ then 50.4
-                when /Rail_Noise_Lnight_England_Round_4_All/ then 47.9
-                when /Rail_Noise_LAeq06hr_England_Round_4_All/ then 46.0
-                when /Rail_Noise_LAeq16hr_England_Round_4_All/ then 52.7
-                when /Rail_Noise_LAeq18hr_England_Round_4_All/ then 54.3
-                when /Road_Noise_Lden_England_Round_4_All/ then 62.1
-                when /Road_Noise_Lday_England_Round_4_All/ then 59.0
-                when /Road_Noise_Leve_England_Round_4_All/ then 56.2
-                when /Road_Noise_Lnight_England_Round_4_All/ then 51.8
-                when /Road_Noise_LAeq16hr_England_Round_4_All/ then 58.4
-                else
-                  raise "unexpected coverageId #{coverage_id}"
-                end
+    flight_gateway.stubs(:fetch).returns(
+      { "covered" => true, "metrics" => { "lden" => 64.4, "laeq16hr" => 60.5 } }
+    )
+    rail_gateway.stubs(:fetch).returns(
+      { "covered" => true, "metrics" => { "lden" => 55.8, "laeq06hr" => 46.0 } }
+    )
+    road_gateway.stubs(:fetch).returns(
+      { "covered" => true, "metrics" => { "lden" => 62.1, "laeq16hr" => 58.4 } }
+    )
 
-        { status: 200, body: "Band 0:\n#{value}\n", headers: { "Content-Type" => "text/plain" } }
-      end
-
-    result = TransportGateway.new.fetch(latitude: 51.45, longitude: -0.3)
+    result = TransportGateway.new(
+      flight_gateway: flight_gateway,
+      rail_gateway: rail_gateway,
+      road_gateway: road_gateway
+    ).fetch(latitude: 51.45, longitude: -0.3)
 
     assert_equal "england_noise_data", result[:provider]
     assert_equal true, result[:flight_data]["covered"]
@@ -53,11 +38,22 @@ class TransportGatewayTest < ActiveSupport::TestCase
   end
 
   test "fetch raises on non-success responses" do
-    stub_request(:get, %r{\Ahttps://environment\.data\.gov\.uk/geoservices/datasets/.+/wcs\z})
-      .to_return(status: 502, body: "bad gateway")
+    flight_gateway = mock
+    rail_gateway = mock
+    road_gateway = mock
 
-    assert_raises(TransportGateway::Error) do
-      TransportGateway.new.fetch(latitude: 51.45, longitude: -0.3)
+    flight_gateway.stubs(:fetch).raises(TransportGateway::Error, "bad gateway")
+    rail_gateway.stubs(:fetch).returns({})
+    road_gateway.stubs(:fetch).returns({})
+
+    error = assert_raises(TransportGateway::Error) do
+      TransportGateway.new(
+        flight_gateway: flight_gateway,
+        rail_gateway: rail_gateway,
+        road_gateway: road_gateway
+      ).fetch(latitude: 51.45, longitude: -0.3)
     end
+
+    assert_equal "bad gateway", error.message
   end
 end

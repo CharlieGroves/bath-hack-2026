@@ -6,7 +6,7 @@ module Api
 
       # GET /api/v1/properties
       def index
-        properties = Property.all.order(created_at: :desc)
+        properties = Property.includes(:property_transport_snapshot).order(created_at: :desc)
         properties = properties.where(status: params[:status])               if params[:status].present?
         properties = properties.where(property_type: params[:property_type]) if params[:property_type].present?
         properties = properties.min_price(params[:min_price].to_i)           if params[:min_price].present?
@@ -79,12 +79,28 @@ module Api
           listed_at:     p.listed_at,
           latitude:      p.latitude,
           longitude:     p.longitude,
-          photo_url:     p.photo_urls.first
+          photo_url:     p.photo_urls.first,
+          noise:         noise_payload(p.property_transport_snapshot)
         }
       end
 
       def property_detail(p)
-        p.as_json(except: :raw_data)
+        p.as_json(except: :raw_data).merge(
+          noise: noise_payload(p.property_transport_snapshot)
+        )
+      end
+
+      def noise_payload(snapshot)
+        return nil unless snapshot
+
+        {
+          provider: snapshot.provider,
+          status: snapshot.status,
+          fetched_at: snapshot.fetched_at,
+          flight_data: snapshot.flight_data,
+          rail_data: snapshot.rail_data,
+          road_data: snapshot.road_data
+        }
       end
     end
   end

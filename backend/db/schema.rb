@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_135400) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_151000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -72,8 +72,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_135400) do
     t.index ["property_id"], name: "index_property_images_on_property_id"
   end
 
-  add_foreign_key "property_images", "properties"
-
   create_table "property_transport_snapshots", force: :cascade do |t|
     t.bigint "property_id", null: false
     t.string "provider", null: false
@@ -91,5 +89,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_135400) do
     t.index ["status"], name: "index_property_transport_snapshots_on_status"
   end
 
+  add_foreign_key "property_images", "properties"
   add_foreign_key "property_transport_snapshots", "properties"
 end

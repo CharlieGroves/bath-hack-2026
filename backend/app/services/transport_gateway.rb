@@ -129,7 +129,6 @@ class EnglandNoiseSampler
     @origin_easting = origin_easting
     @origin_northing = origin_northing
     @bounds = bounds
-    @coverage_suffix = coverage_suffix
     @base_url = base_url
   end
 

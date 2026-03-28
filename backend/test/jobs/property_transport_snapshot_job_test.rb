@@ -41,8 +41,12 @@ class PropertyTransportSnapshotJobTest < ActiveSupport::TestCase
       road_data: { "covered" => true, "metrics" => { "lden" => 60.7 } }
     )
 
-    TransportGateway.stub(:new, gateway) do
+    TransportGateway.stubs(:new).returns(gateway)
+
+    begin
       PropertyTransportSnapshotJob.perform_now(property.id)
+    ensure
+      TransportGateway.unstub(:new)
     end
 
     snapshot = property.reload.property_transport_snapshot
