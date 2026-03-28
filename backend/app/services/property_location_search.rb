@@ -1,7 +1,7 @@
 class PropertyLocationSearch
   DEFAULT_TRAVEL_TIME = 15.minutes.to_i
   DEFAULT_TRANSPORTATION_TYPE = "driving".freeze
-  ALLOWED_TRANSPORTATION_TYPES = %w[driving walking cycling].freeze
+  ALLOWED_TRANSPORTATION_TYPES = %w[driving walking cycling public_transport].freeze
   MIN_TRAVEL_TIME = 60
   MAX_TRAVEL_TIME = 7_200
 

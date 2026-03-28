@@ -175,19 +175,11 @@ const STATION_MINUTE_OPTIONS = [
   { value: 30, label: '30 min' },
 ]
 
-const TRAVEL_TIME_OPTIONS = [
-  { value: 5, label: '5 min' },
-  { value: 10, label: '10 min' },
-  { value: 15, label: '15 min' },
-  { value: 20, label: '20 min' },
-  { value: 30, label: '30 min' },
-  { value: 45, label: '45 min' },
-]
-
 const TRANSPORTATION_OPTIONS: { value: TransportationType; label: string }[] = [
   { value: 'driving', label: 'Driving' },
   { value: 'walking', label: 'Walking' },
   { value: 'cycling', label: 'Cycling' },
+  { value: 'public_transport', label: 'Public transport' },
 ]
 
 const PROPERTY_TYPES = [
@@ -266,7 +258,7 @@ export default function LayoutSplit({
           <input
             className="l2-sb-text-input"
             type="text"
-            placeholder="King's Cross, SW1, Canary Wharf..."
+            placeholder="King's Cross, SW1A 1AA, Canary Wharf..."
             value={locationSearch.query}
             onChange={e => onLocationQueryChange(e.target.value)}
             onKeyDown={e => {
@@ -283,15 +275,21 @@ export default function LayoutSplit({
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
-            <select
-              className="l2-sb-select"
+            <input
+              className="l2-sb-input"
+              type="number"
+              min={1}
+              max={120}
+              step={1}
+              inputMode="numeric"
+              placeholder="Minutes"
               value={locationSearch.travelTimeMinutes}
-              onChange={e => onTravelTimeMinutesChange(Number(e.target.value))}
-            >
-              {TRAVEL_TIME_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
+              onChange={e => {
+                const nextValue = Number(e.target.value)
+                if (Number.isNaN(nextValue)) return
+                onTravelTimeMinutesChange(Math.min(120, Math.max(1, nextValue)))
+              }}
+            />
           </div>
           <div className="l2-sb-actions">
             <button
@@ -316,7 +314,7 @@ export default function LayoutSplit({
               <div className="l2-sb-search-meta">Bounding box shown on the map</div>
             </div>
           ) : (
-            <p className="l2-sb-hint">Search a place to filter homes by travel time and draw the returned bounding box on the map.</p>
+            <p className="l2-sb-hint">Try a postcode, station, landmark, or neighborhood. Travel time accepts any whole minute from 1 to 120.</p>
           )}
           {locationSearchError && (
             <p className="l2-sb-error">{locationSearchError}</p>

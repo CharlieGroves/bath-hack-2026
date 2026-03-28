@@ -8,7 +8,7 @@ export interface MapBounds {
   ne_lng: number
 }
 
-export type TransportationType = 'driving' | 'walking' | 'cycling'
+export type TransportationType = 'driving' | 'walking' | 'cycling' | 'public_transport'
 
 export interface LocationSearchParams {
   query: string
