@@ -6,7 +6,7 @@ module Api
 
       # GET /api/v1/properties
       def index
-        properties = Property.includes(:property_transport_snapshot).order(created_at: :desc)
+        properties = Property.includes(:property_transport_snapshot, :property_crime_snapshot).order(created_at: :desc)
         properties = properties.where(status: params[:status])               if params[:status].present?
         properties = properties.where(property_type: params[:property_type]) if params[:property_type].present?
         properties = properties.min_price(params[:min_price].to_i)           if params[:min_price].present?
@@ -80,13 +80,15 @@ module Api
           latitude:      p.latitude,
           longitude:     p.longitude,
           photo_url:     p.photo_urls.first,
-          noise:         noise_payload(p.property_transport_snapshot)
+          noise:         noise_payload(p.property_transport_snapshot),
+          crime:         crime_payload(p.property_crime_snapshot)
         }
       end
 
       def property_detail(p)
         p.as_json(except: :raw_data).merge(
-          noise: noise_payload(p.property_transport_snapshot)
+          noise: noise_payload(p.property_transport_snapshot),
+          crime: crime_payload(p.property_crime_snapshot)
         )
       end
 
@@ -100,6 +102,16 @@ module Api
           flight_data: snapshot.flight_data,
           rail_data: snapshot.rail_data,
           road_data: snapshot.road_data
+        }
+      end
+
+      def crime_payload(snapshot)
+        return nil unless snapshot
+
+        {
+          status:             snapshot.status,
+          avg_monthly_crimes: snapshot.avg_monthly_crimes,
+          fetched_at:         snapshot.fetched_at
         }
       end
     end

@@ -17,14 +17,15 @@ function FlameIcon({ size = 24 }: { size?: number }) {
 
 // ─── Filter state ────────────────────────────────────────────────────────────
 export interface Filters {
-  minPrice: number | ''
-  maxPrice: number | ''
-  minBeds:  number
-  maxBeds:  number
-  types:    string[]
+  minPrice:     number | ''
+  maxPrice:     number | ''
+  minBeds:      number
+  maxBeds:      number
+  types:        string[]
+  maxCrimeRate: number | ''
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [] }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxCrimeRate: '' }
 
 type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
 
@@ -42,6 +43,10 @@ export default function App() {
       if (filters.minBeds > 0 && (p.bedrooms ?? 0) < filters.minBeds) return false
       if (filters.maxBeds > 0 && (p.bedrooms ?? 0) > filters.maxBeds) return false
       if (filters.types.length && !filters.types.includes(p.property_type)) return false
+      if (filters.maxCrimeRate !== '') {
+        const avg = p.crime?.avg_monthly_crimes
+        if (avg == null || avg > (filters.maxCrimeRate as number)) return false
+      }
       return true
     })
     return [...result].sort((a: Property, b: Property) => {

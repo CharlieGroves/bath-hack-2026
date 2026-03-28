@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_170000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -74,6 +74,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_170000) do
     t.index ["tenure"], name: "index_properties_on_tenure"
   end
 
+  create_table "property_crime_snapshots", force: :cascade do |t|
+    t.bigint "property_id", null: false
+    t.decimal "latitude", precision: 10, scale: 7
+    t.decimal "longitude", precision: 10, scale: 7
+    t.float "avg_monthly_crimes"
+    t.string "status", default: "pending", null: false
+    t.datetime "fetched_at"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["property_id"], name: "index_property_crime_snapshots_on_property_id", unique: true
+  end
+
   create_table "property_images", force: :cascade do |t|
     t.bigint "property_id", null: false
     t.string "url", null: false
@@ -101,6 +114,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_170000) do
   end
 
   add_foreign_key "properties", "area_price_growths"
+  add_foreign_key "property_crime_snapshots", "properties"
   add_foreign_key "property_images", "properties"
   add_foreign_key "property_transport_snapshots", "properties"
 end
