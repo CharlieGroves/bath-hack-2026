@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap, useMapEvents }
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.heat'
 import L from 'leaflet'
+import LocationAutocompleteInput from '../components/LocationAutocompleteInput'
 import type { BoundingBox, IsochronePoint, Property } from '../types/property'
 import type { Filters } from '../App'
 import type { ActiveLocationSearch, LocationSearchParams, MapBounds, TransportationType } from '../hooks/useProperties'
@@ -291,15 +292,12 @@ export default function LayoutSplit({
 
         <div className="l2-sb-section">
           <span className="l2-sb-label">Distance from place</span>
-          <input
-            className="l2-sb-text-input"
-            type="text"
-            placeholder="King's Cross, SW1A 1AA, Canary Wharf..."
+          <LocationAutocompleteInput
             value={locationSearch.query}
-            onChange={e => onLocationQueryChange(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') onApplyLocationSearch()
-            }}
+            onChange={onLocationQueryChange}
+            onEnter={onApplyLocationSearch}
+            inputClassName="l2-sb-text-input"
+            placeholder="King's Cross, SW1A 1AA, Canary Wharf..."
           />
           <div className="l2-sb-search-grid">
             <select

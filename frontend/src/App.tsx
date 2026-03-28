@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
 import type { Property } from './types/property'
 import {
@@ -8,6 +8,7 @@ import {
   type TransportationType,
 } from './hooks/useProperties'
 import LayoutSplit from './layouts/LayoutSplit'
+import LocationAutocompleteInput from './components/LocationAutocompleteInput'
 import PropertyPage from './components/PropertyPage'
 import './App.css'
 
@@ -22,8 +23,15 @@ function FlameIcon({ size = 24 }: { size?: number }) {
   )
 }
 
-function AppHeader() {
+interface AppHeaderProps {
+  locationSearch: LocationSearchParams
+  onLocationQueryChange: (value: string) => void
+  onApplyLocationSearch: (queryOverride?: string) => boolean
+}
+
+function AppHeader({ locationSearch, onLocationQueryChange, onApplyLocationSearch }: AppHeaderProps) {
   const navigate = useNavigate()
+
   return (
     <header className="header">
       <div className="header-brand" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
@@ -35,7 +43,19 @@ function AppHeader() {
           <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5"/>
           <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
         </svg>
-        <input className="header-search" type="text" placeholder="Where would you like to live?" />
+        <LocationAutocompleteInput
+          value={locationSearch.query}
+          onChange={onLocationQueryChange}
+          onEnter={() => {
+            if (onApplyLocationSearch()) navigate('/')
+          }}
+          onSelect={suggestion => {
+            if (onApplyLocationSearch(suggestion.label)) navigate('/')
+          }}
+          inputClassName="header-search"
+          placeholder="Where would you like to live?"
+          theme="dark"
+        />
       </div>
     </header>
   )
@@ -64,14 +84,26 @@ const DEFAULT_LOCATION_SEARCH: LocationSearchParams = {
 
 type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
 
+interface SearchPageProps {
+  locationSearchDraft: LocationSearchParams
+  appliedLocationSearch: LocationSearchParams | null
+  onLocationSearchFieldChange: <K extends keyof LocationSearchParams>(key: K, value: LocationSearchParams[K]) => void
+  onApplyLocationSearch: (queryOverride?: string) => boolean
+  onClearLocationSearch: () => void
+}
+
 // ─── Search page ─────────────────────────────────────────────────────────────
-function SearchPage() {
+function SearchPage({
+  locationSearchDraft,
+  appliedLocationSearch,
+  onLocationSearchFieldChange,
+  onApplyLocationSearch,
+  onClearLocationSearch,
+}: SearchPageProps) {
   const navigate = useNavigate()
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
   const [filters, setFilters] = useState<Filters>(INIT)
   const [sort, setSort]       = useState<SortKey>('newest')
-  const [locationSearchDraft, setLocationSearchDraft] = useState<LocationSearchParams>(DEFAULT_LOCATION_SEARCH)
-  const [appliedLocationSearch, setAppliedLocationSearch] = useState<LocationSearchParams | null>(null)
   const { properties, total, loading, error, activeLocationSearch } = useProperties(mapBounds, appliedLocationSearch)
   const locationSearchError = appliedLocationSearch ? error : null
   const viewportError = appliedLocationSearch ? null : error
@@ -124,25 +156,6 @@ function SearchPage() {
       types: f.types.includes(t) ? f.types.filter(x => x !== t) : [...f.types, t],
     }))
   }
-  function setLocationSearchField<K extends keyof LocationSearchParams>(key: K, value: LocationSearchParams[K]) {
-    setLocationSearchDraft(current => ({ ...current, [key]: value }))
-  }
-  function applyLocationSearch() {
-    const query = locationSearchDraft.query.trim()
-    if (!query) {
-      setAppliedLocationSearch(null)
-      return
-    }
-
-    setAppliedLocationSearch({
-      ...locationSearchDraft,
-      query,
-    })
-  }
-  function clearLocationSearch() {
-    setAppliedLocationSearch(null)
-    setLocationSearchDraft(current => ({ ...current, query: '' }))
-  }
 
   return (
     <div className="shell" style={{ overflow: 'hidden' }}>
@@ -164,11 +177,11 @@ function SearchPage() {
         locationSearchLoading={locationSearchLoading}
         locationSearch={locationSearchDraft}
         activeLocationSearch={activeLocationSearch}
-        onLocationQueryChange={value => setLocationSearchField('query', value)}
-        onTransportationTypeChange={value => setLocationSearchField('transportationType', value as TransportationType)}
-        onTravelTimeMinutesChange={value => setLocationSearchField('travelTimeMinutes', value)}
-        onApplyLocationSearch={applyLocationSearch}
-        onClearLocationSearch={clearLocationSearch}
+        onLocationQueryChange={value => onLocationSearchFieldChange('query', value)}
+        onTransportationTypeChange={value => onLocationSearchFieldChange('transportationType', value as TransportationType)}
+        onTravelTimeMinutesChange={value => onLocationSearchFieldChange('travelTimeMinutes', value)}
+        onApplyLocationSearch={onApplyLocationSearch}
+        onClearLocationSearch={onClearLocationSearch}
       />
     </div>
   )
@@ -188,11 +201,53 @@ function PropertyDetailPage() {
 
 // ─── Main App ────────────────────────────────────────────────────────────────
 export default function App() {
+  const [locationSearchDraft, setLocationSearchDraft] = useState<LocationSearchParams>(DEFAULT_LOCATION_SEARCH)
+  const [appliedLocationSearch, setAppliedLocationSearch] = useState<LocationSearchParams | null>(null)
+
+  function setLocationSearchField<K extends keyof LocationSearchParams>(key: K, value: LocationSearchParams[K]) {
+    setLocationSearchDraft(current => ({ ...current, [key]: value }))
+  }
+
+  function applyLocationSearch(queryOverride?: string) {
+    const query = (queryOverride ?? locationSearchDraft.query).trim()
+    if (!query) {
+      setAppliedLocationSearch(null)
+      return false
+    }
+
+    setLocationSearchDraft(current => ({ ...current, query }))
+    setAppliedLocationSearch({
+      ...locationSearchDraft,
+      query,
+    })
+    return true
+  }
+
+  function clearLocationSearch() {
+    setAppliedLocationSearch(null)
+    setLocationSearchDraft(current => ({ ...current, query: '' }))
+  }
+
   return (
     <div className="app">
-      <AppHeader />
+      <AppHeader
+        locationSearch={locationSearchDraft}
+        onLocationQueryChange={value => setLocationSearchField('query', value)}
+        onApplyLocationSearch={applyLocationSearch}
+      />
       <Routes>
-        <Route path="/" element={<SearchPage />} />
+        <Route
+          path="/"
+          element={
+            <SearchPage
+              locationSearchDraft={locationSearchDraft}
+              appliedLocationSearch={appliedLocationSearch}
+              onLocationSearchFieldChange={setLocationSearchField}
+              onApplyLocationSearch={applyLocationSearch}
+              onClearLocationSearch={clearLocationSearch}
+            />
+          }
+        />
         <Route path="/properties/:id" element={<PropertyDetailPage />} />
       </Routes>
     </div>

@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import LocationAutocompleteInput from './components/LocationAutocompleteInput'
 import type { UserSettings } from './hooks/useSettings'
 import './settings.css'
 
@@ -225,24 +226,22 @@ export default function SettingsPage({ settings, updateSettings, toggleItem, res
 
             <div className="sp-field-wrap" style={{ marginBottom: 20 }}>
               <label className="sp-label">Preferred areas or postcodes</label>
-              <input
-                className="sp-text-input"
-                type="text"
-                placeholder="e.g. Clifton, BA1 5, Larkhall"
+              <LocationAutocompleteInput
                 value={settings.preferredAreas}
-                onChange={e => updateSettings({ preferredAreas: e.target.value })}
+                onChange={value => updateSettings({ preferredAreas: value })}
+                inputClassName="sp-text-input"
+                placeholder="e.g. Clifton, BA1 5, Larkhall"
               />
               <p className="sp-hint">Separate multiple areas with commas</p>
             </div>
 
             <div className="sp-field-wrap">
               <label className="sp-label">Workplace address or postcode</label>
-              <input
-                className="sp-text-input"
-                type="text"
-                placeholder="e.g. Bath Spa Station, BS1 4DJ"
+              <LocationAutocompleteInput
                 value={settings.workplace}
-                onChange={e => updateSettings({ workplace: e.target.value })}
+                onChange={value => updateSettings({ workplace: value })}
+                inputClassName="sp-text-input"
+                placeholder="e.g. Bath Spa Station, BS1 4DJ"
               />
               <p className="sp-hint">Used to estimate commute times on property listings</p>
             </div>
