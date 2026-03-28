@@ -1,0 +1,75 @@
+<% content_for :title, "Properties" %>
+
+<div class="w-full">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold">Properties <span class="text-gray-400 text-lg font-normal">(<%= @properties.total_count %>)</span></h1>
+    <%= link_to "Add property", new_property_path, class: "bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" %>
+  </div>
+
+  <%# Filters %>
+  <%= form_with url: properties_path, method: :get, class: "flex flex-wrap gap-3 mb-6 bg-gray-50 p-4 rounded-lg" do |f| %>
+    <%= f.select :status, [["Any status", ""]] + Property::STATUSES.map { |s| [s.humanize, s] },
+        { selected: params[:status] }, class: "border rounded px-3 py-1.5 text-sm" %>
+    <%= f.select :property_type, [["Any type", ""]] + Property::PROPERTY_TYPES.map { |t| [t.humanize, t] },
+        { selected: params[:property_type] }, class: "border rounded px-3 py-1.5 text-sm" %>
+    <%= f.number_field :min_price, placeholder: "Min price (p)", value: params[:min_price],
+        class: "border rounded px-3 py-1.5 text-sm w-36" %>
+    <%= f.number_field :max_price, placeholder: "Max price (p)", value: params[:max_price],
+        class: "border rounded px-3 py-1.5 text-sm w-36" %>
+    <%= f.number_field :min_beds, placeholder: "Min beds", value: params[:min_beds],
+        class: "border rounded px-3 py-1.5 text-sm w-24" %>
+    <%= f.submit "Filter", class: "bg-gray-200 px-4 py-1.5 rounded text-sm hover:bg-gray-300 cursor-pointer" %>
+    <%= link_to "Clear", properties_path, class: "text-sm text-gray-500 hover:underline self-center" %>
+  <% end %>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm border-collapse">
+      <thead>
+        <tr class="bg-gray-100 text-left">
+          <th class="px-3 py-2 font-semibold">Address</th>
+          <th class="px-3 py-2 font-semibold">Type</th>
+          <th class="px-3 py-2 font-semibold">Price</th>
+          <th class="px-3 py-2 font-semibold">Beds</th>
+          <th class="px-3 py-2 font-semibold">Status</th>
+          <th class="px-3 py-2 font-semibold">Listed</th>
+          <th class="px-3 py-2"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @properties.each do |property| %>
+          <tr class="border-t hover:bg-gray-50">
+            <td class="px-3 py-2">
+              <%= link_to property.address_line_1 || property.rightmove_id, property, class: "text-blue-600 hover:underline font-medium" %>
+              <div class="text-xs text-gray-400"><%= property.postcode %></div>
+            </td>
+            <td class="px-3 py-2 capitalize"><%= property.property_type&.humanize %></td>
+            <td class="px-3 py-2 font-medium"><%= property.formatted_price %></td>
+            <td class="px-3 py-2"><%= property.bedrooms %></td>
+            <td class="px-3 py-2">
+              <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                <%= property.status == 'active' ? 'bg-green-100 text-green-700' :
+                    property.status == 'under_offer' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-gray-100 text-gray-600' %>">
+                <%= property.status&.humanize %>
+              </span>
+            </td>
+            <td class="px-3 py-2 text-gray-500"><%= property.listed_at&.strftime("%d %b %Y") %></td>
+            <td class="px-3 py-2 text-right space-x-2">
+              <%= link_to "Edit", edit_property_path(property), class: "text-gray-500 hover:underline" %>
+              <%= button_to "Delete", property_path(property), method: :delete,
+                  data: { turbo_confirm: "Delete this property?" },
+                  class: "text-red-500 hover:underline bg-transparent border-0 cursor-pointer p-0" %>
+            </td>
+          </tr>
+        <% end %>
+        <% if @properties.empty? %>
+          <tr><td colspan="7" class="px-3 py-8 text-center text-gray-400">No properties found.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-4">
+    <%= paginate @properties %>
+  </div>
+</div>

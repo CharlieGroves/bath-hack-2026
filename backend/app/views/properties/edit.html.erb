@@ -1,0 +1,9 @@
+<% content_for :title, "Edit – #{@property.address_line_1}" %>
+
+<div class="w-full max-w-3xl">
+  <div class="flex items-center gap-4 mb-6">
+    <%= link_to "← #{@property.address_line_1 || @property.rightmove_id}", @property, class: "text-gray-500 hover:underline text-sm" %>
+    <h1 class="text-2xl font-bold">Edit property</h1>
+  </div>
+  <%= render "form", property: @property %>
+</div>

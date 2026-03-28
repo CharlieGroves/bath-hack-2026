@@ -1,0 +1,53 @@
+active_terraced:
+  rightmove_id: "111111111"
+  slug: "111111111"
+  listing_url: "https://www.rightmove.co.uk/properties/111111111"
+  title: "3 bedroom terraced house for sale"
+  description: "A lovely terraced house."
+  key_features: '["Garden","Garage"]'
+  photo_urls: '["https://example.com/photo1.jpg","https://example.com/photo2.jpg"]'
+  price_pence: 35000000
+  property_type: terraced
+  bedrooms: 3
+  bathrooms: 1
+  size_sqft: 900
+  tenure: freehold
+  epc_rating: C
+  council_tax_band: C
+  address_line_1: "1 High Street, Bath"
+  town: Bath
+  postcode: BA1
+  latitude: 51.3837
+  longitude: -2.3644
+  agent_name: "Bath Properties"
+  agent_phone: "01225 000000"
+  has_floor_plan: true
+  has_virtual_tour: false
+  status: active
+  listed_at: "2026-01-15 00:00:00"
+  last_seen_at: "2026-03-28 00:00:00"
+
+under_offer_flat:
+  rightmove_id: "222222222"
+  slug: "222222222"
+  listing_url: "https://www.rightmove.co.uk/properties/222222222"
+  title: "2 bedroom flat for sale"
+  description: "A modern flat."
+  key_features: []
+  photo_urls: []
+  price_pence: 25000000
+  property_type: flat
+  bedrooms: 2
+  bathrooms: 1
+  tenure: leasehold
+  lease_years_remaining: 125
+  address_line_1: "Flat 4, Queen Square, Bath"
+  town: Bath
+  postcode: BA1
+  latitude: 51.3800
+  longitude: -2.3600
+  has_floor_plan: false
+  has_virtual_tour: false
+  status: under_offer
+  listed_at: "2026-02-01 00:00:00"
+  last_seen_at: "2026-03-28 00:00:00"
