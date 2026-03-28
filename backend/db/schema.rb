@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_220001) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -37,6 +37,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_220001) do
     t.index ["area_slug"], name: "index_area_price_growths_on_area_slug", unique: true
   end
 
+  create_table "estate_agents", force: :cascade do |t|
+    t.string "lookup_key", null: false
+    t.string "google_place_id", null: false
+    t.string "display_name"
+    t.decimal "rating", precision: 2, scale: 1
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["google_place_id"], name: "index_estate_agents_on_google_place_id", unique: true
+    t.index ["lookup_key"], name: "index_estate_agents_on_lookup_key", unique: true
+  end
+  
   create_table "flood_risk_datapoints", force: :cascade do |t|
     t.decimal "latitude", precision: 10, scale: 7, null: false
     t.decimal "longitude", precision: 10, scale: 7, null: false
@@ -88,9 +99,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_220001) do
     t.bigint "area_price_growth_id"
     t.bigint "air_quality_station_id"
     t.bigint "flood_risk_datapoint_id"
+    t.bigint "estate_agent_id"
     t.index ["air_quality_station_id"], name: "index_properties_on_air_quality_station_id"
     t.index ["area_price_growth_id"], name: "index_properties_on_area_price_growth_id"
     t.index ["bedrooms"], name: "index_properties_on_bedrooms"
+    t.index ["estate_agent_id"], name: "index_properties_on_estate_agent_id"
     t.index ["flood_risk_datapoint_id"], name: "index_properties_on_flood_risk_datapoint_id"
     t.index ["latitude", "longitude"], name: "index_properties_on_latitude_and_longitude"
     t.index ["listed_at"], name: "index_properties_on_listed_at"
@@ -155,6 +168,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_220001) do
 
   add_foreign_key "properties", "air_quality_stations"
   add_foreign_key "properties", "area_price_growths"
+  add_foreign_key "properties", "estate_agents"
   add_foreign_key "properties", "flood_risk_datapoints"
   add_foreign_key "property_crime_snapshots", "properties"
   add_foreign_key "property_images", "properties"
