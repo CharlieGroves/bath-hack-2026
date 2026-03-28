@@ -55,7 +55,9 @@ module Api
       private
 
       def set_property
-        @property = Property.friendly.find(params[:id])
+        @property = Property
+          .includes(:property_nearest_stations, :area_price_growth, :property_transport_snapshot)
+          .friendly.find(params[:id])
       end
 
       def property_params
@@ -98,10 +100,35 @@ module Api
       end
 
       def property_detail(p)
-        p.as_json(except: :raw_data).merge(
+        {
+          id: p.id, rightmove_id: p.rightmove_id, slug: p.slug, listing_url: p.listing_url,
+          title: p.title, description: p.description,
+          address_line_1: p.address_line_1, town: p.town, postcode: p.postcode,
+          price_pence: p.price_pence, price_qualifier: p.price_qualifier,
+          price_per_sqft_pence: p.price_per_sqft_pence,
+          property_type: p.property_type, bedrooms: p.bedrooms, bathrooms: p.bathrooms,
+          size_sqft: p.size_sqft, tenure: p.tenure, lease_years_remaining: p.lease_years_remaining,
+          epc_rating: p.epc_rating, council_tax_band: p.council_tax_band,
+          service_charge_annual_pence: p.service_charge_annual_pence,
+          photo_urls: p.photo_urls, key_features: p.key_features,
+          latitude: p.latitude, longitude: p.longitude,
+          agent_name: p.agent_name, agent_phone: p.agent_phone,
+          status: p.status, listed_at: p.listed_at,
           noise: noise_payload(p.property_transport_snapshot),
-          crime: crime_payload(p.property_crime_snapshot)
-        )
+          nearest_stations: p.property_nearest_stations
+            .sort_by(&:distance_miles)
+            .map { |s|
+              { name: s.name, distance_miles: s.distance_miles,
+                walking_minutes: s.walking_minutes, transport_type: s.transport_type }
+            },
+          area_price_growth: area_price_growth_payload(p.area_price_growth),
+        }
+      end
+
+      def area_price_growth_payload(apg)
+        return nil unless apg
+        { area_name: apg.area_name, area_slug: apg.area_slug,
+          yearly_growth_data: apg.yearly_growth_data }
       end
 
       def noise_payload(snapshot)

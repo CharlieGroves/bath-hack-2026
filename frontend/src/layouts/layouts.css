@@ -537,6 +537,12 @@
   font-size: 0.72rem;
   color: var(--t3);
 }
+.map-popup-cta {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ember);
+}
 
 .l2-map {
   flex: 1;

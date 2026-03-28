@@ -87,6 +87,7 @@ interface Props {
   setFilters: (f: Filters) => void
   setSort: (s: string) => void
   onBoundsChange: (b: MapBounds) => void
+  onSelectProperty: (id: number) => void
 }
 
 const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '' }
@@ -110,11 +111,11 @@ const PROPERTY_TYPES = [
 ]
 
 export default function LayoutSplit({
-  filtered, filters, sort, setF, toggleType, setFilters, setSort, properties, total, onBoundsChange,
+  filtered, filters, sort, setF, toggleType, setFilters, setSort, properties, total, onBoundsChange, onSelectProperty,
 }: Props) {
   const [hoveredId, setHoveredId]     = useState<number | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const rowRefs = useRef<Record<number, HTMLAnchorElement | null>>({})
+  const rowRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
   const crimeRange = useMemo(() => {
     const rates = properties
@@ -277,15 +278,14 @@ export default function LayoutSplit({
 
         <div className="l2-list">
           {filtered.map(p => (
-            <a
+            <div
               key={p.id}
               ref={el => { rowRefs.current[p.id] = el }}
-              href={`https://www.rightmove.co.uk/properties/${p.rightmove_id}`}
-              target="_blank"
-              rel="noreferrer"
               className={`l2-row ${hoveredId === p.id ? 'l2-active' : ''}`}
               onMouseEnter={() => setHoveredId(p.id)}
               onMouseLeave={() => setHoveredId(null)}
+              onClick={() => onSelectProperty(p.id)}
+              style={{ cursor: 'pointer' }}
             >
               <div className="l2-thumb">
                 {p.photo_url
@@ -309,7 +309,7 @@ export default function LayoutSplit({
               {p.property_type && (
                 <span className="l2-badge">{p.property_type === 'semi_detached' ? 'Semi' : fmtLabel(p.property_type)}</span>
               )}
-            </a>
+            </div>
           ))}
           {filtered.length === 0 && (
             <div className="l2-empty">
@@ -346,7 +346,7 @@ export default function LayoutSplit({
               }}
             >
               <Popup>
-                <div className="map-popup">
+                <div className="map-popup" onClick={() => onSelectProperty(p.id)} style={{ cursor: 'pointer' }}>
                   <div className="map-popup-price">{fmtPrice(p.price)}</div>
                   <div className="map-popup-title">{p.title || p.address}</div>
                   {(p.bedrooms != null || p.bathrooms != null) && (
@@ -356,6 +356,7 @@ export default function LayoutSplit({
                       {p.bathrooms != null && `${p.bathrooms} bath`}
                     </div>
                   )}
+                  <div className="map-popup-cta">View property</div>
                 </div>
               </Popup>
             </Marker>

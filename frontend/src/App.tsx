@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react'
+import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
 import type { Property } from './types/property'
 import { useProperties, type MapBounds } from './hooks/useProperties'
 import LayoutSplit from './layouts/LayoutSplit'
+import PropertyPage from './components/PropertyPage'
 import './App.css'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -12,6 +14,25 @@ function FlameIcon({ size = 24 }: { size?: number }) {
       <path d="M10 9C10 9 7 13.5 7 16.5a3 3 0 006 0C13 13.5 10 9 10 9z" fill="#F25016"/>
       <ellipse cx="10" cy="19" rx="2" ry="1.4" fill="#DC8236"/>
     </svg>
+  )
+}
+
+function AppHeader() {
+  const navigate = useNavigate()
+  return (
+    <header className="header">
+      <div className="header-brand" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
+        <FlameIcon size={22} />
+        <span className="brand-name">Hearthstone</span>
+      </div>
+      <div className="header-search-wrap">
+        <svg className="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <input className="header-search" type="text" placeholder="Where would you like to live?" />
+      </div>
+    </header>
   )
 }
 
@@ -30,8 +51,9 @@ const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, type
 
 type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
 
-// ─── Main App ────────────────────────────────────────────────────────────────
-export default function App() {
+// ─── Search page ─────────────────────────────────────────────────────────────
+function SearchPage() {
+  const navigate = useNavigate()
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
   const { properties, total, loading, error } = useProperties(mapBounds)
 
@@ -85,36 +107,45 @@ export default function App() {
   if (error) return <div className="splash"><p>Error: {error}</p></div>
 
   return (
+    <div className="shell" style={{ overflow: 'hidden' }}>
+      <LayoutSplit
+        properties={properties}
+        total={total}
+        filtered={filtered}
+        filters={filters}
+        sort={sort}
+        setF={setF}
+        toggleType={toggleType}
+        setFilters={setFilters}
+        setSort={s => setSort(s as SortKey)}
+        onBoundsChange={setMapBounds}
+        onSelectProperty={id => navigate(`/properties/${id}`)}
+      />
+    </div>
+  )
+}
+
+// ─── Property detail page ─────────────────────────────────────────────────────
+function PropertyDetailPage() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  return (
+    <PropertyPage
+      propertyId={Number(id)}
+      onBack={() => navigate('/')}
+    />
+  )
+}
+
+// ─── Main App ────────────────────────────────────────────────────────────────
+export default function App() {
+  return (
     <div className="app">
-      <header className="header">
-        <div className="header-brand">
-          <FlameIcon size={22} />
-          <span className="brand-name">Hearthstone</span>
-        </div>
-
-        <div className="header-search-wrap">
-          <svg className="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none">
-            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          <input className="header-search" type="text" placeholder="Where would you like to live?" />
-        </div>
-      </header>
-
-      <div className="shell" style={{ overflow: 'hidden' }}>
-        <LayoutSplit
-          properties={properties}
-          total={total}
-          filtered={filtered}
-          filters={filters}
-          sort={sort}
-          setF={setF}
-          toggleType={toggleType}
-          setFilters={setFilters}
-          setSort={s => setSort(s as SortKey)}
-          onBoundsChange={setMapBounds}
-        />
-      </div>
+      <AppHeader />
+      <Routes>
+        <Route path="/" element={<SearchPage />} />
+        <Route path="/properties/:id" element={<PropertyDetailPage />} />
+      </Routes>
     </div>
   )
 }
