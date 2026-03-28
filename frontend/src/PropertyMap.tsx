@@ -32,7 +32,7 @@ function formatNoiseMetric(section: NoiseSection | undefined, metric: string) {
 
 export default function PropertyMap({
   properties,
-  center = [51.38, -2.36], // Bath
+  center = [51.5074, -0.1278], // London
   zoom = 13,
 }: PropertyMapProps) {
   return (

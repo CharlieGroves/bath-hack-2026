@@ -328,7 +328,7 @@ export default function LayoutSplit({
 
       {/* Map */}
       <div className="l2-map">
-        <MapContainer center={[51.38, -2.36]} zoom={11} style={{ height: '100%', width: '100%' }}>
+        <MapContainer center={[51.5074, -0.1278]} zoom={11} style={{ height: '100%', width: '100%' }}>
           <MapResizer />
           <MapBoundsTracker onChange={onBoundsChange} />
           <TileLayer
