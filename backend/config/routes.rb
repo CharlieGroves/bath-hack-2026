@@ -21,6 +21,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       resources :properties do
         collection do
+          get :search
           get :heatmap
         end
       end

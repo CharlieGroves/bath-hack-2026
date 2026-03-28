@@ -9,9 +9,9 @@ class Property < ApplicationRecord
   belongs_to :air_quality_station, optional: true
   has_many :property_nearest_stations, dependent: :destroy
 
-  after_commit :enqueue_transport_refresh,          on: %i[create update], if: :transport_refresh_needed?
-  after_commit :enqueue_nearest_stations_refresh,   on: %i[create update], if: :nearest_stations_refresh_needed?
-  after_commit :enqueue_crime_refresh,              on: %i[create update], if: :crime_refresh_needed?
+  after_commit :enqueue_transport_refresh,        on: %i[create update], if: :transport_refresh_needed?
+  after_commit :enqueue_nearest_stations_refresh, on: %i[create update], if: :nearest_stations_refresh_needed?
+  after_commit :enqueue_crime_refresh,            on: %i[create update], if: :crime_refresh_needed?
 
   STATUSES       = %w[active under_offer sold let].freeze
   PROPERTY_TYPES = %w[flat terraced semi_detached detached bungalow land other].freeze
@@ -36,12 +36,18 @@ class Property < ApplicationRecord
   scope :min_sqft,     ->(n) { where("size_sqft >= ?", n) }
   scope :of_type,      ->(t) { where(property_type: Array(t)) }
   scope :of_tenure,    ->(t) { where(tenure: Array(t)) }
+  scope :with_coordinates, -> { where.not(latitude: nil, longitude: nil) }
+  scope :within_bounding_box, lambda { |bounding_box|
+    where(latitude: bounding_box.fetch(:south)..bounding_box.fetch(:north))
+      .where(longitude: bounding_box.fetch(:west)..bounding_box.fetch(:east))
+  }
   scope :within_station_miles,   ->(m) { joins(:property_nearest_stations).where("property_nearest_stations.distance_miles <= ?", m).distinct }
   scope :within_station_minutes, ->(t) { joins(:property_nearest_stations).where("property_nearest_stations.walking_minutes <= ?", t).distinct }
 
   # Returns a human-readable price string, e.g. "£450,000"
   def formatted_price
     return nil unless price_pence
+
     "£#{ActiveSupport::NumberHelper.number_to_delimited(price_pence / 100)}"
   end
 

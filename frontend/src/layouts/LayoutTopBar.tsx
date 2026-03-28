@@ -21,7 +21,17 @@ interface Props {
   setSort: (s: string) => void
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', maxBeds: 0, types: [] }
+const INIT: Filters = {
+  minPrice: '',
+  maxPrice: '',
+  minBeds: 0,
+  maxBeds: 0,
+  types: [],
+  maxStationMinutes: 0,
+  maxCrimeRate: '',
+  minPricePerSqft: '',
+  maxPricePerSqft: '',
+}
 const TYPES = ['flat', 'terraced', 'semi_detached', 'detached', 'bungalow']
 
 export default function LayoutTopBar({ filtered, filters, sort, setF, toggleType, setFilters, setSort, properties }: Props) {

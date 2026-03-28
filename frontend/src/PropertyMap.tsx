@@ -8,7 +8,9 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 
-delete (L.Icon.Default.prototype as any)._getIconUrl
+type LeafletDefaultIconPrototype = { _getIconUrl?: string }
+
+delete (L.Icon.Default.prototype as LeafletDefaultIconPrototype)._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
   iconUrl: markerIcon,
@@ -32,7 +34,7 @@ function formatNoiseMetric(section: NoiseSection | undefined, metric: string) {
 
 export default function PropertyMap({
   properties,
-  center = [51.38, -2.36], // Bath
+  center = [51.5074, -0.1278], // London
   zoom = 13,
 }: PropertyMapProps) {
   return (

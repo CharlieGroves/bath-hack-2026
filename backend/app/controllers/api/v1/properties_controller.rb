@@ -6,27 +6,36 @@ module Api
 
       # GET /api/v1/properties
       def index
-        properties = Property.includes(:property_transport_snapshot, :property_crime_snapshot, :property_nearest_stations).order(created_at: :desc)
-        properties = properties.where(status: params[:status])               if params[:status].present?
-        properties = properties.where(property_type: params[:property_type]) if params[:property_type].present?
-        properties = properties.min_price(params[:min_price].to_i)           if params[:min_price].present?
-        properties = properties.max_price(params[:max_price].to_i)           if params[:max_price].present?
-        properties = properties.min_beds(params[:min_beds].to_i)             if params[:min_beds].present?
-        properties = properties.max_beds(params[:max_beds].to_i)             if params[:max_beds].present?
+        render json: collection_payload(filtered_properties, limit: 500)
+      end
 
-        if params[:sw_lat].present? && params[:sw_lng].present? &&
-           params[:ne_lat].present? && params[:ne_lng].present?
-          properties = properties.where(
-            latitude:  params[:sw_lat].to_f..params[:ne_lat].to_f,
-            longitude: params[:sw_lng].to_f..params[:ne_lng].to_f
-          )
-        end
+      # GET /api/v1/properties/search
+      def search
+        result = PropertyLocationSearch.new(scope: filtered_properties).call(
+          query: params[:query],
+          transportation_type: params[:transportation_type],
+          travel_time: travel_time_seconds
+        )
 
-        total = properties.count
-        render json: {
-          properties: properties.limit(500).map { |p| property_summary(p) },
-          total: total
-        }
+        render json: collection_payload(result.fetch(:properties)).merge(
+          query: result.fetch(:query),
+          location: result.fetch(:location),
+          transportation_type: result.fetch(:transportation_type),
+          travel_time_seconds: result.fetch(:travel_time_seconds),
+          bounding_box: result.fetch(:bounding_box),
+          isochrone_shells: result.fetch(:isochrone_shells)
+        )
+      rescue PropertyLocationSearch::InvalidQuery,
+             PropertyLocationSearch::InvalidTransportationType,
+             PropertyLocationSearch::InvalidTravelTime => e
+        render json: { error: e.message }, status: :unprocessable_entity
+      rescue NominatimGeocoder::LocationNotFound => e
+        render json: { error: e.message }, status: :not_found
+      rescue NominatimGeocoder::RequestError,
+             TravelTimeGateway::RequestError => e
+        render json: { error: e.message }, status: :bad_gateway
+      rescue TravelTimeGateway::ConfigError => e
+        render json: { error: e.message }, status: :service_unavailable
       end
 
       # GET /api/v1/properties/heatmap
@@ -84,60 +93,118 @@ module Api
         )
       end
 
-      def property_summary(p)
+      def base_properties
+        Property.includes(:property_transport_snapshot, :property_crime_snapshot, :property_nearest_stations)
+          .order(created_at: :desc)
+      end
+
+      def filtered_properties
+        properties = base_properties
+        properties = properties.where(status: params[:status])               if params[:status].present?
+        properties = properties.where(property_type: params[:property_type]) if params[:property_type].present?
+        properties = properties.min_price(params[:min_price].to_i)           if params[:min_price].present?
+        properties = properties.max_price(params[:max_price].to_i)           if params[:max_price].present?
+        properties = properties.min_beds(params[:min_beds].to_i)             if params[:min_beds].present?
+        properties = properties.max_beds(params[:max_beds].to_i)             if params[:max_beds].present?
+
+        if params[:sw_lat].present? && params[:sw_lng].present? &&
+           params[:ne_lat].present? && params[:ne_lng].present?
+          properties = properties.where(
+            latitude: params[:sw_lat].to_f..params[:ne_lat].to_f,
+            longitude: params[:sw_lng].to_f..params[:ne_lng].to_f
+          )
+        end
+
+        properties
+      end
+
+      def collection_payload(properties, limit: nil)
         {
-          id:            p.id,
-          rightmove_id:  p.rightmove_id,
-          title:         p.title,
-          address:       p.address_line_1,
-          price:              p.price_pence,
-          price_per_sqft:     p.price_per_sqft_pence,
-          bedrooms:      p.bedrooms,
-          bathrooms:     p.bathrooms,
-          property_type: p.property_type,
-          status:        p.status,
-          listed_at:     p.listed_at,
-          latitude:      p.latitude,
-          longitude:     p.longitude,
-          photo_url:        p.photo_urls.first,
-          noise:            noise_payload(p.property_transport_snapshot),
-          crime:            crime_payload(p.property_crime_snapshot),
-          nearest_stations: p.property_nearest_stations.sort_by(&:distance_miles).map { |s|
-            { name: s.name, distance_miles: s.distance_miles, walking_minutes: s.walking_minutes, transport_type: s.transport_type }
+          properties: limited_collection(properties, limit).map { |property| property_summary(property) },
+          total: properties.count
+        }
+      end
+
+      def limited_collection(properties, limit)
+        return properties unless limit
+        return properties.limit(limit) if properties.respond_to?(:limit)
+
+        Array(properties).first(limit)
+      end
+
+      def travel_time_seconds
+        return PropertyLocationSearch::DEFAULT_TRAVEL_TIME if params[:travel_time_minutes].blank?
+
+        params[:travel_time_minutes].to_i * 60
+      end
+
+      def property_summary(property)
+        {
+          id:               property.id,
+          rightmove_id:     property.rightmove_id,
+          title:            property.title,
+          address:          property.address_line_1,
+          price:            property.price_pence,
+          price_per_sqft:   property.price_per_sqft_pence,
+          bedrooms:         property.bedrooms,
+          bathrooms:        property.bathrooms,
+          property_type:    property.property_type,
+          status:           property.status,
+          listed_at:        property.listed_at,
+          latitude:         property.latitude,
+          longitude:        property.longitude,
+          photo_url:        property.photo_urls.first,
+          noise:            noise_payload(property.property_transport_snapshot),
+          crime:            crime_payload(property.property_crime_snapshot),
+          nearest_stations: property.property_nearest_stations.sort_by(&:distance_miles).map { |station|
+            {
+              name: station.name,
+              distance_miles: station.distance_miles,
+              walking_minutes: station.walking_minutes,
+              transport_type: station.transport_type
+            }
           }
         }
       end
 
-      def property_detail(p)
+      def property_detail(property)
         {
-          id: p.id, rightmove_id: p.rightmove_id, slug: p.slug, listing_url: p.listing_url,
-          title: p.title, description: p.description,
-          address_line_1: p.address_line_1, town: p.town, postcode: p.postcode,
-          price_pence: p.price_pence, price_qualifier: p.price_qualifier,
-          price_per_sqft_pence: p.price_per_sqft_pence,
-          property_type: p.property_type, bedrooms: p.bedrooms, bathrooms: p.bathrooms,
-          size_sqft: p.size_sqft, tenure: p.tenure, lease_years_remaining: p.lease_years_remaining,
-          epc_rating: p.epc_rating, council_tax_band: p.council_tax_band,
-          service_charge_annual_pence: p.service_charge_annual_pence,
-          photo_urls: p.photo_urls, key_features: p.key_features,
-          latitude: p.latitude, longitude: p.longitude,
-          agent_name: p.agent_name, agent_phone: p.agent_phone,
-          status: p.status, listed_at: p.listed_at,
-          noise: noise_payload(p.property_transport_snapshot),
-          nearest_stations: p.property_nearest_stations
+          id: property.id, rightmove_id: property.rightmove_id, slug: property.slug, listing_url: property.listing_url,
+          title: property.title, description: property.description,
+          address_line_1: property.address_line_1, town: property.town, postcode: property.postcode,
+          price_pence: property.price_pence, price_qualifier: property.price_qualifier,
+          price_per_sqft_pence: property.price_per_sqft_pence,
+          property_type: property.property_type, bedrooms: property.bedrooms, bathrooms: property.bathrooms,
+          size_sqft: property.size_sqft, tenure: property.tenure, lease_years_remaining: property.lease_years_remaining,
+          epc_rating: property.epc_rating, council_tax_band: property.council_tax_band,
+          service_charge_annual_pence: property.service_charge_annual_pence,
+          photo_urls: property.photo_urls, key_features: property.key_features,
+          latitude: property.latitude, longitude: property.longitude,
+          agent_name: property.agent_name, agent_phone: property.agent_phone,
+          status: property.status, listed_at: property.listed_at,
+          noise: noise_payload(property.property_transport_snapshot),
+          nearest_stations: property.property_nearest_stations
             .sort_by(&:distance_miles)
-            .map { |s|
-              { name: s.name, distance_miles: s.distance_miles,
-                walking_minutes: s.walking_minutes, transport_type: s.transport_type }
+            .map { |station|
+              {
+                name: station.name,
+                distance_miles: station.distance_miles,
+                walking_minutes: station.walking_minutes,
+                transport_type: station.transport_type
+              }
             },
-          area_price_growth: area_price_growth_payload(p.area_price_growth),
+          area_price_growth: area_price_growth_payload(property.area_price_growth)
         }
       end
 
-      def area_price_growth_payload(apg)
-        return nil unless apg
-        { area_name: apg.area_name, area_slug: apg.area_slug,
-          yearly_growth_data: apg.yearly_growth_data }
+      def area_price_growth_payload(area_price_growth)
+        return nil unless area_price_growth
+
+        {
+          area_name: area_price_growth.area_name,
+          area_slug: area_price_growth.area_slug,
+          yearly_growth_data: area_price_growth.yearly_growth_data
+        }
       end
 
       def noise_payload(snapshot)
@@ -157,9 +224,9 @@ module Api
         return nil unless snapshot
 
         {
-          status:             snapshot.status,
+          status: snapshot.status,
           avg_monthly_crimes: snapshot.avg_monthly_crimes,
-          fetched_at:         snapshot.fetched_at
+          fetched_at: snapshot.fetched_at
         }
       end
     end

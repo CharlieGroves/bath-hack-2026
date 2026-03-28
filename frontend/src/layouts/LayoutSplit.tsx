@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.heat'
 import L from 'leaflet'
-import type { Property } from '../types/property'
+import type { BoundingBox, IsochronePoint, Property } from '../types/property'
 import type { Filters } from '../App'
-import type { MapBounds } from '../hooks/useProperties'
+import type { ActiveLocationSearch, LocationSearchParams, MapBounds, TransportationType } from '../hooks/useProperties'
 import { useHeatmapData } from '../hooks/useHeatmapData'
 import './layouts.css'
 import '../App.css'
@@ -14,7 +14,9 @@ import '../App.css'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon   from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-delete (L.Icon.Default.prototype as any)._getIconUrl
+type LeafletDefaultIconPrototype = { _getIconUrl?: string }
+
+delete (L.Icon.Default.prototype as LeafletDefaultIconPrototype)._getIconUrl
 L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow })
 
 function fmtPrice(pence: number) {
@@ -44,7 +46,7 @@ function HeatmapLayer({ points }: { points: [number, number, number][] }) {
 
   useEffect(() => {
     if (!points.length) return
-    const layer = (L as any).heatLayer(points, {
+    const layer = L.heatLayer(points, {
       radius: 25,
       blur: 18,
       maxZoom: 17,
@@ -72,18 +74,88 @@ function MapResizer() {
 function MapBoundsTracker({ onChange }: { onChange: (b: MapBounds) => void }) {
   const map = useMap()
 
-  const emit = () => {
-    const b = map.getBounds()
+  useEffect(() => {
+    const bounds = map.getBounds()
     onChange({
-      sw_lat: b.getSouth(),
-      sw_lng: b.getWest(),
-      ne_lat: b.getNorth(),
-      ne_lng: b.getEast(),
+      sw_lat: bounds.getSouth(),
+      sw_lng: bounds.getWest(),
+      ne_lat: bounds.getNorth(),
+      ne_lng: bounds.getEast(),
     })
-  }
+  }, [map, onChange])
 
-  useEffect(() => { emit() }, [map])
-  useMapEvents({ moveend: emit, zoomend: emit })
+  useMapEvents({
+    moveend() {
+      const bounds = map.getBounds()
+      onChange({
+        sw_lat: bounds.getSouth(),
+        sw_lng: bounds.getWest(),
+        ne_lat: bounds.getNorth(),
+        ne_lng: bounds.getEast(),
+      })
+    },
+    zoomend() {
+      const bounds = map.getBounds()
+      onChange({
+        sw_lat: bounds.getSouth(),
+        sw_lng: bounds.getWest(),
+        ne_lat: bounds.getNorth(),
+        ne_lng: bounds.getEast(),
+      })
+    },
+  })
+  return null
+}
+
+function leafletBoundsFromBoundingBox(boundingBox: BoundingBox) {
+  return [
+    [boundingBox.south, boundingBox.west],
+    [boundingBox.north, boundingBox.east],
+  ] as [[number, number], [number, number]]
+}
+
+function shellToLeafletLatLngs(shell: IsochronePoint[]) {
+  return shell.map(point => [point.latitude, point.longitude] as [number, number])
+}
+
+function SearchIsochrone({ shells }: { shells: IsochronePoint[][] }) {
+  if (shells.length === 0) return null
+
+  return (
+    <>
+      {shells.map((shell, index) => (
+        <Polygon
+          key={index}
+          positions={shellToLeafletLatLngs(shell)}
+          pathOptions={{
+            color: '#E76814',
+            weight: 2,
+            opacity: 0.95,
+            fillColor: '#E76814',
+            fillOpacity: 0.09,
+          }}
+        />
+      ))}
+    </>
+  )
+}
+
+function MapSearchFitBounds({ boundingBox }: { boundingBox: BoundingBox | null }) {
+  const map = useMap()
+  const north = boundingBox?.north
+  const south = boundingBox?.south
+  const east = boundingBox?.east
+  const west = boundingBox?.west
+
+  useEffect(() => {
+    if (north == null || south == null || east == null || west == null) return
+
+    map.fitBounds(leafletBoundsFromBoundingBox({ north, south, east, west }), {
+      padding: [28, 28],
+      maxZoom: 13,
+    })
+  }, [map, north, south, east, west])
+
   return null
 }
 
@@ -102,6 +174,7 @@ const pinActive = L.divIcon({
 interface Props {
   properties: Property[]
   total: number
+  loading: boolean
   filtered: Property[]
   filters: Filters
   sort: string
@@ -111,6 +184,16 @@ interface Props {
   setSort: (s: string) => void
   onBoundsChange: (b: MapBounds) => void
   onSelectProperty: (id: number) => void
+  viewportError: string | null
+  locationSearchError: string | null
+  locationSearchLoading: boolean
+  locationSearch: LocationSearchParams
+  activeLocationSearch: ActiveLocationSearch | null
+  onLocationQueryChange: (value: string) => void
+  onTransportationTypeChange: (value: TransportationType) => void
+  onTravelTimeMinutesChange: (value: number) => void
+  onApplyLocationSearch: () => void
+  onClearLocationSearch: () => void
 }
 
 const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '' }
@@ -124,6 +207,13 @@ const STATION_MINUTE_OPTIONS = [
   { value: 30, label: '30 min' },
 ]
 
+const TRANSPORTATION_OPTIONS: { value: TransportationType; label: string }[] = [
+  { value: 'driving', label: 'Driving' },
+  { value: 'walking', label: 'Walking' },
+  { value: 'cycling', label: 'Cycling' },
+  { value: 'public_transport', label: 'Public transport' },
+]
+
 const PROPERTY_TYPES = [
   { id: 'flat',          label: 'Flat' },
   { id: 'terraced',      label: 'Terraced' },
@@ -134,7 +224,28 @@ const PROPERTY_TYPES = [
 ]
 
 export default function LayoutSplit({
-  filtered, filters, sort, setF, toggleType, setFilters, setSort, properties, total, onBoundsChange, onSelectProperty,
+  filtered,
+  filters,
+  sort,
+  setF,
+  toggleType,
+  setFilters,
+  setSort,
+  properties,
+  total,
+  loading,
+  onBoundsChange,
+  onSelectProperty,
+  viewportError,
+  locationSearchError,
+  locationSearchLoading,
+  locationSearch,
+  activeLocationSearch,
+  onLocationQueryChange,
+  onTransportationTypeChange,
+  onTravelTimeMinutesChange,
+  onApplyLocationSearch,
+  onClearLocationSearch,
 }: Props) {
   const [hoveredId, setHoveredId]     = useState<number | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -151,12 +262,16 @@ export default function LayoutSplit({
   }, [properties])
 
   const mapItems = filtered.filter(p => p.latitude != null && p.longitude != null)
+  const locationSearchHint = activeLocationSearch
+    ? `${activeLocationSearch.travelTimeMinutes} min ${fmtLabel(activeLocationSearch.transportationType)} from ${activeLocationSearch.location.label}`
+    : null
 
   return (
     <div className="l2-shell">
       {/* Sidebar */}
       <div className={`l2-sidebar ${sidebarOpen ? '' : 'l2-sidebar-collapsed'}`}>
         <button
+          type="button"
           className="l2-sb-toggle"
           onClick={() => setSidebarOpen(o => !o)}
           title={sidebarOpen ? 'Hide filters' : 'Show filters'}
@@ -173,6 +288,75 @@ export default function LayoutSplit({
         </button>
 
         {sidebarOpen && <div className="l2-sb-body">
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Distance from place</span>
+          <input
+            className="l2-sb-text-input"
+            type="text"
+            placeholder="King's Cross, SW1A 1AA, Canary Wharf..."
+            value={locationSearch.query}
+            onChange={e => onLocationQueryChange(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') onApplyLocationSearch()
+            }}
+          />
+          <div className="l2-sb-search-grid">
+            <select
+              className="l2-sb-select"
+              value={locationSearch.transportationType}
+              onChange={e => onTransportationTypeChange(e.target.value as TransportationType)}
+            >
+              {TRANSPORTATION_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <input
+              className="l2-sb-input"
+              type="number"
+              min={1}
+              max={120}
+              step={1}
+              inputMode="numeric"
+              placeholder="Minutes"
+              value={locationSearch.travelTimeMinutes}
+              onChange={e => {
+                const nextValue = Number(e.target.value)
+                if (Number.isNaN(nextValue)) return
+                onTravelTimeMinutesChange(Math.min(120, Math.max(1, nextValue)))
+              }}
+            />
+          </div>
+          <div className="l2-sb-actions">
+            <button
+              type="button"
+              className="l2-sb-primary"
+              onClick={onApplyLocationSearch}
+              disabled={!locationSearch.query.trim() || locationSearchLoading}
+            >
+              {locationSearchLoading ? 'Searching...' : 'Apply search'}
+            </button>
+            {activeLocationSearch && (
+              <button type="button" className="l2-sb-secondary" onClick={onClearLocationSearch}>
+                Clear
+              </button>
+            )}
+          </div>
+          {activeLocationSearch ? (
+            <div className="l2-sb-search-state">
+              <div className="l2-sb-search-title">{activeLocationSearch.location.label}</div>
+              <div className="l2-sb-search-meta">
+                {activeLocationSearch.travelTimeMinutes} min {fmtLabel(activeLocationSearch.transportationType)}
+              </div>
+              <div className="l2-sb-search-meta">Isochrone area shown on the map</div>
+            </div>
+          ) : (
+            <p className="l2-sb-hint">Try a postcode, station, landmark, or neighborhood. Travel time accepts any whole minute from 1 to 120.</p>
+          )}
+          {locationSearchError && (
+            <p className="l2-sb-error">{locationSearchError}</p>
+          )}
+        </div>
 
         <div className="l2-sb-section">
           <span className="l2-sb-label">Sort</span>
@@ -232,6 +416,7 @@ export default function LayoutSplit({
           <div className="l2-sb-pills">
             {[0, 1, 2, 3, 4, 5].map(n => (
               <button
+                type="button"
                 key={n}
                 className={`l2-sb-pill ${filters.minBeds === n ? 'on' : ''}`}
                 onClick={() => setF('minBeds', n)}
@@ -245,6 +430,7 @@ export default function LayoutSplit({
           <div className="l2-sb-chips">
             {PROPERTY_TYPES.map(t => (
               <button
+                type="button"
                 key={t.id}
                 className={`l2-sb-chip ${filters.types.includes(t.id) ? 'on' : ''}`}
                 onClick={() => toggleType(t.id)}
@@ -295,6 +481,7 @@ export default function LayoutSplit({
           <div className="l2-sb-pills">
             {STATION_MINUTE_OPTIONS.map(opt => (
               <button
+                type="button"
                 key={opt.value}
                 className={`l2-sb-pill ${filters.maxStationMinutes === opt.value ? 'on' : ''}`}
                 onClick={() => setF('maxStationMinutes', opt.value)}
@@ -304,7 +491,7 @@ export default function LayoutSplit({
         </div>
 
         <div className="l2-sb-section">
-          <button className="l2-sb-reset" onClick={() => setFilters(INIT)}>
+          <button type="button" className="l2-sb-reset" onClick={() => setFilters(INIT)}>
             Reset filters
           </button>
         </div>
@@ -316,9 +503,19 @@ export default function LayoutSplit({
       {/* List panel */}
       <div className="l2-left">
         <div className="l2-count">
-          {filtered.length.toLocaleString()} of {total.toLocaleString()} homes in view
+          {activeLocationSearch
+            ? `${filtered.length.toLocaleString()} of ${total.toLocaleString()} homes matching ${locationSearchHint}`
+            : `${filtered.length.toLocaleString()} of ${total.toLocaleString()} homes in view`}
+          {loading && (
+            <span className="l2-count-status">
+              {activeLocationSearch ? ' Updating search...' : ' Loading homes...'}
+            </span>
+          )}
           {total > properties.length && (
             <span className="l2-count-hint"> &mdash; showing first {properties.length.toLocaleString()}, zoom in to see more</span>
+          )}
+          {viewportError && (
+            <div className="l2-count-error">{viewportError}</div>
           )}
         </div>
 
@@ -361,6 +558,7 @@ export default function LayoutSplit({
             <div className="l2-empty">
               <span>Nothing matches your search just yet.</span>
               <button
+                type="button"
                 className="reset-btn"
                 style={{ display: 'inline-block', width: 'auto', marginTop: 4, padding: '6px 16px', fontStyle: 'normal', fontFamily: 'var(--ff-body)', fontSize: '0.8rem' }}
                 onClick={() => setFilters(INIT)}
@@ -386,21 +584,25 @@ export default function LayoutSplit({
         )}
         <div className="l2-layer-toggle">
           <button
+            type="button"
             className={mapLayer === 'markers' ? 'on' : ''}
             onClick={() => setMapLayer('markers')}
           >Markers</button>
           <button
+            type="button"
             className={mapLayer === 'heatmap' ? 'on' : ''}
             onClick={() => setMapLayer('heatmap')}
           >Price / sq ft</button>
         </div>
-        <MapContainer center={[51.38, -2.36]} zoom={11} style={{ height: '100%', width: '100%' }}>
+        <MapContainer center={[51.5074, -0.1278]} zoom={11} style={{ height: '100%', width: '100%' }}>
           <MapResizer />
           <MapBoundsTracker onChange={onBoundsChange} />
+          <MapSearchFitBounds boundingBox={activeLocationSearch?.boundingBox ?? null} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
+          <SearchIsochrone shells={activeLocationSearch?.isochroneShells ?? []} />
           {mapLayer === 'heatmap' && <HeatmapLayer points={heatmapPoints} />}
           {mapLayer === 'markers' && mapItems.map(p => (
             <Marker
