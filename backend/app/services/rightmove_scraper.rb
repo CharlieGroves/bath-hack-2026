@@ -26,6 +26,18 @@ class RightmoveScraper
     parse_listing(data, rightmove_id, url)
   end
 
+  def extract_nearest_stations(data)
+    stations = data.dig("propertyData", "nearestStations") ||
+               data.dig("propertyData", "locationInfo", "nearestStations") || []
+    Array(stations).map do |s|
+      {
+        name:           s["name"].to_s.strip,
+        distance_miles: s["distance"]&.to_f,
+        transport_type: normalise_transport_type(Array(s["types"]).first || s["stationType"] || s["type"])
+      }
+    end.select { |s| s[:name].present? }
+  end
+
   private
 
   # ------------------------------------------------------------------
@@ -204,6 +216,17 @@ class RightmoveScraper
     when /sold/                then "sold"
     when /let/                 then "let"
     else                            "active"
+    end
+  end
+
+  def normalise_transport_type(raw)
+    case raw.to_s.downcase
+    when /national.rail/, /nationalrail/, /national.train/ then "national_rail"
+    when /tube/, /underground/                             then "tube"
+    when /overground/                                      then "overground"
+    when /dlr/                                             then "dlr"
+    when /elizabeth/                                       then "elizabeth_line"
+    else                                                        "other"
     end
   end
 end
