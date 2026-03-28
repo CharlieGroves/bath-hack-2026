@@ -29,6 +29,8 @@ const INIT: Filters = {
   types: [],
   maxStationMinutes: 0,
   maxCrimeRate: '',
+  minPricePerSqft: '',
+  maxPricePerSqft: '',
 }
 const TYPES = ['flat', 'terraced', 'semi_detached', 'detached', 'bungalow']
 

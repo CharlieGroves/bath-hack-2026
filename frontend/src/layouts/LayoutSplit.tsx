@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet.heat'
 import L from 'leaflet'
 import type { BoundingBox, IsochronePoint, Property } from '../types/property'
 import type { Filters } from '../App'
 import type { ActiveLocationSearch, LocationSearchParams, MapBounds, TransportationType } from '../hooks/useProperties'
+import { useHeatmapData } from '../hooks/useHeatmapData'
 import './layouts.css'
 import '../App.css'
 
@@ -36,6 +38,27 @@ const pinDefault = L.divIcon({
   iconAnchor: [12, 32],
   popupAnchor: [0, -32],
 })
+
+type MapLayer = 'markers' | 'heatmap'
+
+function HeatmapLayer({ points }: { points: [number, number, number][] }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!points.length) return
+    const layer = L.heatLayer(points, {
+      radius: 25,
+      blur: 18,
+      maxZoom: 17,
+      max: 0.12,
+      gradient: { 0.0: '#3b82f6', 0.5: '#f59e0b', 1.0: '#dc2626' },
+    })
+    layer.addTo(map)
+    return () => { layer.remove() }
+  }, [map, points])
+
+  return null
+}
 
 function MapResizer() {
   const map = useMap()
@@ -173,7 +196,7 @@ interface Props {
   onClearLocationSearch: () => void
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '' }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '' }
 
 const STATION_MINUTE_OPTIONS = [
   { value: 0,  label: 'Any' },
@@ -226,6 +249,8 @@ export default function LayoutSplit({
 }: Props) {
   const [hoveredId, setHoveredId]     = useState<number | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [mapLayer, setMapLayer]       = useState<MapLayer>('markers')
+  const { points: heatmapPoints, minPricePerSqft, maxPricePerSqft } = useHeatmapData()
   const rowRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
   const crimeRange = useMemo(() => {
@@ -361,6 +386,27 @@ export default function LayoutSplit({
               placeholder="Max £"
               value={filters.maxPrice}
               onChange={e => setF('maxPrice', e.target.value === '' ? '' : +e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Price per sq ft</span>
+          <div className="l2-sb-row">
+            <input
+              className="l2-sb-input"
+              type="number"
+              placeholder="Min £"
+              value={filters.minPricePerSqft}
+              onChange={e => setF('minPricePerSqft', e.target.value === '' ? '' : +e.target.value)}
+            />
+            <span style={{ color: 'var(--t4)', fontSize: '0.75rem', flexShrink: 0 }}>—</span>
+            <input
+              className="l2-sb-input"
+              type="number"
+              placeholder="Max £"
+              value={filters.maxPricePerSqft}
+              onChange={e => setF('maxPricePerSqft', e.target.value === '' ? '' : +e.target.value)}
             />
           </div>
         </div>
@@ -526,6 +572,28 @@ export default function LayoutSplit({
 
       {/* Map */}
       <div className="l2-map">
+        {mapLayer === 'heatmap' && (
+          <div className="l2-heatmap-key">
+            <div className="l2-heatmap-key-bar" />
+            <div className="l2-heatmap-key-labels">
+              <span>{minPricePerSqft != null ? `£${minPricePerSqft.toLocaleString('en-GB')}` : '—'}</span>
+              <span className="l2-heatmap-key-title">price / sq ft</span>
+              <span>{maxPricePerSqft != null ? `£${maxPricePerSqft.toLocaleString('en-GB')}` : '—'}</span>
+            </div>
+          </div>
+        )}
+        <div className="l2-layer-toggle">
+          <button
+            type="button"
+            className={mapLayer === 'markers' ? 'on' : ''}
+            onClick={() => setMapLayer('markers')}
+          >Markers</button>
+          <button
+            type="button"
+            className={mapLayer === 'heatmap' ? 'on' : ''}
+            onClick={() => setMapLayer('heatmap')}
+          >Price / sq ft</button>
+        </div>
         <MapContainer center={[51.5074, -0.1278]} zoom={11} style={{ height: '100%', width: '100%' }}>
           <MapResizer />
           <MapBoundsTracker onChange={onBoundsChange} />
@@ -535,7 +603,8 @@ export default function LayoutSplit({
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
           <SearchIsochrone shells={activeLocationSearch?.isochroneShells ?? []} />
-          {mapItems.map(p => (
+          {mapLayer === 'heatmap' && <HeatmapLayer points={heatmapPoints} />}
+          {mapLayer === 'markers' && mapItems.map(p => (
             <Marker
               key={p.id}
               position={[p.latitude, p.longitude]}

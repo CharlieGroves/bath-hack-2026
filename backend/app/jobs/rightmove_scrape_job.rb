@@ -21,6 +21,8 @@ class RightmoveScrapeJob < ApplicationJob
     action = is_new ? "created" : "updated"
     Rails.logger.info("[RightmoveScrapeJob] #{action.upcase} #{rightmove_id} — #{property.address_line_1}, #{property.postcode}")
 
+    PropertyAirQualityMatchJob.perform_later(property.id) if is_new
+
     update_scrape_run(scrape_run_id, is_new)
 
   rescue RightmoveScraper::ScrapingError => e

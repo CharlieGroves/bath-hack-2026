@@ -50,9 +50,11 @@ export interface Filters {
   types:             string[]
   maxStationMinutes: number
   maxCrimeRate:      number | ''
+  minPricePerSqft:   number | ''
+  maxPricePerSqft:   number | ''
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '' }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '' }
 const DEFAULT_LOCATION_SEARCH: LocationSearchParams = {
   query: '',
   transportationType: 'driving',
@@ -88,6 +90,12 @@ function SearchPage() {
       if (filters.maxCrimeRate !== '') {
         const avg = p.crime?.avg_monthly_crimes
         if (avg == null || avg > (filters.maxCrimeRate as number)) return false
+      }
+      if (filters.minPricePerSqft !== '') {
+        if (p.price_per_sqft == null || p.price_per_sqft < (filters.minPricePerSqft as number) * 100) return false
+      }
+      if (filters.maxPricePerSqft !== '') {
+        if (p.price_per_sqft == null || p.price_per_sqft > (filters.maxPricePerSqft as number) * 100) return false
       }
       return true
     })

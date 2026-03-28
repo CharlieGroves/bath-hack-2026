@@ -99,6 +99,7 @@ export interface Property {
   title: string
   address: string
   price: number
+  price_per_sqft: number | null
   bedrooms: number
   bathrooms: number
   property_type: string

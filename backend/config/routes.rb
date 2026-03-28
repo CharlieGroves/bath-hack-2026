@@ -22,8 +22,10 @@ Rails.application.routes.draw do
       resources :properties do
         collection do
           get :search
+          get :heatmap
         end
       end
+      resources :air_quality_stations, only: [:show]
     end
   end
 end

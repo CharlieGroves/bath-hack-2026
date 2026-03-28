@@ -38,6 +38,14 @@ module Api
         render json: { error: e.message }, status: :service_unavailable
       end
 
+      # GET /api/v1/properties/heatmap
+      def heatmap
+        points = Property
+          .where.not(latitude: nil, longitude: nil, price_per_sqft_pence: nil)
+          .pluck(:latitude, :longitude, :price_per_sqft_pence)
+        render json: { points: points }
+      end
+
       # GET /api/v1/properties/:id
       def show
         render json: property_detail(@property)
@@ -137,6 +145,7 @@ module Api
           title:            property.title,
           address:          property.address_line_1,
           price:            property.price_pence,
+          price_per_sqft:   property.price_per_sqft_pence,
           bedrooms:         property.bedrooms,
           bathrooms:        property.bathrooms,
           property_type:    property.property_type,
