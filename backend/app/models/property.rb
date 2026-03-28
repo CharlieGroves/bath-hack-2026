@@ -45,6 +45,7 @@ class Property < ApplicationRecord
   scope :within_station_miles,   ->(m) { joins(:property_nearest_stations).where("property_nearest_stations.distance_miles <= ?", m).distinct }
   scope :within_station_minutes, ->(t) { joins(:property_nearest_stations).where("property_nearest_stations.walking_minutes <= ?", t).distinct }
   scope :max_daqi,               ->(n) { joins(:air_quality_station).where("air_quality_stations.daqi_index <= ?", n) }
+  scope :max_flood_risk_band,    ->(n) { joins(:flood_risk_datapoint).where("flood_risk_datapoints.risk_band <= ?", n) }
 
   # Returns a human-readable price string, e.g. "£450,000"
   def formatted_price
