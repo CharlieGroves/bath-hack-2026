@@ -14,6 +14,12 @@ export interface PropertyNoise {
   road_data: NoiseSection
 }
 
+export interface PropertyCrime {
+  status: string
+  avg_monthly_crimes: number | null
+  fetched_at: string | null
+}
+
 // Matches the shape returned by API::V1::PropertiesController#property_summary
 export interface Property {
   id: number
@@ -30,4 +36,5 @@ export interface Property {
   longitude: number
   photo_url: string | null
   noise: PropertyNoise | null
+  crime: PropertyCrime | null
 }
