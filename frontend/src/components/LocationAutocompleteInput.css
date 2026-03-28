@@ -1,0 +1,92 @@
+.lac-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.lac-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 18px 32px rgba(28, 18, 12, 0.18);
+  border: 1px solid rgba(152, 138, 112, 0.18);
+}
+
+.lac-panel-light {
+  background: var(--white);
+  border-color: rgba(152, 138, 112, 0.18);
+}
+
+.lac-panel-dark {
+  background: #2b231f;
+  border-color: rgba(216, 212, 188, 0.16);
+}
+
+.lac-item,
+.lac-status {
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+}
+
+.lac-item {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lac-panel-light .lac-item {
+  color: var(--t1);
+}
+
+.lac-panel-dark .lac-item {
+  color: var(--ash);
+}
+
+.lac-item + .lac-item,
+.lac-status {
+  border-top: 1px solid rgba(152, 138, 112, 0.14);
+}
+
+.lac-panel-dark .lac-item + .lac-item,
+.lac-panel-dark .lac-status {
+  border-top-color: rgba(216, 212, 188, 0.08);
+}
+
+.lac-item:hover,
+.lac-item-active {
+  background: rgba(231, 104, 20, 0.1);
+}
+
+.lac-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.lac-meta {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  opacity: 0.75;
+}
+
+.lac-status {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.lac-panel-light .lac-status {
+  color: var(--t3);
+}
+
+.lac-panel-dark .lac-status {
+  color: rgba(216, 212, 188, 0.82);
+}

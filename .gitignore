@@ -1,1 +1,3 @@
 backend/dump.rdb
+backend/.env
+frontend/.env
