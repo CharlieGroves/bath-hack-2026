@@ -7,7 +7,7 @@ import {
   Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { useProperty } from '../hooks/useProperty'
-import type { PropertyDetail, YearlyGrowthEntry } from '../types/property'
+import type { PropertyDetail, AirQuality, YearlyGrowthEntry } from '../types/property'
 import './PropertyPage.css'
 
 // Fix default marker icons broken by Vite's asset pipeline
@@ -314,6 +314,33 @@ function AreaGrowthChart({ property }: { property: PropertyDetail }) {
   )
 }
 
+const DAQI_COLORS: Record<string, string> = {
+  Low:        '#22c55e',
+  Moderate:   '#f59e0b',
+  High:       '#f97316',
+  'Very High': '#ef4444',
+}
+
+function AirQualitySection({ aq }: { aq: AirQuality }) {
+  const color = DAQI_COLORS[aq.daqi_band] ?? 'var(--t3)'
+  return (
+    <section className="pp-section">
+      <h2 className="pp-section-heading">Air quality</h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ fontSize: '2.5rem', fontWeight: 700, lineHeight: 1, color, fontFamily: 'var(--ff-body)' }}>
+          {aq.daqi_index}
+        </div>
+        <div>
+          <div style={{ fontWeight: 600, color, fontSize: '0.95rem' }}>{aq.daqi_band}</div>
+          <div style={{ color: 'var(--t3)', fontSize: '0.8rem', marginTop: '0.2rem' }}>
+            DAQI 1–10 · {aq.station_name}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function NoiseSection({ property }: { property: PropertyDetail }) {
   const noise = property.noise
   if (!noise || noise.status === 'pending') {
@@ -434,6 +461,7 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
             <KeyFeatures property={property} />
             <Description property={property} />
             <TransportSection property={property} />
+            {property.air_quality && <AirQualitySection aq={property.air_quality} />}
             <AreaGrowthChart property={property} />
             <NoiseSection property={property} />
           </div>
