@@ -51,6 +51,11 @@ export interface SearchLocation {
   label: string
 }
 
+export interface IsochronePoint {
+  latitude: number
+  longitude: number
+}
+
 // Matches the shape returned by API::V1::PropertiesController#property_detail
 export interface PropertyDetail {
   id: number

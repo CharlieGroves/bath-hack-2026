@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Rectangle, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import type { BoundingBox, Property } from '../types/property'
+import type { BoundingBox, IsochronePoint, Property } from '../types/property'
 import type { Filters } from '../App'
 import type { ActiveLocationSearch, LocationSearchParams, MapBounds, TransportationType } from '../hooks/useProperties'
 import './layouts.css'
@@ -91,21 +91,29 @@ function leafletBoundsFromBoundingBox(boundingBox: BoundingBox) {
   ] as [[number, number], [number, number]]
 }
 
-function SearchBoundingBox({ boundingBox }: { boundingBox: BoundingBox | null }) {
-  if (!boundingBox) return null
+function shellToLeafletLatLngs(shell: IsochronePoint[]) {
+  return shell.map(point => [point.latitude, point.longitude] as [number, number])
+}
+
+function SearchIsochrone({ shells }: { shells: IsochronePoint[][] }) {
+  if (shells.length === 0) return null
 
   return (
-    <Rectangle
-      bounds={leafletBoundsFromBoundingBox(boundingBox)}
-      pathOptions={{
-        color: '#E76814',
-        weight: 2,
-        opacity: 0.95,
-        fillColor: '#E76814',
-        fillOpacity: 0.08,
-        dashArray: '8 6',
-      }}
-    />
+    <>
+      {shells.map((shell, index) => (
+        <Polygon
+          key={index}
+          positions={shellToLeafletLatLngs(shell)}
+          pathOptions={{
+            color: '#E76814',
+            weight: 2,
+            opacity: 0.95,
+            fillColor: '#E76814',
+            fillOpacity: 0.09,
+          }}
+        />
+      ))}
+    </>
   )
 }
 
@@ -311,7 +319,7 @@ export default function LayoutSplit({
               <div className="l2-sb-search-meta">
                 {activeLocationSearch.travelTimeMinutes} min {fmtLabel(activeLocationSearch.transportationType)}
               </div>
-              <div className="l2-sb-search-meta">Bounding box shown on the map</div>
+              <div className="l2-sb-search-meta">Isochrone area shown on the map</div>
             </div>
           ) : (
             <p className="l2-sb-hint">Try a postcode, station, landmark, or neighborhood. Travel time accepts any whole minute from 1 to 120.</p>
@@ -513,7 +521,7 @@ export default function LayoutSplit({
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
-          <SearchBoundingBox boundingBox={activeLocationSearch?.boundingBox ?? null} />
+          <SearchIsochrone shells={activeLocationSearch?.isochroneShells ?? []} />
           {mapItems.map(p => (
             <Marker
               key={p.id}

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import type { BoundingBox, Property, SearchLocation } from '../types/property'
+import type { BoundingBox, IsochronePoint, Property, SearchLocation } from '../types/property'
 
 export interface MapBounds {
   sw_lat: number
@@ -22,6 +22,7 @@ export interface ActiveLocationSearch {
   transportationType: TransportationType
   travelTimeMinutes: number
   boundingBox: BoundingBox
+  isochroneShells: IsochronePoint[][]
 }
 
 interface UsePropertiesResult {
@@ -58,31 +59,23 @@ export function useProperties(
 
   useEffect(() => {
     const trimmedQuery = searchQuery.trim()
-    const hasLocationSearch = trimmedQuery.length > 0
-    if (!hasLocationSearch && (swLat == null || swLng == null || neLat == null || neLng == null)) return
+    if (trimmedQuery.length > 0) return
+    if (swLat == null || swLng == null || neLat == null || neLng == null) return
 
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
       abortRef.current?.abort()
       abortRef.current = new AbortController()
 
-      const params = hasLocationSearch
-        ? new URLSearchParams({
-            query: trimmedQuery,
-            transportation_type: transportationType!,
-            travel_time_minutes: String(travelTimeMinutes!),
-          })
-        : new URLSearchParams({
-            sw_lat: String(swLat),
-            sw_lng: String(swLng),
-            ne_lat: String(neLat),
-            ne_lng: String(neLng),
-          })
+      const params = new URLSearchParams({
+        sw_lat: String(swLat),
+        sw_lng: String(swLng),
+        ne_lat: String(neLat),
+        ne_lng: String(neLng),
+      })
 
-      const endpoint = hasLocationSearch ? '/api/v1/properties/search' : '/api/v1/properties'
-
-      if (!hasLoadedOnce.current || hasLocationSearch) setLoading(true)
-      fetch(`${endpoint}?${params}`, { signal: abortRef.current.signal })
+      if (!hasLoadedOnce.current) setLoading(true)
+      fetch(`/api/v1/properties?${params}`, { signal: abortRef.current.signal })
         .then(async res => {
           const payload = await res.json().catch(() => null)
           if (!res.ok) {
@@ -95,37 +88,72 @@ export function useProperties(
           setProperties(data.properties)
           setTotal(data.total)
           setError(null)
-          if (hasLocationSearch) {
-            setActiveLocationSearch({
-              query: data.query,
-              location: data.location,
-              transportationType: data.transportation_type,
-              travelTimeMinutes: Math.round(data.travel_time_seconds / 60),
-              boundingBox: data.bounding_box,
-            })
-          } else {
-            setActiveLocationSearch(null)
-          }
+          setActiveLocationSearch(null)
           hasLoadedOnce.current = true
         })
         .catch(err => {
           if (err.name !== 'AbortError') setError(err.message)
         })
         .finally(() => setLoading(false))
-    }, hasLocationSearch ? 0 : DEBOUNCE_MS)
+    }, DEBOUNCE_MS)
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [
-    swLat,
-    swLng,
-    neLat,
-    neLng,
-    searchQuery,
-    transportationType,
-    travelTimeMinutes,
-  ])
+  }, [swLat, swLng, neLat, neLng, searchQuery])
+
+  useEffect(() => {
+    const trimmedQuery = searchQuery.trim()
+    if (trimmedQuery.length === 0) return
+    let cancelled = false
+
+    abortRef.current?.abort()
+    abortRef.current = new AbortController()
+    queueMicrotask(() => {
+      if (!cancelled) setLoading(true)
+    })
+
+    const params = new URLSearchParams({
+      query: trimmedQuery,
+      transportation_type: transportationType!,
+      travel_time_minutes: String(travelTimeMinutes!),
+    })
+
+    fetch(`/api/v1/properties/search?${params}`, { signal: abortRef.current.signal })
+      .then(async res => {
+        const payload = await res.json().catch(() => null)
+        if (!res.ok) {
+          const message = typeof payload?.error === 'string' ? payload.error : `HTTP ${res.status}`
+          throw new Error(message)
+        }
+        return payload
+      })
+      .then(data => {
+        setProperties(data.properties)
+        setTotal(data.total)
+        setError(null)
+        setActiveLocationSearch({
+          query: data.query,
+          location: data.location,
+          transportationType: data.transportation_type,
+          travelTimeMinutes: Math.round(data.travel_time_seconds / 60),
+          boundingBox: data.bounding_box,
+          isochroneShells: data.isochrone_shells,
+        })
+        hasLoadedOnce.current = true
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') setError(err.message)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+      abortRef.current?.abort()
+    }
+  }, [searchQuery, transportationType, travelTimeMinutes])
 
   return { properties, total, loading, error, activeLocationSearch }
 }
