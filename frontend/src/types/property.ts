@@ -27,6 +27,12 @@ export interface PropertyCrime {
   fetched_at: string | null
 }
 
+export interface AirQuality {
+  daqi_index: number
+  daqi_band: string
+  station_name: string
+}
+
 export interface YearlyGrowthEntry {
   average_change_pct_per_year: number
   sale_pairs_count: number
@@ -90,6 +96,7 @@ export interface PropertyDetail {
   noise: PropertyNoise | null
   nearest_stations: NearestStation[]
   area_price_growth: AreaPriceGrowth | null
+  air_quality: AirQuality | null
 }
 
 // Matches the shape returned by API::V1::PropertiesController#property_summary
@@ -110,5 +117,6 @@ export interface Property {
   photo_url: string | null
   noise: PropertyNoise | null
   crime: PropertyCrime | null
+  air_quality: AirQuality | null
   nearest_stations: NearestStation[]
 }
