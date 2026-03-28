@@ -10,9 +10,23 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_160000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "air_quality_stations", force: :cascade do |t|
+    t.integer "external_id", null: false
+    t.string "name", null: false
+    t.decimal "latitude", precision: 10, scale: 7, null: false
+    t.decimal "longitude", precision: 10, scale: 7, null: false
+    t.integer "daqi_index"
+    t.string "daqi_band"
+    t.datetime "readings_fetched_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["external_id"], name: "index_air_quality_stations_on_external_id", unique: true
+    t.index ["latitude", "longitude"], name: "index_air_quality_stations_on_latitude_and_longitude"
+  end
 
   create_table "properties", force: :cascade do |t|
     t.string "rightmove_id", null: false
@@ -51,6 +65,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_160000) do
     t.jsonb "raw_data"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "air_quality_station_id"
+    t.index ["air_quality_station_id"], name: "index_properties_on_air_quality_station_id"
     t.index ["bedrooms"], name: "index_properties_on_bedrooms"
     t.index ["latitude", "longitude"], name: "index_properties_on_latitude_and_longitude"
     t.index ["listed_at"], name: "index_properties_on_listed_at"
@@ -89,6 +105,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_160000) do
     t.index ["status"], name: "index_property_transport_snapshots_on_status"
   end
 
+  add_foreign_key "properties", "air_quality_stations"
   add_foreign_key "property_images", "properties"
   add_foreign_key "property_transport_snapshots", "properties"
 end

@@ -4,6 +4,7 @@ class Property < ApplicationRecord
 
   has_one  :property_transport_snapshot, dependent: :destroy
   has_many :property_images, dependent: :destroy
+  belongs_to :air_quality_station, optional: true
 
   after_commit :enqueue_transport_refresh, on: %i[create update], if: :transport_refresh_needed?
 
