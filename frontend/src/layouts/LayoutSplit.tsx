@@ -66,10 +66,6 @@ interface Props {
   toggleType: (t: string) => void
   setFilters: (f: Filters) => void
   setSort: (s: string) => void
-  settings: UserSettings
-  updateSettings: (patch: Partial<UserSettings>) => void
-  toggleItem: (key: keyof UserSettings, item: string) => void
-  resetSettings: () => void
 }
 
 const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [] }
@@ -83,34 +79,8 @@ const PROPERTY_TYPES = [
   { id: 'land',          label: 'Land' },
 ]
 
-const TENURES = [
-  { id: 'freehold',          label: 'Freehold' },
-  { id: 'leasehold',         label: 'Leasehold' },
-  { id: 'share_of_freehold', label: 'Share of freehold' },
-]
-
-const MUST_HAVES = [
-  { id: 'garden',       label: 'Garden' },
-  { id: 'parking',      label: 'Parking' },
-  { id: 'garage',       label: 'Garage' },
-  { id: 'new_build',    label: 'New build' },
-  { id: 'period',       label: 'Period' },
-  { id: 'chain_free',   label: 'Chain free' },
-  { id: 'ground_floor', label: 'Ground floor' },
-  { id: 'top_floor',    label: 'Top floor' },
-  { id: 'balcony',      label: 'Balcony' },
-]
-
-const SITUATIONS = [
-  { id: 'first_time', label: 'First-time buyer' },
-  { id: 'moving',     label: 'Moving home' },
-  { id: 'investment', label: 'Buy to let' },
-  { id: 'let',        label: 'Looking to rent' },
-]
-
 export default function LayoutSplit({
   filtered, filters, sort, setF, toggleType, setFilters, setSort, properties,
-  settings, updateSettings, toggleItem, resetSettings,
 }: Props) {
   const [hoveredId, setHoveredId]     = useState<number | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -200,83 +170,8 @@ export default function LayoutSplit({
         </div>
 
         <div className="l2-sb-section">
-          <span className="l2-sb-label">Tenure</span>
-          <div className="l2-sb-chips">
-            {TENURES.map(t => (
-              <button
-                key={t.id}
-                className={`l2-sb-chip ${settings.tenures.includes(t.id) ? 'on' : ''}`}
-                onClick={() => toggleItem('tenures', t.id)}
-              >{t.label}</button>
-            ))}
-          </div>
-          {settings.tenures.length === 0 && <p className="l2-sb-hint">All tenures shown</p>}
-        </div>
-
-        <div className="l2-sb-section">
-          <span className="l2-sb-label">Must-haves</span>
-          <div className="l2-sb-chips">
-            {MUST_HAVES.map(m => (
-              <button
-                key={m.id}
-                className={`l2-sb-chip ${settings.mustHaves.includes(m.id) ? 'on' : ''}`}
-                onClick={() => toggleItem('mustHaves', m.id)}
-              >{m.label}</button>
-            ))}
-          </div>
-        </div>
-
-        <div className="l2-sb-section">
-          <span className="l2-sb-label">Your situation</span>
-          <div className="l2-sb-chips">
-            {SITUATIONS.map(s => (
-              <button
-                key={s.id}
-                className={`l2-sb-chip ${settings.situation === s.id ? 'on' : ''}`}
-                onClick={() => updateSettings({ situation: settings.situation === s.id ? '' : s.id as UserSettings['situation'] })}
-              >{s.label}</button>
-            ))}
-          </div>
-        </div>
-
-        <div className="l2-sb-section">
-          <span className="l2-sb-label">Min floor area (sq ft)</span>
-          <input
-            className="l2-sb-text-input"
-            type="number"
-            placeholder="e.g. 700"
-            value={settings.minSqft}
-            onChange={e => updateSettings({ minSqft: e.target.value === '' ? '' : +e.target.value })}
-          />
-        </div>
-
-        <div className="l2-sb-section">
-          <span className="l2-sb-label">Preferred areas</span>
-          <input
-            className="l2-sb-text-input"
-            type="text"
-            placeholder="e.g. Clifton, BA1 5"
-            value={settings.preferredAreas}
-            onChange={e => updateSettings({ preferredAreas: e.target.value })}
-          />
-          <p className="l2-sb-hint">Comma-separated</p>
-        </div>
-
-        <div className="l2-sb-section">
-          <span className="l2-sb-label">Workplace</span>
-          <input
-            className="l2-sb-text-input"
-            type="text"
-            placeholder="e.g. Bath Spa Station"
-            value={settings.workplace}
-            onChange={e => updateSettings({ workplace: e.target.value })}
-          />
-          <p className="l2-sb-hint">For commute estimates</p>
-        </div>
-
-        <div className="l2-sb-section">
-          <button className="l2-sb-reset" onClick={() => { setFilters(INIT); resetSettings() }}>
-            Reset all
+          <button className="l2-sb-reset" onClick={() => setFilters(INIT)}>
+            Reset filters
           </button>
         </div>
 

@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { Property } from './types/property'
 import { useProperties } from './hooks/useProperties'
-import { useSettings } from './hooks/useSettings'
 import LayoutSplit from './layouts/LayoutSplit'
 import './App.css'
 
@@ -32,7 +31,6 @@ type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
 // ─── Main App ────────────────────────────────────────────────────────────────
 export default function App() {
   const { properties, loading, error } = useProperties()
-  const { settings, updateSettings, toggleItem, resetSettings } = useSettings()
 
   const [filters, setFilters] = useState<Filters>(INIT)
   const [sort, setSort]       = useState<SortKey>('newest')
@@ -102,10 +100,7 @@ export default function App() {
           toggleType={toggleType}
           setFilters={setFilters}
           setSort={s => setSort(s as SortKey)}
-          settings={settings}
-          updateSettings={updateSettings}
-          toggleItem={(key, item) => toggleItem(key, item)}
-          resetSettings={resetSettings}
+
         />
       </div>
     </div>
