@@ -73,7 +73,7 @@ module Api
 
       def set_property
         @property = Property
-          .includes(:property_nearest_stations, :area_price_growth, :property_transport_snapshot, :air_quality_station)
+          .includes(:property_nearest_stations, :area_price_growth, :property_transport_snapshot, :air_quality_station, :estate_agent)
           .friendly.find(params[:id])
       end
 
@@ -94,7 +94,7 @@ module Api
       end
 
       def base_properties
-        Property.includes(:property_transport_snapshot, :property_crime_snapshot, :property_nearest_stations, :air_quality_station)
+        Property.includes(:property_transport_snapshot, :property_crime_snapshot, :property_nearest_stations, :air_quality_station, :estate_agent)
           .order(created_at: :desc)
       end
 
@@ -183,6 +183,7 @@ module Api
           photo_urls: property.photo_urls, key_features: property.key_features,
           latitude: property.latitude, longitude: property.longitude,
           agent_name: property.agent_name, agent_phone: property.agent_phone,
+          estate_agent: estate_agent_payload(property.estate_agent),
           status: property.status, listed_at: property.listed_at,
           noise: noise_payload(property.property_transport_snapshot),
           nearest_stations: property.property_nearest_stations
@@ -197,6 +198,16 @@ module Api
             },
           area_price_growth: area_price_growth_payload(property.area_price_growth),
           air_quality:       air_quality_payload(property.air_quality_station)
+        }
+      end
+
+      def estate_agent_payload(estate_agent)
+        return nil unless estate_agent
+
+        {
+          display_name: estate_agent.display_name,
+          rating: estate_agent.rating&.to_f,
+          google_place_id: estate_agent.google_place_id
         }
       end
 
