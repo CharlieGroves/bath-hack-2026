@@ -20,7 +20,6 @@ os.environ.setdefault("KMP_INIT_AT_FORK", "FALSE")
 import numpy as np
 import pandas as pd
 import torch
-from captum.attr import IntegratedGradients
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
@@ -200,18 +199,6 @@ HPI_PROPERTY_KEYS = {
     "other": "all",
 }
 
-HUMAN_LABELS = {
-    "current_price_pence": "Current listing price",
-    "hpi_property_avg_price_pence": "Local historical average",
-    "hpi_property_yoy_pct": "Local 12m price trend",
-    "hpi_property_sales_volume": "Local sales volume",
-    "hpi_all_avg_price_pence": "Area all-property average",
-    "hpi_all_yoy_pct": "Area all-property 12m trend",
-    "price_vs_hpi_property_ratio": "Price vs local historical average",
-    "hpi_property_vs_all_ratio": "Property-type premium in area",
-}
-
-
 class PriceForecastNet(nn.Module):
     def __init__(self, input_dim: int) -> None:
         super().__init__()
@@ -329,69 +316,6 @@ def load_artifacts(artifacts_dir: Path) -> tuple[dict[str, PriceForecastNet], Co
     model.load_state_dict(payload["state_dict"])
     model.eval()
     return {"12": model}, preprocessor, metadata
-
-
-def transformed_feature_names(preprocessor: ColumnTransformer) -> list[str]:
-    return [str(name) for name in preprocessor.get_feature_names_out()]
-
-
-def simplify_feature_name(name: str) -> str:
-    if name.startswith("num__"):
-        return name.replace("num__", "", 1)
-    if name.startswith("cat__"):
-        return name.replace("cat__", "", 1)
-    return name
-
-
-def humanise_feature_name(name: str) -> str:
-    simplified = simplify_feature_name(name)
-    if simplified in HUMAN_LABELS:
-        return HUMAN_LABELS[simplified]
-    if simplified.startswith("property_type_"):
-        return f"Property type: {simplified.split('property_type_', 1)[1].replace('_', ' ')}"
-    if simplified.startswith("tenure_"):
-        return f"Tenure: {simplified.split('tenure_', 1)[1].replace('_', ' ')}"
-    if simplified.startswith("postcode_outward_"):
-        return f"Postcode area: {simplified.split('postcode_outward_', 1)[1]}"
-    if simplified.startswith("area_slug_"):
-        return f"Area: {simplified.split('area_slug_', 1)[1].replace('_', ' ')}"
-    return simplified.replace("_", " ")
-
-
-def summarize_attributions(
-    model: PriceForecastNet,
-    transformed_row: np.ndarray,
-    feature_names: list[str],
-    top_k: int = 8,
-) -> tuple[list[dict[str, Any]], float]:
-    input_tensor = torch.tensor(transformed_row.reshape(1, -1), dtype=torch.float32)
-    baseline_tensor = torch.zeros_like(input_tensor)
-    ig = IntegratedGradients(model)
-    attributions, delta = ig.attribute(
-        input_tensor,
-        baselines=baseline_tensor,
-        target=0,
-        return_convergence_delta=True,
-    )
-    attribution_values = attributions.detach().cpu().numpy().reshape(-1)
-    total_abs = float(np.abs(attribution_values).sum()) or 1.0
-
-    rows = []
-    for name, value in zip(feature_names, attribution_values, strict=True):
-        if abs(value) < 1e-8:
-            continue
-        rows.append(
-            {
-                "feature": simplify_feature_name(name),
-                "label": humanise_feature_name(name),
-                "attribution": float(value),
-                "direction": "up" if value >= 0 else "down",
-                "share_of_abs": float(abs(value) / total_abs),
-            }
-        )
-
-    rows.sort(key=lambda row: abs(row["attribution"]), reverse=True)
-    return rows[:top_k], float(delta.detach().cpu().numpy().reshape(-1)[0])
 
 
 def download_file(url: str, destination: Path) -> None:
@@ -757,7 +681,6 @@ def build_inference_payload(
     models: dict[str, PriceForecastNet],
     preprocessor: ColumnTransformer,
     metadata: dict[str, Any],
-    top_k: int = 8,
 ) -> dict[str, Any]:
     feature_frame = build_current_listing_frame(record, metadata)
     if feature_frame.empty:
@@ -765,7 +688,6 @@ def build_inference_payload(
 
     transformed_row = matrix_from_frame(preprocessor, feature_frame).reshape(1, -1)
     current_price_pence = float(feature_frame.iloc[0]["current_price_pence"])
-    feature_names = transformed_feature_names(preprocessor)
     forecasts = []
     horizon_months = metadata.get("forecast_horizon_months")
     if not horizon_months:
@@ -788,7 +710,6 @@ def build_inference_payload(
                 np.array([current_price_pence]),
             )[0]
         )
-        attributions, convergence_delta = summarize_attributions(model, transformed_row[0], feature_names, top_k=top_k)
         predicted_growth_pct = ((predicted_future_price_pence / current_price_pence) - 1.0) * 100.0 if current_price_pence else None
 
         forecasts.append(
@@ -799,8 +720,6 @@ def build_inference_payload(
                 "predicted_growth_pct": float(predicted_growth_pct) if predicted_growth_pct is not None else None,
                 "baseline_prediction_pence": int(round(baseline_prediction_pence)),
                 "training_summary": metadata.get("training_summaries", {}).get(horizon_key),
-                "attributions": attributions,
-                "attribution_convergence_delta": convergence_delta,
             }
         )
 

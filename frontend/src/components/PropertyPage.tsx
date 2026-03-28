@@ -371,27 +371,6 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
                     Holdout RMSE about £{Math.round(rmse).toLocaleString('en-GB')}
                   </div>
                 )}
-
-                {item.attributions.length > 0 && (
-                  <div className="pp-forecast-attribs">
-                    <div className="pp-forecast-attrib-heading">Integrated gradients</div>
-                    <div className="pp-forecast-attrib-list">
-                      {item.attributions.slice(0, 4).map((attrib) => (
-                        <div key={`${item.prediction_horizon_months}-${attrib.feature}`} className="pp-forecast-attrib-row">
-                          <div>
-                            <div className="pp-forecast-attrib-label">{attrib.label}</div>
-                            <div className="pp-forecast-attrib-meta">
-                              {(attrib.share_of_abs * 100).toFixed(0)}% of absolute attribution
-                            </div>
-                          </div>
-                          <div className={attrib.direction === 'up' ? 'pp-forecast-up' : 'pp-forecast-down'}>
-                            {attrib.direction === 'up' ? 'Raises' : 'Lowers'}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )
           })}

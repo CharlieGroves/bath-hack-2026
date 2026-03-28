@@ -145,16 +145,12 @@ module Api
               {
                 "prediction_horizon_months" => 12,
                 "predicted_future_price_pence" => 37_800_000,
-                "predicted_growth_pct" => 8.0,
-                "attributions" => [
-                  { "feature" => "current_price_pence", "label" => "Current asking price", "share_of_abs" => 0.7 }
-                ]
+                "predicted_growth_pct" => 8.0
               },
               {
                 "prediction_horizon_months" => 24,
                 "predicted_future_price_pence" => 39_200_000,
-                "predicted_growth_pct" => 12.0,
-                "attributions" => []
+                "predicted_growth_pct" => 12.0
               }
             ]
           }
@@ -164,7 +160,7 @@ module Api
 
         assert_response :success
         assert_equal 37_800_000, response.parsed_body["ml_forecast"]["forecasts"].first["predicted_future_price_pence"]
-        assert_equal "Current asking price", response.parsed_body["ml_forecast"]["forecasts"].first["attributions"].first["label"]
+        assert_equal 12.0, response.parsed_body["ml_forecast"]["forecasts"].second["predicted_growth_pct"]
       end
 
       test "GET /api/v1/properties/:id excludes raw_data" do

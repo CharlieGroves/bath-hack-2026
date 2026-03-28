@@ -44,14 +44,6 @@ export interface AreaPriceGrowth {
   yearly_growth_data: Record<string, YearlyGrowthEntry>
 }
 
-export interface MlForecastAttribution {
-  feature: string
-  label: string
-  attribution: number
-  direction: 'up' | 'down'
-  share_of_abs: number
-}
-
 export interface MlHistoricalContext {
   area_slug: string
   area_name: string
@@ -79,8 +71,6 @@ export interface MlForecastResult {
   predicted_growth_pct: number | null
   baseline_prediction_pence: number
   training_summary: MlTrainingSummary | null
-  attributions: MlForecastAttribution[]
-  attribution_convergence_delta: number
 }
 
 export interface MlForecast {

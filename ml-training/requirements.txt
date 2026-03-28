@@ -1,4 +1,3 @@
-captum
 numpy
 pandas
 scikit-learn

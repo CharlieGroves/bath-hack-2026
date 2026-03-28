@@ -594,60 +594,6 @@
   margin-top: 10px;
 }
 
-.pp-forecast-attribs {
-  margin-top: 20px;
-}
-
-.pp-forecast-attrib-heading {
-  font-family: var(--ff-body);
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--t2);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 10px;
-}
-
-.pp-forecast-attrib-list {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.pp-forecast-attrib-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-  padding: 12px 14px;
-  background: var(--sb-bg);
-  border-bottom: 1px solid var(--hr);
-}
-
-.pp-forecast-attrib-row:nth-child(odd) {
-  background: var(--card-bg);
-}
-
-.pp-forecast-attrib-row:last-child {
-  border-bottom: none;
-}
-
-.pp-forecast-attrib-label {
-  font-family: var(--ff-body);
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--t1);
-}
-
-.pp-forecast-attrib-meta {
-  font-family: var(--ff-body);
-  font-size: 0.76rem;
-  color: var(--t3);
-  margin-top: 2px;
-}
-
 .pp-forecast-note {
   margin-top: 14px;
   font-family: var(--ff-body);
@@ -771,10 +717,5 @@
 
   .pp-forecast-horizon-grid {
     grid-template-columns: 1fr;
-  }
-
-  .pp-forecast-attrib-row {
-    align-items: flex-start;
-    flex-direction: column;
   }
 }
