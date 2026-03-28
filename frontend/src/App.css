@@ -1,118 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Figtree:wght@300;400;500;600;700&display=swap');
-
-/* ─── Fireside palette ──────────────────────────────────────────────────── */
-:root {
-  --ember:   #E76814;
-  --flame:   #DC8236;
-  --ash:     #D8D4BC;
-  --coal:    #B8210F;
-  --hearth:  #891A10;
-  --bark:    #714236;
-  --glow:    #F25016;
-  --sage:    #83B366;
-  --sky:     #6596F3;
-
-  /* surfaces */
-  --bg:        #F5F0E6;
-  --sb-bg:     #EDE7D7;
-  --card-bg:   #FFFCF7;
-  --white:     #FFFFFF;
-
-  /* text */
-  --t1: #1E0D08;
-  --t2: #5A3020;
-  --t3: #9C7A68;
-  --t4: #BCA898;
-
-  /* chrome */
-  --border:    #DDD5C2;
-  --hr:        #E5DDD0;
-  --shadow:    0 1px 4px rgba(30,13,8,0.08), 0 4px 14px rgba(30,13,8,0.06);
-  --shadow-lg: 0 4px 8px rgba(30,13,8,0.06), 0 12px 32px rgba(30,13,8,0.10);
-
-  /* layout */
-  --hh:  60px;
-  --sbw: 292px;
-  --r:   10px;
-
-  /* typography */
-  --ff-display: 'Cormorant Garamond', Georgia, serif;
-  --ff-body:    'Figtree', system-ui, -apple-system, sans-serif;
-}
-
-/* ─── Reset ─────────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
-html, body, #root { height: 100%; }
-body {
-  font-family: var(--ff-body);
-  font-size: 14px;
-  background: var(--bg);
-  color: var(--t1);
-  -webkit-font-smoothing: antialiased;
-}
-input, button { font-family: inherit }
-button { cursor: pointer }
-a { text-decoration: none; color: inherit }
-
-/* ─── Splash ─────────────────────────────────────────────────────────────── */
-.splash {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  background: var(--bg);
-}
-.splash-text {
-  font-family: var(--ff-display);
-  font-size: 1.4rem;
-  color: var(--bark);
-  font-style: italic;
-}
-
-/* ─── App shell ─────────────────────────────────────────────────────────── */
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* ─── Header ─────────────────────────────────────────────────────────────── */
-.header {
-  height: var(--hh);
-  background: var(--t1);
-  border-bottom: 2px solid var(--ember);
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  gap: 18px;
-  flex-shrink: 0;
-  z-index: 10;
-}
-
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-shrink: 0;
-}
-.brand-name {
-  font-family: var(--ff-display);
-  font-size: 1.55rem;
-  font-weight: 700;
-  color: var(--ash);
-  letter-spacing: 0.015em;
-  line-height: 1;
-}
-
-.header-search-wrap {
-  flex: 1;
-  max-width: 440px;
+.app-shell {
   position: relative;
+  height: 100vh;
+  width: 100vw;
 }
-.search-icon {
+
+.status-panel {
   position: absolute;
   left: 11px;
   top: 50%;
@@ -404,217 +296,56 @@ a { text-decoration: none; color: inherit }
   width: 58px;
   padding: 7px 9px;
   border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--white);
-  font-size: 0.85rem;
-  color: var(--t1);
-  outline: none;
-  transition: border-color 0.15s;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
 }
-.num-field:focus { border-color: var(--ember) }
 
-/* Slider */
-.slider {
+.status-panel h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+}
+
+.map-shell {
+  height: 100%;
   width: 100%;
-  accent-color: var(--ember);
-  margin-bottom: 4px;
-}
-.slider-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.72rem;
-  color: var(--t4);
 }
 
-/* Reset */
-.reset-btn {
-  width: 100%;
-  margin-top: 10px;
-  padding: 9px;
-  border: 1px dashed var(--border);
-  border-radius: 7px;
-  background: none;
-  font-size: 0.8rem;
-  color: var(--t3);
-  transition: all 0.15s;
-}
-.reset-btn:hover {
-  border-color: var(--coal);
-  color: var(--coal);
-  border-style: solid;
-}
-
-/* ─── Content ─────────────────────────────────────────────────────────────── */
-.content {
-  flex: 1;
-  overflow-y: auto;
-  background: var(--bg);
-}
-.content::-webkit-scrollbar { width: 6px }
-.content::-webkit-scrollbar-track { background: transparent }
-.content::-webkit-scrollbar-thumb { background: var(--ash); border-radius: 3px }
-
-/* Grid */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-  gap: 18px;
-  padding: 22px;
-}
-
-/* Empty */
-.empty {
-  grid-column: 1 / -1;
+.leaflet-popup-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 40px;
-  gap: 16px;
-  font-family: var(--ff-display);
-  font-size: 1.1rem;
-  color: var(--bark);
-  font-style: italic;
-  text-align: center;
-}
-
-/* Map */
-.map-wrap { height: 100% }
-
-/* ─── Property Card ──────────────────────────────────────────────────────── */
-.card {
-  background: var(--card-bg);
-  border-radius: var(--r);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
-  border: 1px solid rgba(221, 213, 194, 0.6);
-}
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
-}
-.card-link {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-}
-
-/* Photo */
-.card-img {
-  position: relative;
-  height: 185px;
-  overflow: hidden;
-  background: var(--sb-bg);
-}
-.card-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform 0.4s ease;
-}
-.card:hover .card-img img { transform: scale(1.05) }
-
-.img-placeholder {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.25;
-}
-
-.type-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background: rgba(20, 8, 4, 0.7);
-  backdrop-filter: blur(6px);
-  color: var(--ash);
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  padding: 4px 9px;
-  border-radius: 4px;
-}
-
-/* Card body */
-.card-body {
-  padding: 14px 15px 15px;
-}
-
-.card-price {
-  font-family: var(--ff-display);
-  font-size: 1.45rem;
-  font-weight: 700;
-  color: var(--t1);
-  line-height: 1.1;
-  margin-bottom: 3px;
-}
-
-.card-title {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--t1);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 2px;
-}
-
-.card-addr {
-  font-size: 0.76rem;
-  color: var(--t3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 10px;
-}
-
-.card-stats {
-  display: flex;
-  gap: 10px;
-  font-size: 0.78rem;
-  color: var(--t2);
-  margin-bottom: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--hr);
-}
-
-/* Score chips */
-.score-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-bottom: 10px;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 20px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  background: color-mix(in srgb, var(--c) 12%, white);
-  color: color-mix(in srgb, var(--c) 80%, #111);
-  border: 1px solid color-mix(in srgb, var(--c) 28%, transparent);
-  cursor: default;
-}
-
-/* Card footer */
-.card-footer {
-  display: flex;
   gap: 8px;
-  flex-wrap: wrap;
 }
-.footer-tag {
-  font-size: 0.73rem;
-  color: var(--t3);
-  background: var(--bg);
-  border: 1px solid var(--hr);
-  border-radius: 5px;
-  padding: 2px 7px;
+
+.popup-title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.popup-address,
+.popup-price,
+.popup-noise-status,
+.popup-noise-empty {
+  margin: 0;
+  font-size: 13px;
+}
+
+.popup-noise-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.popup-noise-list li + li {
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .status-panel {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    max-width: none;
+  }
 }

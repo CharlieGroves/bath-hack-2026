@@ -2,7 +2,10 @@ class Property < ApplicationRecord
   extend FriendlyId
   friendly_id :rightmove_id, use: :slugged
 
+  has_one  :property_transport_snapshot, dependent: :destroy
   has_many :property_images, dependent: :destroy
+
+  after_commit :enqueue_transport_refresh, on: %i[create update], if: :transport_refresh_needed?
 
   STATUSES       = %w[active under_offer sold let].freeze
   PROPERTY_TYPES = %w[flat terraced semi_detached detached bungalow land other].freeze
@@ -34,4 +37,19 @@ class Property < ApplicationRecord
     "£#{ActiveSupport::NumberHelper.number_to_delimited(price_pence / 100)}"
   end
 
+  private
+
+  def transport_refresh_needed?
+    return false if latitude.blank? || longitude.blank?
+
+    saved_change_to_latitude? ||
+      saved_change_to_longitude? ||
+      property_transport_snapshot.nil? ||
+      property_transport_snapshot.fetched_at.nil? ||
+      property_transport_snapshot.fetched_at < 24.hours.ago
+  end
+
+  def enqueue_transport_refresh
+    PropertyTransportSnapshotJob.perform_later(id)
+  end
 end

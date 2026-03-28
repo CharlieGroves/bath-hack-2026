@@ -1,7 +1,7 @@
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import type { Property } from './types/property'
+import type { NoiseSection, Property } from './types/property'
 
 // Fix default marker icons broken by Vite's asset pipeline
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
@@ -25,6 +25,11 @@ function formatPrice(pence: number) {
   return `£${(pence / 100).toLocaleString('en-GB')}`
 }
 
+function formatNoiseMetric(section: NoiseSection | undefined, metric: string) {
+  const value = section?.metrics?.[metric]
+  return typeof value === 'number' ? `${value.toFixed(1)} dB` : 'No data'
+}
+
 export default function PropertyMap({
   properties,
   center = [51.38, -2.36], // Bath
@@ -41,12 +46,29 @@ export default function PropertyMap({
         .map((p) => (
           <Marker key={p.id} position={[p.latitude, p.longitude]}>
             <Popup>
-              <strong>{p.title || p.address}</strong>
-              <br />
-              {p.address}
-              <br />
-              {p.price && formatPrice(p.price)}
-              {p.bedrooms && ` · ${p.bedrooms} bed`}
+              <h2 className="popup-title">{p.title || p.address}</h2>
+              <p className="popup-address">{p.address}</p>
+              <p className="popup-price">
+                {p.price && formatPrice(p.price)}
+                {p.bedrooms && ` · ${p.bedrooms} bed`}
+              </p>
+              {p.noise ? (
+                <>
+                  <p className="popup-noise-status">
+                    Noise snapshot: {p.noise.status}
+                  </p>
+                  <ul className="popup-noise-list">
+                    <li>Road Lden: {formatNoiseMetric(p.noise.road_data, 'lden')}</li>
+                    <li>Rail Lden: {formatNoiseMetric(p.noise.rail_data, 'lden')}</li>
+                    <li>Flight Lden: {formatNoiseMetric(p.noise.flight_data, 'lden')}</li>
+                    <li>Road LAeq16hr: {formatNoiseMetric(p.noise.road_data, 'laeq16hr')}</li>
+                    <li>Rail LAeq16hr: {formatNoiseMetric(p.noise.rail_data, 'laeq16hr')}</li>
+                    <li>Flight LAeq16hr: {formatNoiseMetric(p.noise.flight_data, 'laeq16hr')}</li>
+                  </ul>
+                </>
+              ) : (
+                <p className="popup-noise-empty">Noise snapshot not loaded yet.</p>
+              )}
             </Popup>
           </Marker>
         ))}
