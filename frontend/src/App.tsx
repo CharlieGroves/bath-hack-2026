@@ -17,15 +17,16 @@ function FlameIcon({ size = 24 }: { size?: number }) {
 
 // ─── Filter state ────────────────────────────────────────────────────────────
 export interface Filters {
-  minPrice:         number | ''
-  maxPrice:         number | ''
-  minBeds:          number
-  maxBeds:          number
-  types:            string[]
+  minPrice:          number | ''
+  maxPrice:          number | ''
+  minBeds:           number
+  maxBeds:           number
+  types:             string[]
   maxStationMinutes: number
+  maxCrimeRate:      number | ''
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0 }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '' }
 
 type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
 
@@ -47,6 +48,10 @@ export default function App() {
       if (filters.maxStationMinutes > 0) {
         const closest = Math.min(...(p.nearest_stations ?? []).map(s => s.walking_minutes))
         if (!isFinite(closest) || closest > filters.maxStationMinutes) return false
+      }
+      if (filters.maxCrimeRate !== '') {
+        const avg = p.crime?.avg_monthly_crimes
+        if (avg == null || avg > (filters.maxCrimeRate as number)) return false
       }
       return true
     })

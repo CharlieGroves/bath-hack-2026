@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
@@ -89,7 +89,7 @@ interface Props {
   onBoundsChange: (b: MapBounds) => void
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0 }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '' }
 
 const STATION_MINUTE_OPTIONS = [
   { value: 0,  label: 'Any' },
@@ -115,6 +115,14 @@ export default function LayoutSplit({
   const [hoveredId, setHoveredId]     = useState<number | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const rowRefs = useRef<Record<number, HTMLAnchorElement | null>>({})
+
+  const crimeRange = useMemo(() => {
+    const rates = properties
+      .map(p => p.crime?.avg_monthly_crimes)
+      .filter((v): v is number => v != null)
+    if (rates.length === 0) return null
+    return { min: Math.floor(Math.min(...rates)), max: Math.ceil(Math.max(...rates)) }
+  }, [properties])
 
   const mapItems = filtered.filter(p => p.latitude != null && p.longitude != null)
 
@@ -198,6 +206,42 @@ export default function LayoutSplit({
           </div>
           {filters.types.length === 0 && <p className="l2-sb-hint">All types shown</p>}
         </div>
+
+        {crimeRange && (
+        <div className="l2-sb-section">
+          <div className="l2-sb-slider-header">
+            <span className="l2-sb-label" style={{ marginBottom: 0 }}>Crime rate</span>
+            <span className="l2-sb-slider-value">
+              {filters.maxCrimeRate === '' || filters.maxCrimeRate === crimeRange.max
+                ? 'Any'
+                : `up to ${Math.round(filters.maxCrimeRate as number)}/mo`}
+            </span>
+          </div>
+          {(() => {
+            const val = filters.maxCrimeRate === '' ? crimeRange.max : filters.maxCrimeRate as number
+            const pct = Math.round(((val - crimeRange.min) / (crimeRange.max - crimeRange.min)) * 100)
+            return (
+              <input
+                className="l2-sb-slider"
+                type="range"
+                min={crimeRange.min}
+                max={crimeRange.max}
+                step={1}
+                value={val}
+                style={{ '--slider-pct': pct } as React.CSSProperties}
+                onChange={e => {
+                  const v = +e.target.value
+                  setF('maxCrimeRate', v >= crimeRange.max ? '' : v)
+                }}
+              />
+            )
+          })()}
+          <div className="l2-sb-slider-range">
+            <span>{crimeRange.min}</span>
+            <span>{crimeRange.max} crimes/mo</span>
+          </div>
+        </div>
+        )}
 
         <div className="l2-sb-section">
           <span className="l2-sb-label">Walk to station</span>
