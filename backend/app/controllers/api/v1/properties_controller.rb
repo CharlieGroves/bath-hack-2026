@@ -2,7 +2,7 @@ module Api
   module V1
     class PropertiesController < ApplicationController
       skip_before_action :verify_authenticity_token
-      before_action :set_property, only: %i[show update destroy]
+      before_action :set_property, only: %i[show update destroy xray]
 
       # GET /api/v1/properties
       def index
@@ -49,6 +49,16 @@ module Api
       # GET /api/v1/properties/:id
       def show
         render json: property_detail(@property)
+      end
+
+      # GET /api/v1/properties/:id/xray
+      def xray
+        result = PropertyXrayService.new(@property).call
+        render json: result
+      rescue TravelTimeGateway::ConfigError => e
+        render json: { error: e.message }, status: :service_unavailable
+      rescue TravelTimeGateway::RequestError => e
+        render json: { error: e.message }, status: :bad_gateway
       end
 
       # POST /api/v1/properties
