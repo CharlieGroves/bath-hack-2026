@@ -1,4 +1,4 @@
-require "net/http"
+require "faraday"
 require "nokogiri"
 require "json"
 
@@ -33,16 +33,14 @@ class RightmoveScraper
   # ------------------------------------------------------------------
 
   def fetch_html(url)
-    uri      = URI(url)
-    response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-      req = Net::HTTP::Get.new(uri)
-      req["User-Agent"]      = "Mozilla/5.0 (compatible; Bath-Hack-Bot/1.0)"
-      req["Accept"]          = "text/html,application/xhtml+xml"
-      req["Accept-Language"] = "en-GB,en;q=0.9"
-      http.request(req)
+    conn = Faraday.new do |f|
+      f.headers["User-Agent"]      = "Mozilla/5.0 (compatible; Bath-Hack-Bot/1.0)"
+      f.headers["Accept"]          = "text/html,application/xhtml+xml"
+      f.headers["Accept-Language"] = "en-GB,en;q=0.9"
     end
 
-    raise ScrapingError, "HTTP #{response.code} for #{url}" unless response.is_a?(Net::HTTPSuccess)
+    response = conn.get(url)
+    raise ScrapingError, "HTTP #{response.status} for #{url}" unless response.success?
 
     response.body
   end
