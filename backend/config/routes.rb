@@ -19,7 +19,11 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      resources :properties
+      resources :properties do
+        collection do
+          get :heatmap
+        end
+      end
       resources :air_quality_stations, only: [:show]
     end
   end

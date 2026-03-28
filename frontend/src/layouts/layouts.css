@@ -548,6 +548,80 @@
   flex: 1;
   height: 100%;
   min-height: 0;
+  position: relative;
+}
+
+.l2-heatmap-key {
+  position: absolute;
+  bottom: 24px;
+  right: 10px;
+  z-index: 1000;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  padding: 8px 10px;
+  width: 180px;
+}
+
+.l2-heatmap-key-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #3b82f6, #f59e0b, #dc2626);
+  margin-bottom: 5px;
+}
+
+.l2-heatmap-key-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.67rem;
+  color: var(--t3);
+}
+
+.l2-heatmap-key-title {
+  color: var(--t4);
+  font-size: 0.63rem;
+  text-align: center;
+}
+
+.l2-layer-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  display: flex;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.l2-layer-toggle button {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-family: var(--ff-body);
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--t2);
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+
+.l2-layer-toggle button + button {
+  border-left: 1px solid var(--border);
+}
+
+.l2-layer-toggle button:hover {
+  color: var(--t1);
+}
+
+.l2-layer-toggle button.on {
+  background: var(--ember);
+  color: #fff;
 }
 
 .l2-count {

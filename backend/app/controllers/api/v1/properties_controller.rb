@@ -29,6 +29,14 @@ module Api
         }
       end
 
+      # GET /api/v1/properties/heatmap
+      def heatmap
+        points = Property
+          .where.not(latitude: nil, longitude: nil, price_per_sqft_pence: nil)
+          .pluck(:latitude, :longitude, :price_per_sqft_pence)
+        render json: { points: points }
+      end
+
       # GET /api/v1/properties/:id
       def show
         render json: property_detail(@property)
@@ -82,7 +90,8 @@ module Api
           rightmove_id:  p.rightmove_id,
           title:         p.title,
           address:       p.address_line_1,
-          price:         p.price_pence,
+          price:              p.price_pence,
+          price_per_sqft:     p.price_per_sqft_pence,
           bedrooms:      p.bedrooms,
           bathrooms:     p.bathrooms,
           property_type: p.property_type,

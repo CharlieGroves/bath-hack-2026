@@ -158,7 +158,7 @@ function CoreDetails({ property }: { property: PropertyDetail }) {
   if (property.listed_at)        items.push({ label: 'Listed',          value: fmtDate(property.listed_at) ?? '' })
   if (property.service_charge_annual_pence && property.service_charge_annual_pence > 0)
     items.push({ label: 'Service charge', value: `${fmtPrice(property.service_charge_annual_pence)} p.a.` })
-  if (property.lease_years_remaining != null)
+  if (property.lease_years_remaining != null && property.tenure !== 'freehold')
     items.push({ label: 'Lease remaining', value: `${property.lease_years_remaining} years` })
 
   if (!items.length) return null
