@@ -19,7 +19,6 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      get "location_autocomplete" => "location_autocomplete#index"
       resources :properties do
         collection do
           get :search
