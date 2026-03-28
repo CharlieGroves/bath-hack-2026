@@ -9,7 +9,7 @@ Install these before starting:
 - [rbenv](https://github.com/rbenv/rbenv) — Ruby version manager
 - [Node.js](https://nodejs.org/) (v18+) and npm
 - [Redis](https://redis.io/) — `brew install redis`
-- [SQLite3](https://www.sqlite.org/) — usually pre-installed on macOS
+- [PostgreSQL](https://www.postgresql.org/) — `brew install postgresql@16`
 
 ## Setup
 
