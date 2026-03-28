@@ -1,6 +1,6 @@
 # ML Training
 
-This folder contains the local training and inference pipeline for the one-year price forecast shown on the property detail page.
+This folder contains the local training and inference pipeline for the 1-year, 2-year, and 3-year price forecasts shown on the property detail page.
 
 ## Training basis
 
@@ -9,7 +9,7 @@ The model is now trained on official historical data:
 - HM Land Registry Price Paid Data transactions for London local authorities, filtered from yearly files for `2020` through `2024`.
 - HM Land Registry UK HPI data, using the latest bundled file in this pipeline for `2025-12`.
 
-For each historical sale, the one-year-forward target is built from the actual subsequent UK HPI movement for that same London area and property type, applied to the historical sale price.
+For each historical sale, the 1-year, 2-year, and 3-year targets are built from the actual subsequent UK HPI movement for that same London area and property type, applied to the historical sale price.
 
 This is materially better than the earlier proxy based only on current listings and a growth prior, but it is still not a perfect observed repeat-sale target for the exact same house.
 

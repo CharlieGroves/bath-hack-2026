@@ -503,11 +503,21 @@
   gap: 12px;
 }
 
+.pp-forecast-topline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
 .pp-forecast-stat {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.5);
   padding: 14px 16px;
+}
+
+.pp-forecast-stat-wide {
+  max-width: 320px;
 }
 
 .pp-forecast-label {
@@ -554,6 +564,34 @@
   font-family: var(--ff-body);
   font-size: 0.8rem;
   color: var(--t3);
+}
+
+.pp-forecast-horizon-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.pp-forecast-horizon-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.56);
+  padding: 14px;
+}
+
+.pp-forecast-horizon-delta {
+  font-family: var(--ff-body);
+  font-size: 0.86rem;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.pp-forecast-card-meta {
+  font-family: var(--ff-body);
+  font-size: 0.76rem;
+  color: var(--t3);
+  margin-top: 10px;
 }
 
 .pp-forecast-attribs {
@@ -728,6 +766,10 @@
   }
 
   .pp-forecast-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pp-forecast-horizon-grid {
     grid-template-columns: 1fr;
   }
 

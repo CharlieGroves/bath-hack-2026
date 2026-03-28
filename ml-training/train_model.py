@@ -17,6 +17,7 @@ os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
 os.environ.setdefault("KMP_INIT_AT_FORK", "FALSE")
 
 import numpy as np
+import pandas as pd
 import torch
 from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
@@ -30,9 +31,9 @@ from pipeline import (
     DEFAULT_CURRENT_LISTINGS_PATH,
     DEFAULT_PPD_YEARS,
     DEFAULT_FILTERED_PPD_PATH,
+    FORECAST_HORIZON_MONTHS,
     METADATA_COLUMNS,
     NUMERIC_FEATURES,
-    PREDICTION_HORIZON_MONTHS,
     PriceForecastNet,
     TARGET_NOTE,
     UK_HPI_FULL_FILE_URL,
@@ -158,7 +159,7 @@ def metrics_for_predictions(actual_pence: np.ndarray, predicted_pence: np.ndarra
 
 def generate_listing_forecasts(
     listings_path: Path,
-    model: PriceForecastNet,
+    models: dict[str, PriceForecastNet],
     preprocessor,
     metadata: dict[str, Any],
 ) -> list[dict[str, Any]]:
@@ -173,13 +174,33 @@ def generate_listing_forecasts(
         frame = build_current_listing_frame(record, metadata)
         if frame.empty:
             continue
-        result = build_inference_payload(record, model, preprocessor, metadata)
+        result = build_inference_payload(record, models, preprocessor, metadata)
         result["id"] = record.get("id")
         result["rightmove_id"] = record.get("rightmove_id")
         result["address_line_1"] = record.get("address_line_1")
         result["postcode"] = record.get("postcode")
         forecasts.append(result)
     return forecasts
+
+
+def training_summary_for_horizon(
+    horizon_months: int,
+    training_frame,
+    test_frame,
+    best_epoch: int,
+    holdout_actual: np.ndarray,
+    holdout_predictions: np.ndarray,
+) -> dict[str, Any]:
+    return {
+        "prediction_horizon_months": int(horizon_months),
+        "prediction_horizon_years": int(horizon_months) // 12,
+        "sample_count": int(len(training_frame)),
+        "holdout_count": int(len(test_frame)),
+        "best_epoch": int(best_epoch),
+        "trained_at": datetime.now(timezone.utc).isoformat(),
+        "historical_years": list(DEFAULT_PPD_YEARS),
+        **metrics_for_predictions(holdout_actual, holdout_predictions),
+    }
 
 
 def main() -> None:
@@ -202,90 +223,124 @@ def main() -> None:
     hpi_path = ensure_hpi_download()
     hpi_context = build_hpi_context(hpi_path)
     filtered_ppd_path = build_filtered_ppd_cache(hpi_context, output_path=args.filtered_ppd_path.resolve())
-    training_frame = build_training_frame(
-        hpi_context,
-        filtered_ppd_path=filtered_ppd_path,
-        sample_limit=args.sample_limit,
-        seed=args.seed,
-    )
+    training_frames_by_horizon: dict[int, Any] = {}
+    combined_training_frames = []
+    for horizon_months in FORECAST_HORIZON_MONTHS:
+        horizon_frame = build_training_frame(
+            hpi_context,
+            filtered_ppd_path=filtered_ppd_path,
+            horizon_months=horizon_months,
+            sample_limit=args.sample_limit,
+            seed=args.seed,
+        )
+        if len(horizon_frame) < 1_000:
+            raise SystemExit(
+                f"Need at least 1000 historical rows to train horizon {horizon_months}; only found {len(horizon_frame)}."
+            )
+        training_frames_by_horizon[horizon_months] = horizon_frame
+        combined_training_frames.append(horizon_frame)
 
-    if len(training_frame) < 1_000:
-        raise SystemExit(f"Need at least 1000 historical rows to train; only found {len(training_frame)}.")
+    if not combined_training_frames:
+        raise SystemExit("No historical training frames were produced.")
 
-    active_numeric_features = [feature for feature in NUMERIC_FEATURES if training_frame[feature].notna().any()]
-    active_categorical_features = [feature for feature in CATEGORICAL_FEATURES if training_frame[feature].notna().any()]
+    combined_training_frame = pd.concat(combined_training_frames, ignore_index=True)
+
+    active_numeric_features = [feature for feature in NUMERIC_FEATURES if combined_training_frame[feature].notna().any()]
+    active_categorical_features = [feature for feature in CATEGORICAL_FEATURES if combined_training_frame[feature].notna().any()]
     feature_columns = active_numeric_features + active_categorical_features
-    targets = np.log1p(training_frame["target_future_price_pence"].to_numpy(dtype=np.float64))
-
-    train_indices, test_indices = train_test_split(
-        np.arange(len(training_frame)),
-        test_size=min(max(5_000, round(len(training_frame) * 0.2)), len(training_frame) // 3),
-        random_state=args.seed,
-    )
-
-    train_frame = training_frame.iloc[train_indices].reset_index(drop=True)
-    test_frame = training_frame.iloc[test_indices].reset_index(drop=True)
-
-    inner_train_indices, val_indices = train_test_split(
-        np.arange(len(train_frame)),
-        test_size=min(max(2_500, round(len(train_frame) * 0.1)), len(train_frame) // 4),
-        random_state=args.seed,
-    )
-
-    dev_preprocessor = make_preprocessor(active_numeric_features, active_categorical_features)
-    dev_preprocessor.fit(train_frame[feature_columns])
-
-    dev_train_matrix = matrix_from_frame(dev_preprocessor, train_frame.iloc[inner_train_indices])
-    dev_val_matrix = matrix_from_frame(dev_preprocessor, train_frame.iloc[val_indices])
-    dev_test_matrix = matrix_from_frame(dev_preprocessor, test_frame)
-
-    dev_train_targets = np.log1p(train_frame.iloc[inner_train_indices]["target_future_price_pence"].to_numpy(dtype=np.float64))
-    dev_val_targets = np.log1p(train_frame.iloc[val_indices]["target_future_price_pence"].to_numpy(dtype=np.float64))
-
-    dev_model, best_epoch = train_with_validation(
-        dev_train_matrix,
-        dev_train_targets,
-        dev_val_matrix,
-        dev_val_targets,
-        seed=args.seed,
-    )
-
-    holdout_predictions = stabilize_future_price_predictions(
-        predict_future_prices(dev_model, dev_test_matrix),
-        test_frame["current_price_pence"].to_numpy(dtype=np.float64),
-    )
-    holdout_actual = test_frame["target_future_price_pence"].to_numpy(dtype=np.float64)
-
-    training_summary = {
-        "sample_count": int(len(training_frame)),
-        "holdout_count": int(len(test_frame)),
-        "best_epoch": int(best_epoch),
-        "trained_at": datetime.now(timezone.utc).isoformat(),
-        "historical_years": list(DEFAULT_PPD_YEARS),
-        **metrics_for_predictions(holdout_actual, holdout_predictions),
-    }
-
     final_preprocessor = make_preprocessor(active_numeric_features, active_categorical_features)
-    final_preprocessor.fit(training_frame[feature_columns])
-    final_matrix = matrix_from_frame(final_preprocessor, training_frame)
-    final_model = train_fixed_epochs(final_matrix, targets, final_matrix.shape[1], best_epoch, args.seed)
+    final_preprocessor.fit(combined_training_frame[feature_columns])
 
-    final_predictions = stabilize_future_price_predictions(
-        predict_future_prices(final_model, final_matrix),
-        training_frame["current_price_pence"].to_numpy(dtype=np.float64),
-    )
-    training_summary["full_fit_rmse_pounds"] = float(
-        math.sqrt(mean_squared_error(training_frame["target_future_price_pence"].to_numpy(dtype=np.float64) / 100.0, final_predictions / 100.0))
-    )
+    models_by_horizon: dict[str, PriceForecastNet] = {}
+    training_summaries: dict[str, dict[str, Any]] = {}
+    predictions_output_by_horizon: dict[str, list[dict[str, Any]]] = {}
+
+    for horizon_months, training_frame in training_frames_by_horizon.items():
+        targets = np.log1p(training_frame["target_future_price_pence"].to_numpy(dtype=np.float64))
+        train_indices, test_indices = train_test_split(
+            np.arange(len(training_frame)),
+            test_size=min(max(5_000, round(len(training_frame) * 0.2)), len(training_frame) // 3),
+            random_state=args.seed,
+        )
+
+        train_frame = training_frame.iloc[train_indices].reset_index(drop=True)
+        test_frame = training_frame.iloc[test_indices].reset_index(drop=True)
+
+        inner_train_indices, val_indices = train_test_split(
+            np.arange(len(train_frame)),
+            test_size=min(max(2_500, round(len(train_frame) * 0.1)), len(train_frame) // 4),
+            random_state=args.seed,
+        )
+
+        dev_preprocessor = make_preprocessor(active_numeric_features, active_categorical_features)
+        dev_preprocessor.fit(train_frame[feature_columns])
+
+        dev_train_matrix = matrix_from_frame(dev_preprocessor, train_frame.iloc[inner_train_indices])
+        dev_val_matrix = matrix_from_frame(dev_preprocessor, train_frame.iloc[val_indices])
+        dev_test_matrix = matrix_from_frame(dev_preprocessor, test_frame)
+
+        dev_train_targets = np.log1p(train_frame.iloc[inner_train_indices]["target_future_price_pence"].to_numpy(dtype=np.float64))
+        dev_val_targets = np.log1p(train_frame.iloc[val_indices]["target_future_price_pence"].to_numpy(dtype=np.float64))
+
+        dev_model, best_epoch = train_with_validation(
+            dev_train_matrix,
+            dev_train_targets,
+            dev_val_matrix,
+            dev_val_targets,
+            seed=args.seed,
+        )
+
+        holdout_predictions = stabilize_future_price_predictions(
+            predict_future_prices(dev_model, dev_test_matrix),
+            test_frame["current_price_pence"].to_numpy(dtype=np.float64),
+        )
+        holdout_actual = test_frame["target_future_price_pence"].to_numpy(dtype=np.float64)
+
+        training_summary = training_summary_for_horizon(
+            horizon_months,
+            training_frame,
+            test_frame,
+            best_epoch,
+            holdout_actual,
+            holdout_predictions,
+        )
+
+        final_matrix = matrix_from_frame(final_preprocessor, training_frame)
+        final_model = train_fixed_epochs(final_matrix, targets, final_matrix.shape[1], best_epoch, args.seed)
+        final_predictions = stabilize_future_price_predictions(
+            predict_future_prices(final_model, final_matrix),
+            training_frame["current_price_pence"].to_numpy(dtype=np.float64),
+        )
+
+        training_summary["full_fit_rmse_pounds"] = float(
+            math.sqrt(
+                mean_squared_error(
+                    training_frame["target_future_price_pence"].to_numpy(dtype=np.float64) / 100.0,
+                    final_predictions / 100.0,
+                )
+            )
+        )
+
+        horizon_key = str(horizon_months)
+        models_by_horizon[horizon_key] = final_model
+        training_summaries[horizon_key] = training_summary
+
+        predictions_output = training_frame[METADATA_COLUMNS].copy()
+        predictions_output["prediction_horizon_months"] = horizon_months
+        predictions_output["predicted_future_price_pence"] = final_predictions.round().astype(int)
+        predictions_output["predicted_growth_pct"] = (
+            (predictions_output["predicted_future_price_pence"] / predictions_output["current_price_pence"]) - 1.0
+        ) * 100.0
+        predictions_output_by_horizon[horizon_key] = predictions_output.to_dict(orient="records")
 
     metadata = {
-        "prediction_horizon_months": PREDICTION_HORIZON_MONTHS,
+        "forecast_horizon_months": list(FORECAST_HORIZON_MONTHS),
         "target_note": TARGET_NOTE,
         "feature_columns": feature_columns,
         "numeric_features": active_numeric_features,
         "categorical_features": active_categorical_features,
         "transformed_feature_names": final_preprocessor.get_feature_names_out().tolist(),
-        "training_summary": training_summary,
+        "training_summaries": training_summaries,
         "training_basis": "historical_land_registry_hpi",
         "latest_hpi_period": hpi_context["latest_period"],
         "area_name_by_slug": hpi_context["area_name_by_slug"],
@@ -300,27 +355,27 @@ def main() -> None:
         pickle.dump(final_preprocessor, file_handle)
     torch.save(
         {
-            "input_dim": final_matrix.shape[1],
-            "state_dict": final_model.state_dict(),
+            "input_dim": len(final_preprocessor.get_feature_names_out()),
+            "models": {horizon: model.state_dict() for horizon, model in models_by_horizon.items()},
         },
         artifacts_dir / "model.pt",
     )
     with (artifacts_dir / "metadata.json").open("w", encoding="utf-8") as file_handle:
         json.dump(metadata, file_handle, indent=2)
 
-    predictions_output = training_frame[METADATA_COLUMNS].copy()
-    predictions_output["predicted_future_price_pence"] = final_predictions.round().astype(int)
-    predictions_output["predicted_growth_pct"] = (
-        (predictions_output["predicted_future_price_pence"] / predictions_output["current_price_pence"]) - 1.0
-    ) * 100.0
-    predictions_output.to_json(artifacts_dir / "training_predictions.json", orient="records", indent=2)
+    with (artifacts_dir / "training_predictions.json").open("w", encoding="utf-8") as file_handle:
+        json.dump(predictions_output_by_horizon, file_handle, indent=2)
 
-    listing_forecasts = generate_listing_forecasts(args.listings_path.resolve(), final_model, final_preprocessor, metadata)
+    listing_forecasts = generate_listing_forecasts(args.listings_path.resolve(), models_by_horizon, final_preprocessor, metadata)
     with (artifacts_dir / "property_forecasts.json").open("w", encoding="utf-8") as file_handle:
         json.dump(listing_forecasts, file_handle, indent=2)
 
-    print(f"Trained model on {len(training_frame)} historical rows")
-    print(f"Holdout RMSE: £{training_summary['holdout_rmse_pounds']:,.0f}")
+    summary_text = ", ".join(
+        f"{horizon}m RMSE £{round(training_summaries[str(horizon)]['holdout_rmse_pounds']):,}"
+        for horizon in FORECAST_HORIZON_MONTHS
+    )
+    print(f"Trained models for horizons {', '.join(str(h) for h in FORECAST_HORIZON_MONTHS)} months")
+    print(summary_text)
     print(f"Artifacts written to {artifacts_dir}")
 
 

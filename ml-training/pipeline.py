@@ -37,13 +37,14 @@ DEFAULT_FILTERED_PPD_PATH = DEFAULT_HISTORICAL_DATA_DIR / "london_ppd_2020_2024.
 DEFAULT_ARTIFACTS_DIR = PROJECT_ROOT / "ml-training" / "artifacts" / "latest"
 
 DEFAULT_PPD_YEARS = tuple(range(2020, 2025))
-PREDICTION_HORIZON_MONTHS = 12
+FORECAST_HORIZON_MONTHS = (12, 24, 36)
 TARGET_GROWTH_CLIP_MIN = -20.0
 TARGET_GROWTH_CLIP_MAX = 25.0
 TARGET_NOTE = (
     "Model trained on official HM Land Registry Price Paid Data transactions from 2020 to 2024 "
-    "for London local authorities. The one-year target is derived from the actual subsequent UK HPI "
-    "movement for the same London area and property type, applied to each historical sale price."
+    "for London local authorities. The 1-year, 2-year, and 3-year targets are derived from the "
+    "actual subsequent UK HPI movement for the same London area and property type, applied to each "
+    "historical sale price."
 )
 
 UK_HPI_FULL_FILE_URL = (
@@ -308,17 +309,26 @@ def stabilize_future_price_predictions(predicted_prices: np.ndarray, current_pri
     return np.where(np.isfinite(stabilized), stabilized, predicted_prices)
 
 
-def load_artifacts(artifacts_dir: Path) -> tuple[PriceForecastNet, ColumnTransformer, dict[str, Any]]:
+def load_artifacts(artifacts_dir: Path) -> tuple[dict[str, PriceForecastNet], ColumnTransformer, dict[str, Any]]:
     artifacts_dir = Path(artifacts_dir)
     with (artifacts_dir / "metadata.json").open("r", encoding="utf-8") as file_handle:
         metadata = json.load(file_handle)
     with (artifacts_dir / "preprocessor.pkl").open("rb") as file_handle:
         preprocessor = pickle.load(file_handle)
     payload = torch.load(artifacts_dir / "model.pt", map_location="cpu")
+    if "models" in payload:
+        models: dict[str, PriceForecastNet] = {}
+        for horizon_key, state_dict in payload["models"].items():
+            model = PriceForecastNet(int(payload["input_dim"]))
+            model.load_state_dict(state_dict)
+            model.eval()
+            models[str(horizon_key)] = model
+        return models, preprocessor, metadata
+
     model = PriceForecastNet(int(payload["input_dim"]))
     model.load_state_dict(payload["state_dict"])
     model.eval()
-    return model, preprocessor, metadata
+    return {"12": model}, preprocessor, metadata
 
 
 def transformed_feature_names(preprocessor: ColumnTransformer) -> list[str]:
@@ -616,6 +626,7 @@ def latest_hpi_record_for(latest_snapshot: dict[str, Any], area_slug: str, prope
 def build_training_frame(
     hpi_context: dict[str, Any],
     filtered_ppd_path: Path = DEFAULT_FILTERED_PPD_PATH,
+    horizon_months: int = 12,
     sample_limit: int | None = 120_000,
     seed: int = 42,
 ) -> pd.DataFrame:
@@ -635,7 +646,7 @@ def build_training_frame(
             continue
 
         current_hpi = hpi_record_for(hpi_context, row["area_slug"], property_type, row["sale_period"])
-        future_hpi = hpi_record_for(hpi_context, row["area_slug"], property_type, row["sale_period"] + PREDICTION_HORIZON_MONTHS)
+        future_hpi = hpi_record_for(hpi_context, row["area_slug"], property_type, row["sale_period"] + horizon_months)
         current_all_hpi = hpi_record_for(hpi_context, row["area_slug"], "other", row["sale_period"])
 
         if not current_hpi or not future_hpi or not current_all_hpi:
@@ -657,6 +668,7 @@ def build_training_frame(
                 "sample_id": row["transaction_id"],
                 "current_price_pence": current_price_pence,
                 "target_future_price_pence": target_future_price_pence,
+                "prediction_horizon_months": horizon_months,
                 "hpi_property_avg_price_pence": current_hpi["avg_price_pence"],
                 "hpi_property_yoy_pct": current_hpi["yoy_pct"],
                 "hpi_property_sales_volume": current_hpi["sales_volume"],
@@ -742,7 +754,7 @@ def build_current_listing_frame(record: dict[str, Any], metadata: dict[str, Any]
 
 def build_inference_payload(
     record: dict[str, Any],
-    model: PriceForecastNet,
+    models: dict[str, PriceForecastNet],
     preprocessor: ColumnTransformer,
     metadata: dict[str, Any],
     top_k: int = 8,
@@ -753,33 +765,55 @@ def build_inference_payload(
 
     transformed_row = matrix_from_frame(preprocessor, feature_frame).reshape(1, -1)
     current_price_pence = float(feature_frame.iloc[0]["current_price_pence"])
-    raw_prediction = predict_future_prices(model, transformed_row)
-    predicted_future_price_pence = float(stabilize_future_price_predictions(raw_prediction, np.array([current_price_pence]))[0])
-    baseline_prediction_pence = float(
-        stabilize_future_price_predictions(
-            predict_future_prices(model, np.zeros_like(transformed_row)),
-            np.array([current_price_pence]),
-        )[0]
-    )
-
     feature_names = transformed_feature_names(preprocessor)
-    attributions, convergence_delta = summarize_attributions(model, transformed_row[0], feature_names, top_k=top_k)
-    predicted_growth_pct = ((predicted_future_price_pence / current_price_pence) - 1.0) * 100.0 if current_price_pence else None
+    forecasts = []
+    horizon_months = metadata.get("forecast_horizon_months")
+    if not horizon_months:
+        single_horizon = metadata.get("prediction_horizon_months")
+        horizon_months = [single_horizon] if single_horizon else [12]
+
+    for horizon in horizon_months:
+        horizon_key = str(horizon)
+        model = models.get(horizon_key)
+        if model is None:
+            continue
+
+        raw_prediction = predict_future_prices(model, transformed_row)
+        predicted_future_price_pence = float(
+            stabilize_future_price_predictions(raw_prediction, np.array([current_price_pence]))[0]
+        )
+        baseline_prediction_pence = float(
+            stabilize_future_price_predictions(
+                predict_future_prices(model, np.zeros_like(transformed_row)),
+                np.array([current_price_pence]),
+            )[0]
+        )
+        attributions, convergence_delta = summarize_attributions(model, transformed_row[0], feature_names, top_k=top_k)
+        predicted_growth_pct = ((predicted_future_price_pence / current_price_pence) - 1.0) * 100.0 if current_price_pence else None
+
+        forecasts.append(
+            {
+                "prediction_horizon_months": int(horizon),
+                "prediction_horizon_years": int(horizon) // 12,
+                "predicted_future_price_pence": int(round(predicted_future_price_pence)),
+                "predicted_growth_pct": float(predicted_growth_pct) if predicted_growth_pct is not None else None,
+                "baseline_prediction_pence": int(round(baseline_prediction_pence)),
+                "training_summary": metadata.get("training_summaries", {}).get(horizon_key),
+                "attributions": attributions,
+                "attribution_convergence_delta": convergence_delta,
+            }
+        )
 
     return {
-        "prediction_horizon_months": metadata["prediction_horizon_months"],
         "current_price_pence": int(round(current_price_pence)),
-        "predicted_future_price_pence": int(round(predicted_future_price_pence)),
-        "predicted_growth_pct": float(predicted_growth_pct) if predicted_growth_pct is not None else None,
-        "baseline_prediction_pence": int(round(baseline_prediction_pence)),
         "historical_context": {
             "area_slug": feature_frame.iloc[0]["area_slug"],
             "area_name": feature_frame.iloc[0]["area_name"],
             "latest_hpi_period": metadata["latest_hpi_period"],
             "local_hpi_yoy_pct": feature_frame.iloc[0]["hpi_property_yoy_pct"],
         },
-        "training_summary": metadata["training_summary"],
+        "forecast_horizon_months": horizon_months,
+        "training_summaries": metadata.get("training_summaries", {}),
         "target_note": metadata["target_note"],
-        "attributions": attributions,
-        "attribution_convergence_delta": convergence_delta,
+        "forecasts": forecasts,
     }

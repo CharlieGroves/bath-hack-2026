@@ -1,6 +1,10 @@
 {
-  "prediction_horizon_months": 12,
-  "target_note": "Model trained on official HM Land Registry Price Paid Data transactions from 2020 to 2024 for London local authorities. The one-year target is derived from the actual subsequent UK HPI movement for the same London area and property type, applied to each historical sale price.",
+  "forecast_horizon_months": [
+    12,
+    24,
+    36
+  ],
+  "target_note": "Model trained on official HM Land Registry Price Paid Data transactions from 2020 to 2024 for London local authorities. The 1-year, 2-year, and 3-year targets are derived from the actual subsequent UK HPI movement for the same London area and property type, applied to each historical sale price.",
   "feature_columns": [
     "current_price_pence",
     "hpi_property_avg_price_pence",
@@ -101,6 +105,7 @@
     "cat__postcode_outward_EC1V",
     "cat__postcode_outward_EC1Y",
     "cat__postcode_outward_EC2A",
+    "cat__postcode_outward_EC2M",
     "cat__postcode_outward_EC2R",
     "cat__postcode_outward_EC2Y",
     "cat__postcode_outward_EC3A",
@@ -108,7 +113,9 @@
     "cat__postcode_outward_EC3R",
     "cat__postcode_outward_EC4A",
     "cat__postcode_outward_EC4M",
+    "cat__postcode_outward_EC4R",
     "cat__postcode_outward_EC4V",
+    "cat__postcode_outward_EC4Y",
     "cat__postcode_outward_EN1",
     "cat__postcode_outward_EN2",
     "cat__postcode_outward_EN3",
@@ -125,6 +132,7 @@
     "cat__postcode_outward_HA7",
     "cat__postcode_outward_HA8",
     "cat__postcode_outward_HA9",
+    "cat__postcode_outward_HP3",
     "cat__postcode_outward_IG1",
     "cat__postcode_outward_IG11",
     "cat__postcode_outward_IG2",
@@ -139,6 +147,7 @@
     "cat__postcode_outward_KT17",
     "cat__postcode_outward_KT19",
     "cat__postcode_outward_KT2",
+    "cat__postcode_outward_KT22",
     "cat__postcode_outward_KT3",
     "cat__postcode_outward_KT4",
     "cat__postcode_outward_KT5",
@@ -357,22 +366,64 @@
     "cat__area_slug_WALTHAM_FOREST",
     "cat__area_slug_WANDSWORTH"
   ],
-  "training_summary": {
-    "sample_count": 120000,
-    "holdout_count": 24000,
-    "best_epoch": 15,
-    "trained_at": "2026-03-28T23:40:18.659766+00:00",
-    "historical_years": [
-      2020,
-      2021,
-      2022,
-      2023,
-      2024
-    ],
-    "holdout_rmse_pounds": 226921.476669276,
-    "holdout_mape": 0.11214774887592766,
-    "holdout_r2": 0.9288469814821747,
-    "full_fit_rmse_pounds": 245523.74841982746
+  "training_summaries": {
+    "12": {
+      "prediction_horizon_months": 12,
+      "prediction_horizon_years": 1,
+      "sample_count": 120000,
+      "holdout_count": 24000,
+      "best_epoch": 15,
+      "trained_at": "2026-03-28T23:51:18.828195+00:00",
+      "historical_years": [
+        2020,
+        2021,
+        2022,
+        2023,
+        2024
+      ],
+      "holdout_rmse_pounds": 226921.476669276,
+      "holdout_mape": 0.11214774887592766,
+      "holdout_r2": 0.9288469814821747,
+      "full_fit_rmse_pounds": 254654.06894481622
+    },
+    "24": {
+      "prediction_horizon_months": 24,
+      "prediction_horizon_years": 2,
+      "sample_count": 120000,
+      "holdout_count": 24000,
+      "best_epoch": 22,
+      "trained_at": "2026-03-28T23:51:44.604812+00:00",
+      "historical_years": [
+        2020,
+        2021,
+        2022,
+        2023,
+        2024
+      ],
+      "holdout_rmse_pounds": 257388.15111468034,
+      "holdout_mape": 0.12406169103617719,
+      "holdout_r2": 0.9167854510490756,
+      "full_fit_rmse_pounds": 208919.33332771025
+    },
+    "36": {
+      "prediction_horizon_months": 36,
+      "prediction_horizon_years": 3,
+      "sample_count": 120000,
+      "holdout_count": 24000,
+      "best_epoch": 15,
+      "trained_at": "2026-03-28T23:52:12.877010+00:00",
+      "historical_years": [
+        2020,
+        2021,
+        2022,
+        2023,
+        2024
+      ],
+      "holdout_rmse_pounds": 218423.03571063254,
+      "holdout_mape": 0.12255055372024022,
+      "holdout_r2": 0.924282957203082,
+      "full_fit_rmse_pounds": 217746.187275602
+    }
   },
   "training_basis": "historical_land_registry_hpi",
   "latest_hpi_period": "2025-12",

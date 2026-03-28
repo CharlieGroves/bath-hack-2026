@@ -60,6 +60,8 @@ export interface MlHistoricalContext {
 }
 
 export interface MlTrainingSummary {
+  prediction_horizon_months?: number
+  prediction_horizon_years?: number
   sample_count: number
   holdout_count: number
   best_epoch: number
@@ -70,17 +72,24 @@ export interface MlTrainingSummary {
   full_fit_rmse_pounds: number
 }
 
-export interface MlForecast {
+export interface MlForecastResult {
   prediction_horizon_months: number
-  current_price_pence: number
+  prediction_horizon_years: number
   predicted_future_price_pence: number
   predicted_growth_pct: number | null
   baseline_prediction_pence: number
-  historical_context: MlHistoricalContext
-  training_summary: MlTrainingSummary
-  target_note: string
+  training_summary: MlTrainingSummary | null
   attributions: MlForecastAttribution[]
   attribution_convergence_delta: number
+}
+
+export interface MlForecast {
+  current_price_pence: number
+  historical_context: MlHistoricalContext
+  forecast_horizon_months: number[]
+  training_summaries: Record<string, MlTrainingSummary>
+  target_note: string
+  forecasts: MlForecastResult[]
 }
 
 export interface BoundingBox {

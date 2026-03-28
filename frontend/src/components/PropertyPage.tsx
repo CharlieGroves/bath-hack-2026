@@ -323,36 +323,22 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
   const forecast = property.ml_forecast
   if (!forecast) return null
 
-  const deltaPence = forecast.predicted_future_price_pence - forecast.current_price_pence
-  const rmse = forecast.training_summary.holdout_rmse_pounds
   const areaName = forecast.historical_context.area_name
   const localHpi = forecast.historical_context.local_hpi_yoy_pct
+  const horizons = [...forecast.forecasts].sort((a, b) => a.prediction_horizon_months - b.prediction_horizon_months)
 
   return (
     <section className="pp-section">
-      <h2 className="pp-section-heading">1-year ML forecast</h2>
+      <h2 className="pp-section-heading">ML forecasts</h2>
       <p className="pp-section-sub">
-        Trained on {forecast.training_summary.sample_count.toLocaleString('en-GB')} historical London sales.
+        Trained on historical London sales for 1-year, 2-year, and 3-year horizons.
       </p>
 
       <div className="pp-forecast-card">
-        <div className="pp-forecast-grid">
-          <div className="pp-forecast-stat">
+        <div className="pp-forecast-topline">
+          <div className="pp-forecast-stat pp-forecast-stat-wide">
             <div className="pp-forecast-label">Current asking price</div>
             <div className="pp-forecast-value">{fmtPrice(forecast.current_price_pence)}</div>
-          </div>
-          <div className="pp-forecast-stat">
-            <div className="pp-forecast-label">Predicted in {forecast.prediction_horizon_months}m</div>
-            <div className="pp-forecast-value pp-forecast-value-strong">
-              {fmtPrice(forecast.predicted_future_price_pence)}
-            </div>
-          </div>
-          <div className="pp-forecast-stat">
-            <div className="pp-forecast-label">Expected move</div>
-            <div className={`pp-forecast-value ${deltaPence >= 0 ? 'pp-forecast-up' : 'pp-forecast-down'}`}>
-              {fmtPrice(deltaPence)}
-              <span className="pp-forecast-inline">{fmtPct(forecast.predicted_growth_pct)}</span>
-            </div>
           </div>
         </div>
 
@@ -360,29 +346,56 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
           <span>
             Local HPI trend {fmtPct(localHpi)} · {areaName} · {forecast.historical_context.latest_hpi_period}
           </span>
-          <span>Holdout RMSE about £{Math.round(rmse).toLocaleString('en-GB')}</span>
+          <span>{horizons.length} forecast horizons returned</span>
         </div>
 
-        {forecast.attributions.length > 0 && (
-          <div className="pp-forecast-attribs">
-            <div className="pp-forecast-attrib-heading">Top integrated gradients</div>
-            <div className="pp-forecast-attrib-list">
-              {forecast.attributions.slice(0, 6).map((item) => (
-                <div key={item.feature} className="pp-forecast-attrib-row">
-                  <div>
-                    <div className="pp-forecast-attrib-label">{item.label}</div>
-                    <div className="pp-forecast-attrib-meta">
-                      {(item.share_of_abs * 100).toFixed(0)}% of absolute attribution
+        <div className="pp-forecast-horizon-grid">
+          {horizons.map((item) => {
+            const deltaPence = item.predicted_future_price_pence - forecast.current_price_pence
+            const rmse = item.training_summary?.holdout_rmse_pounds
+
+            return (
+              <div key={item.prediction_horizon_months} className="pp-forecast-horizon-card">
+                <div className="pp-forecast-label">
+                  {item.prediction_horizon_years}-year forecast
+                </div>
+                <div className="pp-forecast-value pp-forecast-value-strong">
+                  {fmtPrice(item.predicted_future_price_pence)}
+                </div>
+                <div className={`pp-forecast-horizon-delta ${deltaPence >= 0 ? 'pp-forecast-up' : 'pp-forecast-down'}`}>
+                  {fmtPrice(deltaPence)} · {fmtPct(item.predicted_growth_pct)}
+                </div>
+
+                {rmse != null && (
+                  <div className="pp-forecast-card-meta">
+                    Holdout RMSE about £{Math.round(rmse).toLocaleString('en-GB')}
+                  </div>
+                )}
+
+                {item.attributions.length > 0 && (
+                  <div className="pp-forecast-attribs">
+                    <div className="pp-forecast-attrib-heading">Integrated gradients</div>
+                    <div className="pp-forecast-attrib-list">
+                      {item.attributions.slice(0, 4).map((attrib) => (
+                        <div key={`${item.prediction_horizon_months}-${attrib.feature}`} className="pp-forecast-attrib-row">
+                          <div>
+                            <div className="pp-forecast-attrib-label">{attrib.label}</div>
+                            <div className="pp-forecast-attrib-meta">
+                              {(attrib.share_of_abs * 100).toFixed(0)}% of absolute attribution
+                            </div>
+                          </div>
+                          <div className={attrib.direction === 'up' ? 'pp-forecast-up' : 'pp-forecast-down'}>
+                            {attrib.direction === 'up' ? 'Raises' : 'Lowers'}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className={item.direction === 'up' ? 'pp-forecast-up' : 'pp-forecast-down'}>
-                    {item.direction === 'up' ? 'Raises forecast' : 'Lowers forecast'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                )}
+              </div>
+            )
+          })}
+        </div>
 
         <div className="pp-forecast-note">{forecast.target_note}</div>
       </div>
