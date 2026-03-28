@@ -197,7 +197,9 @@ interface Props {
   onClearLocationSearch: () => void
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0 }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0 }
+
+const FLOOD_RISK_LABELS: Record<number, string> = { 1: 'Very Low', 2: 'Low', 3: 'Medium', 4: 'High' }
 
 const STATION_MINUTE_OPTIONS = [
   { value: 0,  label: 'Any' },
@@ -518,6 +520,56 @@ export default function LayoutSplit({
               >{opt.label}</button>
             ))}
           </div>
+        </div>
+
+        <div className="l2-sb-section">
+          {(() => {
+            const minVal = filters.minFloodRisk === 0 ? 1 : filters.minFloodRisk
+            const maxVal = filters.maxFloodRisk === 0 ? 4 : filters.maxFloodRisk
+            const isDefault = filters.minFloodRisk === 0 && filters.maxFloodRisk === 0
+            const minPct = Math.round(((minVal - 1) / 3) * 100)
+            const maxPct = Math.round(((maxVal - 1) / 3) * 100)
+            return (
+              <>
+                <div className="l2-sb-slider-header">
+                  <span className="l2-sb-label" style={{ marginBottom: 0 }}>Flood risk</span>
+                  <span className="l2-sb-slider-value">
+                    {isDefault ? 'Any' : minVal === maxVal ? FLOOD_RISK_LABELS[minVal] : `${FLOOD_RISK_LABELS[minVal]} — ${FLOOD_RISK_LABELS[maxVal]}`}
+                  </span>
+                </div>
+                <div className="l2-sb-dual-slider">
+                  <div
+                    className="l2-sb-dual-track"
+                    style={{ '--min-pct': minPct, '--max-pct': maxPct } as React.CSSProperties}
+                  />
+                  <input
+                    className="l2-sb-range"
+                    type="range" min={1} max={4} step={1} value={minVal}
+                    onChange={e => {
+                      const v = +e.target.value
+                      const newMax = Math.max(v, maxVal)
+                      setF('minFloodRisk', v === 1 && newMax === 4 ? 0 : v)
+                      setF('maxFloodRisk', v === 1 && newMax === 4 ? 0 : newMax)
+                    }}
+                  />
+                  <input
+                    className="l2-sb-range"
+                    type="range" min={1} max={4} step={1} value={maxVal}
+                    onChange={e => {
+                      const v = +e.target.value
+                      const newMin = Math.min(minVal, v)
+                      setF('minFloodRisk', newMin === 1 && v === 4 ? 0 : newMin)
+                      setF('maxFloodRisk', newMin === 1 && v === 4 ? 0 : v)
+                    }}
+                  />
+                </div>
+                <div className="l2-sb-slider-range">
+                  <span>Very Low</span>
+                  <span>High</span>
+                </div>
+              </>
+            )
+          })()}
         </div>
 
         <div className="l2-sb-section">

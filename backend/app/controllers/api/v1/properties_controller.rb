@@ -94,7 +94,7 @@ module Api
       end
 
       def base_properties
-        Property.includes(:property_transport_snapshot, :property_crime_snapshot, :property_nearest_stations, :air_quality_station, :estate_agent)
+        Property.includes(:property_transport_snapshot, :property_crime_snapshot, :property_nearest_stations, :air_quality_station, :flood_risk_datapoint, :estate_agent)
           .order(created_at: :desc)
       end
 
@@ -107,6 +107,7 @@ module Api
         properties = properties.min_beds(params[:min_beds].to_i)             if params[:min_beds].present?
         properties = properties.max_beds(params[:max_beds].to_i)             if params[:max_beds].present?
         properties = properties.max_daqi(params[:max_daqi].to_i)             if params[:max_daqi].present?
+        properties = properties.max_flood_risk_band(params[:max_flood_risk_band].to_i) if params[:max_flood_risk_band].present?
 
         if params[:sw_lat].present? && params[:sw_lng].present? &&
            params[:ne_lat].present? && params[:ne_lng].present?
@@ -158,6 +159,7 @@ module Api
           noise:            noise_payload(property.property_transport_snapshot),
           crime:            crime_payload(property.property_crime_snapshot),
           air_quality:      air_quality_payload(property.air_quality_station),
+          flood_risk:       flood_risk_payload(property.flood_risk_datapoint),
           nearest_stations: property.property_nearest_stations.sort_by(&:distance_miles).map { |station|
             {
               name: station.name,
@@ -247,6 +249,11 @@ module Api
       def air_quality_payload(station)
         return nil unless station&.daqi_index
         { daqi_index: station.daqi_index, daqi_band: station.daqi_band, station_name: station.name }
+      end
+
+      def flood_risk_payload(datapoint)
+        return nil unless datapoint
+        { risk_level: datapoint.risk_level, risk_band: datapoint.risk_band }
       end
     end
   end
