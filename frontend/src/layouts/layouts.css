@@ -57,6 +57,19 @@
 }
 .l1-price-input:focus { border-color: var(--ember) }
 
+.l1-beds-select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+  font-size: 0.82rem;
+  color: var(--t1);
+  outline: none;
+  cursor: pointer;
+}
+.l1-beds-select:focus { border-color: var(--ember) }
+
 .l1-pill-row {
   display: flex;
   gap: 5px;
@@ -184,13 +197,15 @@
   line-height: 1.1;
 }
 .l2-title {
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-family: var(--ff-display);
+  font-size: 0.96rem;
+  font-weight: 600;
   color: var(--t1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 2px;
+  line-height: 1.2;
 }
 .l2-addr {
   font-size: 0.73rem;
@@ -220,6 +235,68 @@
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 3px 7px;
+}
+
+.l2-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 14px;
+  font-family: var(--ff-display);
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--bark);
+  text-align: center;
+}
+
+/* ─── Leaflet popup overrides ─────────────────────────────────────────────── */
+.leaflet-popup-content-wrapper {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--r);
+  padding: 0;
+}
+.leaflet-popup-content {
+  margin: 0;
+}
+.leaflet-popup-tip {
+  background: var(--card-bg);
+}
+.leaflet-popup-close-button {
+  color: var(--t3) !important;
+  top: 7px !important;
+  right: 8px !important;
+}
+.leaflet-popup-close-button:hover { color: var(--t1) !important }
+
+.map-popup {
+  padding: 12px 32px 12px 14px;
+  min-width: 140px;
+}
+.map-popup-price {
+  font-family: var(--ff-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--t1);
+  line-height: 1.1;
+  margin-bottom: 3px;
+}
+.map-popup-title {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--t1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 190px;
+  margin-bottom: 4px;
+}
+.map-popup-stats {
+  font-size: 0.72rem;
+  color: var(--t3);
 }
 
 .l2-map {

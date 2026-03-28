@@ -30,11 +30,12 @@ function SettingsIcon() {
 export interface Filters {
   minPrice: number | ''
   maxPrice: number | ''
+  minBeds:  number
   maxBeds:  number
   types:    string[]
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', maxBeds: 0, types: [] }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [] }
 
 type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
 
@@ -51,6 +52,7 @@ export default function App() {
     const result = properties.filter((p: Property) => {
       if (filters.minPrice !== '' && p.price < (filters.minPrice as number) * 100) return false
       if (filters.maxPrice !== '' && p.price > (filters.maxPrice as number) * 100) return false
+      if (filters.minBeds > 0 && (p.bedrooms ?? 0) < filters.minBeds) return false
       if (filters.maxBeds > 0 && (p.bedrooms ?? 0) > filters.maxBeds) return false
       if (filters.types.length && !filters.types.includes(p.property_type)) return false
       return true
@@ -111,7 +113,7 @@ export default function App() {
               <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5"/>
               <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
-            <input className="header-search" type="text" placeholder="Town, postcode, or area..." />
+            <input className="header-search" type="text" placeholder="Where would you like to live?" />
           </div>
         )}
 

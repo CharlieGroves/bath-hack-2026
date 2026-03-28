@@ -63,7 +63,7 @@ interface Props {
   setSort: (s: string) => void
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', maxBeds: 0, types: [] }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [] }
 const TYPES = ['flat', 'terraced', 'semi_detached', 'detached', 'bungalow']
 
 export default function LayoutSplit({ filtered, filters, sort, setF, toggleType, setFilters, setSort, properties }: Props) {
@@ -96,14 +96,24 @@ export default function LayoutSplit({ filtered, filters, sort, setF, toggleType,
             onChange={e => setF('maxPrice', e.target.value === '' ? '' : +e.target.value)}
           />
           <div className="l1-sep" />
-          {[0, 1, 2, 3, 4, 5].map(n => (
-            <button
-              key={n}
-              className={`pill ${filters.maxBeds === n ? 'pill-on' : ''}`}
-              style={{ padding: '4px 9px', fontSize: '0.76rem' }}
-              onClick={() => setF('maxBeds', n)}
-            >{n === 0 ? 'Any' : String(n)}</button>
-          ))}
+          <span className="sb-label" style={{ marginBottom: 0, flexShrink: 0 }}>Beds</span>
+          <select
+            className="l1-beds-select"
+            value={filters.minBeds}
+            onChange={e => setF('minBeds', +e.target.value)}
+          >
+            <option value={0}>Min</option>
+            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <span style={{ color: 'var(--t4)', fontSize: '0.82rem' }}>—</span>
+          <select
+            className="l1-beds-select"
+            value={filters.maxBeds}
+            onChange={e => setF('maxBeds', +e.target.value)}
+          >
+            <option value={0}>Max</option>
+            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
           <div className="l1-sep" />
           {TYPES.map(t => (
             <button
@@ -122,7 +132,7 @@ export default function LayoutSplit({ filtered, filters, sort, setF, toggleType,
 
         {/* Count + sort */}
         <div className="l2-count" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ flex: 1 }}>{filtered.length.toLocaleString()} of {properties.length.toLocaleString()} properties</span>
+          <span style={{ flex: 1 }}>{filtered.length.toLocaleString()} of {properties.length.toLocaleString()} homes</span>
           <select
             style={{ background: 'none', border: 'none', fontSize: '0.75rem', color: 'var(--t3)', cursor: 'pointer', outline: 'none' }}
             value={sort}
@@ -170,10 +180,9 @@ export default function LayoutSplit({ filtered, filters, sort, setF, toggleType,
             </a>
           ))}
           {filtered.length === 0 && (
-            <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--t3)', fontSize: '0.85rem' }}>
-              No properties match your filters.
-              <br />
-              <button className="reset-btn" style={{ display: 'inline-block', width: 'auto', marginTop: 12, padding: '6px 16px' }} onClick={() => setFilters(INIT)}>
+            <div className="l2-empty">
+              <span>Nothing matches your search just yet.</span>
+              <button className="reset-btn" style={{ display: 'inline-block', width: 'auto', marginTop: 4, padding: '6px 16px', fontStyle: 'normal', fontFamily: 'var(--ff-body)', fontSize: '0.8rem' }} onClick={() => setFilters(INIT)}>
                 Clear filters
               </button>
             </div>
@@ -200,9 +209,17 @@ export default function LayoutSplit({ filtered, filters, sort, setF, toggleType,
               }}
             >
               <Popup>
-                <strong>{p.title || p.address}</strong><br />
-                {fmtPrice(p.price)}<br />
-                {p.bedrooms != null && `${p.bedrooms} bed`}
+                <div className="map-popup">
+                  <div className="map-popup-price">{fmtPrice(p.price)}</div>
+                  <div className="map-popup-title">{p.title || p.address}</div>
+                  {(p.bedrooms != null || p.bathrooms != null) && (
+                    <div className="map-popup-stats">
+                      {p.bedrooms != null && `${p.bedrooms} bed`}
+                      {p.bedrooms != null && p.bathrooms != null && ' · '}
+                      {p.bathrooms != null && `${p.bathrooms} bath`}
+                    </div>
+                  )}
+                </div>
               </Popup>
             </Marker>
           ))}
