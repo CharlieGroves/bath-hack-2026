@@ -1,0 +1,65 @@
+# This file is auto-generated from the current state of the database. Instead
+# of editing this file, please use the migrations feature of Active Record to
+# incrementally modify your database, and then regenerate this schema definition.
+#
+# This file is the source Rails uses to define your schema when running `bin/rails
+# db:schema:load`. When creating a new database, `bin/rails db:schema:load` tends to
+# be faster and is potentially less error prone than running all of your
+# migrations from scratch. Old migrations may fail to apply correctly if those
+# migrations use external dependencies or application code.
+#
+# It's strongly recommended that you check this file into your version control system.
+
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_000001) do
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "plpgsql"
+
+  create_table "properties", force: :cascade do |t|
+    t.string "rightmove_id", null: false
+    t.string "slug", null: false
+    t.string "listing_url"
+    t.string "title"
+    t.text "description"
+    t.jsonb "key_features", default: [], null: false
+    t.jsonb "photo_urls", default: [], null: false
+    t.integer "price_pence"
+    t.string "price_qualifier"
+    t.integer "price_per_sqft_pence"
+    t.string "property_type"
+    t.integer "bedrooms"
+    t.integer "bathrooms"
+    t.integer "size_sqft"
+    t.string "tenure"
+    t.integer "lease_years_remaining"
+    t.string "epc_rating"
+    t.string "council_tax_band"
+    t.integer "service_charge_annual_pence"
+    t.string "address_line_1"
+    t.string "town"
+    t.string "postcode"
+    t.decimal "latitude", precision: 10, scale: 7
+    t.decimal "longitude", precision: 10, scale: 7
+    t.string "agent_name"
+    t.string "agent_phone"
+    t.boolean "has_floor_plan", default: false, null: false
+    t.boolean "has_virtual_tour", default: false, null: false
+    t.string "utilities_text"
+    t.string "parking_text"
+    t.string "status", default: "active", null: false
+    t.datetime "listed_at"
+    t.datetime "last_seen_at"
+    t.jsonb "raw_data"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["bedrooms"], name: "index_properties_on_bedrooms"
+    t.index ["latitude", "longitude"], name: "index_properties_on_latitude_and_longitude"
+    t.index ["listed_at"], name: "index_properties_on_listed_at"
+    t.index ["postcode"], name: "index_properties_on_postcode"
+    t.index ["price_pence"], name: "index_properties_on_price_pence"
+    t.index ["property_type"], name: "index_properties_on_property_type"
+    t.index ["rightmove_id"], name: "index_properties_on_rightmove_id", unique: true
+    t.index ["slug"], name: "index_properties_on_slug", unique: true
+    t.index ["status"], name: "index_properties_on_status"
+    t.index ["tenure"], name: "index_properties_on_tenure"
+  end
+end
