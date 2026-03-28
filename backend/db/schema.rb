@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_230000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_240001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -35,6 +35,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_230000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["area_slug"], name: "index_area_price_growths_on_area_slug", unique: true
+  end
+
+  create_table "boroughs", force: :cascade do |t|
+    t.string "name", null: false
+    t.float "nte_score_raw"
+    t.float "nte_score", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_boroughs_on_name", unique: true
   end
 
   create_table "estate_agents", force: :cascade do |t|
@@ -96,13 +105,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_230000) do
     t.jsonb "raw_data"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "area_price_growth_id"
     t.bigint "air_quality_station_id"
+    t.bigint "area_price_growth_id"
     t.bigint "flood_risk_datapoint_id"
     t.bigint "estate_agent_id"
+    t.bigint "borough_id"
     t.index ["air_quality_station_id"], name: "index_properties_on_air_quality_station_id"
     t.index ["area_price_growth_id"], name: "index_properties_on_area_price_growth_id"
     t.index ["bedrooms"], name: "index_properties_on_bedrooms"
+    t.index ["borough_id"], name: "index_properties_on_borough_id"
     t.index ["estate_agent_id"], name: "index_properties_on_estate_agent_id"
     t.index ["flood_risk_datapoint_id"], name: "index_properties_on_flood_risk_datapoint_id"
     t.index ["latitude", "longitude"], name: "index_properties_on_latitude_and_longitude"
@@ -146,7 +157,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_230000) do
     t.integer "walking_minutes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "termini", default: [], array: true
     t.index ["property_id"], name: "index_property_nearest_stations_on_property_id"
   end
 
@@ -169,6 +179,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_230000) do
 
   add_foreign_key "properties", "air_quality_stations"
   add_foreign_key "properties", "area_price_growths"
+  add_foreign_key "properties", "boroughs"
   add_foreign_key "properties", "estate_agents"
   add_foreign_key "properties", "flood_risk_datapoints"
   add_foreign_key "property_crime_snapshots", "properties"
