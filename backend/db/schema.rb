@@ -72,5 +72,23 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_160000) do
     t.index ["property_id"], name: "index_property_images_on_property_id"
   end
 
+  create_table "property_transport_snapshots", force: :cascade do |t|
+    t.bigint "property_id", null: false
+    t.string "provider", null: false
+    t.decimal "latitude", precision: 10, scale: 7, null: false
+    t.decimal "longitude", precision: 10, scale: 7, null: false
+    t.jsonb "flight_data", default: {}, null: false
+    t.jsonb "rail_data", default: {}, null: false
+    t.jsonb "road_data", default: {}, null: false
+    t.datetime "fetched_at"
+    t.string "status", default: "pending", null: false
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["property_id"], name: "index_property_transport_snapshots_on_property_id", unique: true
+    t.index ["status"], name: "index_property_transport_snapshots_on_status"
+  end
+
   add_foreign_key "property_images", "properties"
+  add_foreign_key "property_transport_snapshots", "properties"
 end

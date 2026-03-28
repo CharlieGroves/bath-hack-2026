@@ -2,6 +2,7 @@ require "test_helper"
 
 class PropertiesControllerTest < ActionDispatch::IntegrationTest
   setup do
+    PropertyTransportSnapshot.delete_all
     Property.delete_all
     @active      = create(:property)
     @under_offer = create(:property, :under_offer)

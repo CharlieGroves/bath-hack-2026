@@ -4,9 +4,20 @@ module Api
   module V1
     class PropertiesControllerTest < ActionDispatch::IntegrationTest
       setup do
+        PropertyTransportSnapshot.delete_all
         Property.delete_all
         @active      = create(:property)
         @under_offer = create(:property, :under_offer)
+        @active.create_property_transport_snapshot!(
+          provider: "england_noise_data",
+          latitude: @active.latitude || 51.3812,
+          longitude: @active.longitude || -0.1534,
+          fetched_at: Time.current,
+          status: "ready",
+          flight_data: { "covered" => true, "metrics" => { "lden" => 64.4, "laeq16hr" => 60.5 } },
+          rail_data: { "covered" => true, "metrics" => { "lden" => 55.8, "laeq16hr" => 52.7 } },
+          road_data: { "covered" => true, "metrics" => { "lden" => 62.1, "laeq16hr" => 58.4 } }
+        )
       end
 
       # ------------------------------------------------------------------
@@ -24,6 +35,7 @@ module Api
         body = response.parsed_body
         assert body.key?("properties")
         assert_equal 2, body["total"]
+        assert_equal 64.4, body["properties"].find { |property| property["id"] == @active.id }["noise"]["flight_data"]["metrics"]["lden"]
       end
 
       test "GET /api/v1/properties filters by status" do
@@ -67,6 +79,12 @@ module Api
       test "GET /api/v1/properties/:id excludes raw_data" do
         get api_v1_property_path(@active), as: :json
         assert_not response.parsed_body.key?("raw_data")
+      end
+
+      test "GET /api/v1/properties/:id includes noise payload" do
+        get api_v1_property_path(@active), as: :json
+        assert_equal "england_noise_data", response.parsed_body["noise"]["provider"]
+        assert_equal 62.1, response.parsed_body["noise"]["road_data"]["metrics"]["lden"]
       end
 
       test "GET /api/v1/properties/:id returns 404 for missing property" do
