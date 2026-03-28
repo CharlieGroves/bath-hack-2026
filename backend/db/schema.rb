@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_151000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -22,9 +22,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_151000) do
     t.text "description"
     t.jsonb "key_features", default: [], null: false
     t.jsonb "photo_urls", default: [], null: false
-    t.integer "price_pence"
+    t.bigint "price_pence"
     t.string "price_qualifier"
-    t.integer "price_per_sqft_pence"
+    t.bigint "price_per_sqft_pence"
     t.string "property_type"
     t.integer "bedrooms"
     t.integer "bathrooms"
@@ -33,7 +33,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_151000) do
     t.integer "lease_years_remaining"
     t.string "epc_rating"
     t.string "council_tax_band"
-    t.integer "service_charge_annual_pence"
+    t.bigint "service_charge_annual_pence"
     t.string "address_line_1"
     t.string "town"
     t.string "postcode"

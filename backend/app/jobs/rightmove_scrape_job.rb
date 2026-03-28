@@ -8,6 +8,8 @@ class RightmoveScrapeJob < ApplicationJob
   #   rightmove_id  - e.g. "172607297"
   #   scrape_run_id - optional ScrapeRun id for audit logging
   def perform(rightmove_id, scrape_run_id: nil)
+    Rails.logger.info("[RightmoveScrapeJob] START #{rightmove_id}")
+
     scraper = RightmoveScraper.new
     attrs   = scraper.fetch_listing(rightmove_id)
 
@@ -16,10 +18,13 @@ class RightmoveScrapeJob < ApplicationJob
     property.assign_attributes(attrs)
     property.save!
 
+    action = is_new ? "created" : "updated"
+    Rails.logger.info("[RightmoveScrapeJob] #{action.upcase} #{rightmove_id} — #{property.address_line_1}, #{property.postcode}")
+
     update_scrape_run(scrape_run_id, is_new)
 
   rescue RightmoveScraper::ScrapingError => e
-    Rails.logger.error("[RightmoveScrapeJob] #{rightmove_id}: #{e.message}")
+    Rails.logger.error("[RightmoveScrapeJob] ERROR #{rightmove_id}: #{e.message}")
     mark_scrape_run_error(scrape_run_id, e.message)
     raise # re-raise so Sidekiq retries
   end

@@ -92,3 +92,5 @@ end
 
 gem "kaminari", "~> 1.2"
 gem "minitest", "~> 5.25"
+
+gem "faraday-follow_redirects", "~> 0.5.0"
