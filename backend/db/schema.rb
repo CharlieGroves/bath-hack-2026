@@ -96,6 +96,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_180000) do
     t.index ["property_id"], name: "index_property_images_on_property_id"
   end
 
+  create_table "property_nearest_stations", force: :cascade do |t|
+    t.bigint "property_id", null: false
+    t.string "name", null: false
+    t.decimal "distance_miles", precision: 5, scale: 2
+    t.string "transport_type"
+    t.integer "walking_minutes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["property_id"], name: "index_property_nearest_stations_on_property_id"
+  end
+
   create_table "property_transport_snapshots", force: :cascade do |t|
     t.bigint "property_id", null: false
     t.string "provider", null: false
@@ -116,5 +127,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_180000) do
   add_foreign_key "properties", "area_price_growths"
   add_foreign_key "property_crime_snapshots", "properties"
   add_foreign_key "property_images", "properties"
+  add_foreign_key "property_nearest_stations", "properties"
   add_foreign_key "property_transport_snapshots", "properties"
 end

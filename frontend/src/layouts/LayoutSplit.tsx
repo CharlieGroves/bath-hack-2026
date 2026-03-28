@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import type { Property } from '../types/property'
 import type { Filters } from '../App'
+import type { MapBounds } from '../hooks/useProperties'
 import './layouts.css'
 import '../App.css'
 
@@ -45,6 +46,24 @@ function MapResizer() {
   return null
 }
 
+function MapBoundsTracker({ onChange }: { onChange: (b: MapBounds) => void }) {
+  const map = useMap()
+
+  const emit = () => {
+    const b = map.getBounds()
+    onChange({
+      sw_lat: b.getSouth(),
+      sw_lng: b.getWest(),
+      ne_lat: b.getNorth(),
+      ne_lng: b.getEast(),
+    })
+  }
+
+  useEffect(() => { emit() }, [map])
+  useMapEvents({ moveend: emit, zoomend: emit })
+  return null
+}
+
 const pinActive = L.divIcon({
   className: '',
   html: `<svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -59,6 +78,7 @@ const pinActive = L.divIcon({
 
 interface Props {
   properties: Property[]
+  total: number
   filtered: Property[]
   filters: Filters
   sort: string
@@ -66,9 +86,19 @@ interface Props {
   toggleType: (t: string) => void
   setFilters: (f: Filters) => void
   setSort: (s: string) => void
+  onBoundsChange: (b: MapBounds) => void
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxCrimeRate: '' }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '' }
+
+const STATION_MINUTE_OPTIONS = [
+  { value: 0,  label: 'Any' },
+  { value: 5,  label: '5 min' },
+  { value: 10, label: '10 min' },
+  { value: 15, label: '15 min' },
+  { value: 20, label: '20 min' },
+  { value: 30, label: '30 min' },
+]
 
 const PROPERTY_TYPES = [
   { id: 'flat',          label: 'Flat' },
@@ -80,7 +110,7 @@ const PROPERTY_TYPES = [
 ]
 
 export default function LayoutSplit({
-  filtered, filters, sort, setF, toggleType, setFilters, setSort, properties,
+  filtered, filters, sort, setF, toggleType, setFilters, setSort, properties, total, onBoundsChange,
 }: Props) {
   const [hoveredId, setHoveredId]     = useState<number | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -94,7 +124,7 @@ export default function LayoutSplit({
     return { min: Math.floor(Math.min(...rates)), max: Math.ceil(Math.max(...rates)) }
   }, [properties])
 
-  const mapItems = filtered.filter(p => p.latitude != null && p.longitude != null).slice(0, 300)
+  const mapItems = filtered.filter(p => p.latitude != null && p.longitude != null)
 
   return (
     <div className="l2-shell">
@@ -214,6 +244,19 @@ export default function LayoutSplit({
         )}
 
         <div className="l2-sb-section">
+          <span className="l2-sb-label">Walk to station</span>
+          <div className="l2-sb-pills">
+            {STATION_MINUTE_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                className={`l2-sb-pill ${filters.maxStationMinutes === opt.value ? 'on' : ''}`}
+                onClick={() => setF('maxStationMinutes', opt.value)}
+              >{opt.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="l2-sb-section">
           <button className="l2-sb-reset" onClick={() => setFilters(INIT)}>
             Reset filters
           </button>
@@ -226,11 +269,14 @@ export default function LayoutSplit({
       {/* List panel */}
       <div className="l2-left">
         <div className="l2-count">
-          {filtered.length.toLocaleString()} of {properties.length.toLocaleString()} homes
+          {filtered.length.toLocaleString()} of {total.toLocaleString()} homes in view
+          {total > properties.length && (
+            <span className="l2-count-hint"> &mdash; showing first {properties.length.toLocaleString()}, zoom in to see more</span>
+          )}
         </div>
 
         <div className="l2-list">
-          {filtered.slice(0, 200).map(p => (
+          {filtered.map(p => (
             <a
               key={p.id}
               ref={el => { rowRefs.current[p.id] = el }}
@@ -255,6 +301,10 @@ export default function LayoutSplit({
                   {p.bedrooms  != null && <span>{p.bedrooms} bed</span>}
                   {p.bathrooms != null && <span>{p.bathrooms} bath</span>}
                 </div>
+                {p.nearest_stations?.length > 0 && (() => {
+                  const s = p.nearest_stations[0]
+                  return <div className="l2-station">{s.walking_minutes} min walk · {s.name}</div>
+                })()}
               </div>
               {p.property_type && (
                 <span className="l2-badge">{p.property_type === 'semi_detached' ? 'Semi' : fmtLabel(p.property_type)}</span>
@@ -280,6 +330,7 @@ export default function LayoutSplit({
       <div className="l2-map">
         <MapContainer center={[51.38, -2.36]} zoom={11} style={{ height: '100%', width: '100%' }}>
           <MapResizer />
+          <MapBoundsTracker onChange={onBoundsChange} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"

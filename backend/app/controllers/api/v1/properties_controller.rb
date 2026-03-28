@@ -6,7 +6,7 @@ module Api
 
       # GET /api/v1/properties
       def index
-        properties = Property.includes(:property_transport_snapshot, :property_crime_snapshot).order(created_at: :desc)
+        properties = Property.includes(:property_transport_snapshot, :property_crime_snapshot, :property_nearest_stations).order(created_at: :desc)
         properties = properties.where(status: params[:status])               if params[:status].present?
         properties = properties.where(property_type: params[:property_type]) if params[:property_type].present?
         properties = properties.min_price(params[:min_price].to_i)           if params[:min_price].present?
@@ -14,9 +14,18 @@ module Api
         properties = properties.min_beds(params[:min_beds].to_i)             if params[:min_beds].present?
         properties = properties.max_beds(params[:max_beds].to_i)             if params[:max_beds].present?
 
+        if params[:sw_lat].present? && params[:sw_lng].present? &&
+           params[:ne_lat].present? && params[:ne_lng].present?
+          properties = properties.where(
+            latitude:  params[:sw_lat].to_f..params[:ne_lat].to_f,
+            longitude: params[:sw_lng].to_f..params[:ne_lng].to_f
+          )
+        end
+
+        total = properties.count
         render json: {
-          properties: properties.map { |p| property_summary(p) },
-          total: properties.count
+          properties: properties.limit(500).map { |p| property_summary(p) },
+          total: total
         }
       end
 
@@ -79,9 +88,12 @@ module Api
           listed_at:     p.listed_at,
           latitude:      p.latitude,
           longitude:     p.longitude,
-          photo_url:     p.photo_urls.first,
-          noise:         noise_payload(p.property_transport_snapshot),
-          crime:         crime_payload(p.property_crime_snapshot)
+          photo_url:        p.photo_urls.first,
+          noise:            noise_payload(p.property_transport_snapshot),
+          crime:            crime_payload(p.property_crime_snapshot),
+          nearest_stations: p.property_nearest_stations.sort_by(&:distance_miles).map { |s|
+            { name: s.name, distance_miles: s.distance_miles, walking_minutes: s.walking_minutes, transport_type: s.transport_type }
+          }
         }
       end
 

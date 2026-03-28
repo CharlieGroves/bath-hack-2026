@@ -455,6 +455,12 @@
   color: var(--t2);
 }
 
+.l2-station {
+  margin-top: 4px;
+  font-size: 0.71rem;
+  color: var(--t3);
+}
+
 .l2-badge {
   align-self: center;
   flex-shrink: 0;
