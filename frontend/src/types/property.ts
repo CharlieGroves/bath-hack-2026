@@ -3,6 +3,7 @@ export interface NearestStation {
   distance_miles: number
   walking_minutes: number
   transport_type: string
+  termini: string[]
 }
 
 export interface NoiseSection {

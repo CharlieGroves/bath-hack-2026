@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_220002) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -146,6 +146,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_220002) do
     t.integer "walking_minutes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "termini", default: [], array: true
     t.index ["property_id"], name: "index_property_nearest_stations_on_property_id"
   end
 

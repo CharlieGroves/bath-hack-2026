@@ -477,6 +477,13 @@
   color: var(--t3);
 }
 
+.pp-station-termini {
+  font-family: var(--ff-body);
+  font-size: 0.75rem;
+  color: var(--t3);
+  margin-top: 3px;
+}
+
 /* ── Area growth chart ───────────────────────────────────────────────────── */
 .pp-chart-wrap {
   height: 256px;

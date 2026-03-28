@@ -165,7 +165,8 @@ module Api
               name: station.name,
               distance_miles: station.distance_miles,
               walking_minutes: station.walking_minutes,
-              transport_type: station.transport_type
+              transport_type: station.transport_type,
+              termini: station.termini
             }
           }
         }
@@ -195,7 +196,8 @@ module Api
                 name: station.name,
                 distance_miles: station.distance_miles,
                 walking_minutes: station.walking_minutes,
-                transport_type: station.transport_type
+                transport_type: station.transport_type,
+                termini: station.termini
               }
             },
           area_price_growth: area_price_growth_payload(property.area_price_growth),
