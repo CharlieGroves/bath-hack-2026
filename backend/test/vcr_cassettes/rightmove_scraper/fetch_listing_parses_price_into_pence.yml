@@ -1,0 +1,35 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://www.rightmove.co.uk/properties/172607297
+    body:
+      encoding: UTF-8
+      string: ''
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (compatible; Bath-Hack-Bot/1.0)
+      Accept:
+      - text/html,application/xhtml+xml
+      Accept-Language:
+      - en-GB,en;q=0.9
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Content-Type:
+      - text/html; charset=utf-8
+    body:
+      encoding: UTF-8
+      string: <html><head></head><body><script>window.PAGE_MODEL = {"propertyData":{"id":172607297,"text":{"pageTitle":"3
+        bedroom terraced house for sale","description":"<p>A stunning zero-carbon
+        home in the BedZED eco village.</p>"},"keyFeatures":["Vaulted ceilings with
+        skylights","Open-plan living/dining area","Private garden","Modern fitted
+        kitchen"],"prices":{"primaryPrice":"£450,000","priceQualifier":"Guide Price","pricePerSqFt":"£459.65"},"propertySubType":"Terraced
+        house","bedrooms":3,"bathrooms":2,"sizings":[{"unit":"sqft","minimumSize":979},{"unit":"sqm","minimumSize":91}],"tenure":{"tenureType":"Leasehold","yearsRemainingOnLease":975},"epcGraphs":[{"rating":"A"}],"councilTax":{"band":"C"},"councilTaxExempt":false,"livingCosts":{"annualServiceCharge":"£2,670"},"address":{"displayAddress":"Dunster
+        Way, Hackbridge, Wallington, SM6","town":"Wallington","outcode":"SM6"},"location":{"latitude":51.3812,"longitude":-0.1534},"customer":{"branchDisplayName":"Rosindale
+        Pavitt, Wallington","contactTelephone":"020 3909 6696"},"images":[{"url":"https://media.rightmove.co.uk/1k/172607297/photo1.jpg"},{"url":"https://media.rightmove.co.uk/1k/172607297/photo2.jpg"}],"floorplans":[{"url":"https://media.rightmove.co.uk/1k/172607297/floorplan.jpg"}],"virtualTours":[{"url":"https://giraffe360.com/tour/172607297"}],"utilities":[{"description":"Electricity"},{"description":"Water"},{"description":"Sewerage"}],"parking":"Ask
+        agent","status":"","listingUpdate":{"listingUpdateDate":"26/02/2026"}}};</script></body></html>
+  recorded_at: Sat, 28 Mar 2026 00:00:00 GMT
+recorded_with: VCR 6.3.1
