@@ -14,6 +14,35 @@ export interface PropertyNoise {
   road_data: NoiseSection
 }
 
+export interface BoundingBox {
+  north: number
+  south: number
+  east: number
+  west: number
+}
+
+export interface IsochroneCoordinate {
+  latitude: number
+  longitude: number
+}
+
+export interface SearchLocation {
+  latitude: number
+  longitude: number
+  label: string
+}
+
+export interface PropertyLocationSearchResult {
+  query: string
+  location: SearchLocation
+  transportation_type: string
+  travel_time_seconds: number
+  bounding_box: BoundingBox
+  isochrone_shells: IsochroneCoordinate[][]
+  properties: Property[]
+  total: number
+}
+
 // Matches the shape returned by API::V1::PropertiesController#property_summary
 export interface Property {
   id: number
@@ -26,8 +55,8 @@ export interface Property {
   property_type: string
   status: string
   listed_at: string
-  latitude: number
-  longitude: number
+  latitude: number | string | null
+  longitude: number | string | null
   photo_url: string | null
   noise: PropertyNoise | null
 }

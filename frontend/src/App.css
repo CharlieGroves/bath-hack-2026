@@ -2,25 +2,196 @@
   position: relative;
   height: 100vh;
   width: 100vw;
+  background:
+    radial-gradient(circle at top left, rgba(43, 125, 105, 0.18), transparent 28%),
+    linear-gradient(180deg, rgba(247, 242, 233, 0.92), rgba(255, 255, 255, 0.82));
+}
+
+.app-shell--centered {
+  display: grid;
+  place-items: center;
 }
 
 .status-panel {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: 18px;
+  left: 18px;
   z-index: 500;
-  max-width: 360px;
-  padding: 16px 18px;
+  width: min(420px, calc(100vw - 36px));
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  padding: 20px;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--bg) 92%, rgba(255, 255, 255, 0.4));
   box-shadow: var(--shadow);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(14px);
+}
+
+.status-panel__eyebrow {
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 .status-panel h1 {
-  margin: 0 0 8px;
-  font-size: 24px;
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.08;
+}
+
+.status-panel__subtitle,
+.status-panel__hint,
+.status-panel__error,
+.status-panel__loading {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.status-panel__subtitle {
+  margin-top: 10px;
+}
+
+.status-panel__hint {
+  margin-top: 14px;
+}
+
+.status-panel__error {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(176, 42, 55, 0.08);
+  color: #8f1d21;
+}
+
+.search-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.search-form__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.search-form__field {
+  display: grid;
+  gap: 6px;
+}
+
+.search-form__field label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.search-form__field input,
+.search-form__field select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--text-h);
+  box-sizing: border-box;
+}
+
+.search-form__field input:focus,
+.search-form__field select:focus {
+  outline: 2px solid rgba(19, 111, 99, 0.2);
+  border-color: rgba(19, 111, 99, 0.5);
+}
+
+.search-form__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.search-button,
+.clear-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.search-button {
+  background: linear-gradient(135deg, #136f63, #0f4c5c);
+  color: #fff;
+}
+
+.search-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.clear-button {
+  background: rgba(15, 76, 92, 0.08);
+  color: var(--text-h);
+}
+
+.status-panel__stats,
+.search-summary {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.status-panel__stats {
+  display: grid;
+  gap: 4px;
+}
+
+.search-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.search-summary__label {
+  color: var(--text-h);
+  font-weight: 700;
+}
+
+.search-summary__meta {
+  font-size: 13px;
+  text-transform: capitalize;
+}
+
+.search-summary__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.search-summary__metric {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(19, 111, 99, 0.08);
+}
+
+.search-summary__metric span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.search-summary__metric strong {
+  color: var(--text-h);
+  font-size: 16px;
 }
 
 .map-shell {
@@ -61,7 +232,19 @@
   .status-panel {
     top: 12px;
     left: 12px;
-    right: 12px;
-    max-width: none;
+    width: calc(100vw - 24px);
+    max-height: min(460px, calc(100vh - 24px));
+  }
+
+  .search-form__row {
+    grid-template-columns: 1fr;
+  }
+
+  .search-form__actions {
+    flex-direction: column;
+  }
+
+  .search-summary__grid {
+    grid-template-columns: 1fr 1fr;
   }
 }

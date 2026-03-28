@@ -31,6 +31,11 @@ class Property < ApplicationRecord
   scope :min_sqft,     ->(n) { where("size_sqft >= ?", n) }
   scope :of_type,      ->(t) { where(property_type: Array(t)) }
   scope :of_tenure,    ->(t) { where(tenure: Array(t)) }
+  scope :with_coordinates, -> { where.not(latitude: nil, longitude: nil) }
+  scope :within_bounding_box, lambda { |bounding_box|
+    where(latitude: bounding_box.fetch(:south)..bounding_box.fetch(:north))
+      .where(longitude: bounding_box.fetch(:west)..bounding_box.fetch(:east))
+  }
 
   # Returns a human-readable price string, e.g. "£450,000"
   def formatted_price
