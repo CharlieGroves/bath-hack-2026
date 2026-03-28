@@ -156,6 +156,20 @@ a { text-decoration: none; color: inherit }
   opacity: 0.55;
 }
 
+.sort-select {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(216, 212, 188, 0.18);
+  border-radius: 8px;
+  color: var(--ash);
+  font-size: 0.82rem;
+  padding: 5px 10px;
+  cursor: pointer;
+  outline: none;
+}
+.sort-select:hover {
+  background: rgba(255,255,255,0.12);
+}
+
 .view-switch {
   display: flex;
   background: rgba(255,255,255,0.07);
@@ -177,6 +191,50 @@ a { text-decoration: none; color: inherit }
 }
 .vsw-btn.on { background: var(--ember); color: #fff }
 .vsw-btn:hover:not(.on) { color: var(--ash); background: rgba(255,255,255,0.08) }
+
+/* ─── Layout picker ──────────────────────────────────────────────────────── */
+.layout-picker {
+  display: flex;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(216, 212, 188, 0.18);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.lp-btn {
+  display: flex;
+  align-items: center;
+  padding: 6px 14px;
+  background: none;
+  border: none;
+  border-right: 1px solid rgba(216, 212, 188, 0.18);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: rgba(216, 212, 188, 0.5);
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.lp-btn:last-child { border-right: none }
+.lp-btn.lp-on { background: var(--ember); color: #fff }
+.lp-btn:hover:not(.lp-on) { color: var(--ash); background: rgba(255,255,255,0.08) }
+
+/* ─── Settings button ─────────────────────────────────────────────────────── */
+.settings-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(216, 212, 188, 0.18);
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(216, 212, 188, 0.55);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.settings-btn:hover { color: var(--ash); background: rgba(255,255,255,0.12) }
+.settings-btn-on { background: var(--ember) !important; color: #fff !important; border-color: var(--ember) !important }
 
 /* ─── Shell (sidebar + content) ─────────────────────────────────────────── */
 .shell {
