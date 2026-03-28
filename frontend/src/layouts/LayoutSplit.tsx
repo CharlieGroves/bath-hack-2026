@@ -36,7 +36,12 @@ const pinDefault = L.divIcon({
 
 function MapResizer() {
   const map = useMap()
-  useEffect(() => { map.invalidateSize() }, [map])
+  useEffect(() => {
+    map.invalidateSize()
+    const observer = new ResizeObserver(() => map.invalidateSize())
+    observer.observe(map.getContainer())
+    return () => observer.disconnect()
+  }, [map])
   return null
 }
 
@@ -61,92 +66,230 @@ interface Props {
   toggleType: (t: string) => void
   setFilters: (f: Filters) => void
   setSort: (s: string) => void
+  settings: UserSettings
+  updateSettings: (patch: Partial<UserSettings>) => void
+  toggleItem: (key: keyof UserSettings, item: string) => void
+  resetSettings: () => void
 }
 
 const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [] }
-const TYPES = ['flat', 'terraced', 'semi_detached', 'detached', 'bungalow']
 
-export default function LayoutSplit({ filtered, filters, sort, setF, toggleType, setFilters, setSort, properties }: Props) {
-  const [hoveredId, setHoveredId] = useState<number | null>(null)
+const PROPERTY_TYPES = [
+  { id: 'flat',          label: 'Flat' },
+  { id: 'terraced',      label: 'Terraced' },
+  { id: 'semi_detached', label: 'Semi' },
+  { id: 'detached',      label: 'Detached' },
+  { id: 'bungalow',      label: 'Bungalow' },
+  { id: 'land',          label: 'Land' },
+]
+
+const TENURES = [
+  { id: 'freehold',          label: 'Freehold' },
+  { id: 'leasehold',         label: 'Leasehold' },
+  { id: 'share_of_freehold', label: 'Share of freehold' },
+]
+
+const MUST_HAVES = [
+  { id: 'garden',       label: 'Garden' },
+  { id: 'parking',      label: 'Parking' },
+  { id: 'garage',       label: 'Garage' },
+  { id: 'new_build',    label: 'New build' },
+  { id: 'period',       label: 'Period' },
+  { id: 'chain_free',   label: 'Chain free' },
+  { id: 'ground_floor', label: 'Ground floor' },
+  { id: 'top_floor',    label: 'Top floor' },
+  { id: 'balcony',      label: 'Balcony' },
+]
+
+const SITUATIONS = [
+  { id: 'first_time', label: 'First-time buyer' },
+  { id: 'moving',     label: 'Moving home' },
+  { id: 'investment', label: 'Buy to let' },
+  { id: 'let',        label: 'Looking to rent' },
+]
+
+export default function LayoutSplit({
+  filtered, filters, sort, setF, toggleType, setFilters, setSort, properties,
+  settings, updateSettings, toggleItem, resetSettings,
+}: Props) {
+  const [hoveredId, setHoveredId]     = useState<number | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const rowRefs = useRef<Record<number, HTMLAnchorElement | null>>({})
 
   const mapItems = filtered.filter(p => p.latitude != null && p.longitude != null).slice(0, 300)
 
   return (
     <div className="l2-shell">
-      <div className="l2-left">
-        {/* Filter strip */}
-        <div className="l2-filterbar">
-          <span className="sb-label" style={{ marginBottom: 0, flexShrink: 0 }}>Price</span>
-          <input
-            className="l1-price-input"
-            style={{ width: 80 }}
-            type="number"
-            placeholder="Min £"
-            value={filters.minPrice}
-            onChange={e => setF('minPrice', e.target.value === '' ? '' : +e.target.value)}
-          />
-          <span style={{ color: 'var(--t4)', fontSize: '0.82rem' }}>—</span>
-          <input
-            className="l1-price-input"
-            style={{ width: 80 }}
-            type="number"
-            placeholder="Max £"
-            value={filters.maxPrice}
-            onChange={e => setF('maxPrice', e.target.value === '' ? '' : +e.target.value)}
-          />
-          <div className="l1-sep" />
-          <span className="sb-label" style={{ marginBottom: 0, flexShrink: 0 }}>Beds</span>
-          <select
-            className="l1-beds-select"
-            value={filters.minBeds}
-            onChange={e => setF('minBeds', +e.target.value)}
-          >
-            <option value={0}>Min</option>
-            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
-          <span style={{ color: 'var(--t4)', fontSize: '0.82rem' }}>—</span>
-          <select
-            className="l1-beds-select"
-            value={filters.maxBeds}
-            onChange={e => setF('maxBeds', +e.target.value)}
-          >
-            <option value={0}>Max</option>
-            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
-          <div className="l1-sep" />
-          {TYPES.map(t => (
-            <button
-              key={t}
-              className={`pill ${filters.types.includes(t) ? 'pill-on' : ''}`}
-              style={{ padding: '4px 9px', fontSize: '0.76rem' }}
-              onClick={() => toggleType(t)}
-            >{t === 'semi_detached' ? 'Semi' : fmtLabel(t)}</button>
-          ))}
-          <button
-            className="reset-btn"
-            style={{ width: 'auto', marginTop: 0, padding: '4px 12px', flexShrink: 0, fontSize: '0.75rem' }}
-            onClick={() => setFilters(INIT)}
-          >Reset</button>
-        </div>
+      {/* Sidebar */}
+      <div className={`l2-sidebar ${sidebarOpen ? '' : 'l2-sidebar-collapsed'}`}>
+        <button
+          className="l2-sb-toggle"
+          onClick={() => setSidebarOpen(o => !o)}
+          title={sidebarOpen ? 'Hide filters' : 'Show filters'}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path
+              d={sidebarOpen
+                ? 'M9 2L4 7l5 5'
+                : 'M5 2l5 5-5 5'}
+              stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+            />
+          </svg>
+          {sidebarOpen && <span>Filters</span>}
+        </button>
 
-        {/* Count + sort */}
-        <div className="l2-count" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ flex: 1 }}>{filtered.length.toLocaleString()} of {properties.length.toLocaleString()} homes</span>
-          <select
-            style={{ background: 'none', border: 'none', fontSize: '0.75rem', color: 'var(--t3)', cursor: 'pointer', outline: 'none' }}
-            value={sort}
-            onChange={e => setSort(e.target.value)}
-          >
-            <option value="newest">Newest</option>
-            <option value="price_asc">Price low-high</option>
-            <option value="price_desc">Price high-low</option>
+        {sidebarOpen && <div className="l2-sb-body">
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Sort</span>
+          <select className="l2-sb-select" value={sort} onChange={e => setSort(e.target.value)}>
+            <option value="newest">Newest first</option>
+            <option value="price_asc">Price: low to high</option>
+            <option value="price_desc">Price: high to low</option>
             <option value="beds_asc">Fewest beds</option>
             <option value="beds_desc">Most beds</option>
           </select>
         </div>
 
-        {/* Property list */}
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Price</span>
+          <div className="l2-sb-row">
+            <input
+              className="l2-sb-input"
+              type="number"
+              placeholder="Min £"
+              value={filters.minPrice}
+              onChange={e => setF('minPrice', e.target.value === '' ? '' : +e.target.value)}
+            />
+            <span style={{ color: 'var(--t4)', fontSize: '0.75rem', flexShrink: 0 }}>—</span>
+            <input
+              className="l2-sb-input"
+              type="number"
+              placeholder="Max £"
+              value={filters.maxPrice}
+              onChange={e => setF('maxPrice', e.target.value === '' ? '' : +e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Min bedrooms</span>
+          <div className="l2-sb-pills">
+            {[0, 1, 2, 3, 4, 5].map(n => (
+              <button
+                key={n}
+                className={`l2-sb-pill ${filters.minBeds === n ? 'on' : ''}`}
+                onClick={() => setF('minBeds', n)}
+              >{n === 0 ? 'Any' : `${n}+`}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Property type</span>
+          <div className="l2-sb-chips">
+            {PROPERTY_TYPES.map(t => (
+              <button
+                key={t.id}
+                className={`l2-sb-chip ${filters.types.includes(t.id) ? 'on' : ''}`}
+                onClick={() => toggleType(t.id)}
+              >{t.label}</button>
+            ))}
+          </div>
+          {filters.types.length === 0 && <p className="l2-sb-hint">All types shown</p>}
+        </div>
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Tenure</span>
+          <div className="l2-sb-chips">
+            {TENURES.map(t => (
+              <button
+                key={t.id}
+                className={`l2-sb-chip ${settings.tenures.includes(t.id) ? 'on' : ''}`}
+                onClick={() => toggleItem('tenures', t.id)}
+              >{t.label}</button>
+            ))}
+          </div>
+          {settings.tenures.length === 0 && <p className="l2-sb-hint">All tenures shown</p>}
+        </div>
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Must-haves</span>
+          <div className="l2-sb-chips">
+            {MUST_HAVES.map(m => (
+              <button
+                key={m.id}
+                className={`l2-sb-chip ${settings.mustHaves.includes(m.id) ? 'on' : ''}`}
+                onClick={() => toggleItem('mustHaves', m.id)}
+              >{m.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Your situation</span>
+          <div className="l2-sb-chips">
+            {SITUATIONS.map(s => (
+              <button
+                key={s.id}
+                className={`l2-sb-chip ${settings.situation === s.id ? 'on' : ''}`}
+                onClick={() => updateSettings({ situation: settings.situation === s.id ? '' : s.id as UserSettings['situation'] })}
+              >{s.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Min floor area (sq ft)</span>
+          <input
+            className="l2-sb-text-input"
+            type="number"
+            placeholder="e.g. 700"
+            value={settings.minSqft}
+            onChange={e => updateSettings({ minSqft: e.target.value === '' ? '' : +e.target.value })}
+          />
+        </div>
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Preferred areas</span>
+          <input
+            className="l2-sb-text-input"
+            type="text"
+            placeholder="e.g. Clifton, BA1 5"
+            value={settings.preferredAreas}
+            onChange={e => updateSettings({ preferredAreas: e.target.value })}
+          />
+          <p className="l2-sb-hint">Comma-separated</p>
+        </div>
+
+        <div className="l2-sb-section">
+          <span className="l2-sb-label">Workplace</span>
+          <input
+            className="l2-sb-text-input"
+            type="text"
+            placeholder="e.g. Bath Spa Station"
+            value={settings.workplace}
+            onChange={e => updateSettings({ workplace: e.target.value })}
+          />
+          <p className="l2-sb-hint">For commute estimates</p>
+        </div>
+
+        <div className="l2-sb-section">
+          <button className="l2-sb-reset" onClick={() => { setFilters(INIT); resetSettings() }}>
+            Reset all
+          </button>
+        </div>
+
+        </div>}
+
+      </div>
+
+      {/* List panel */}
+      <div className="l2-left">
+        <div className="l2-count">
+          {filtered.length.toLocaleString()} of {properties.length.toLocaleString()} homes
+        </div>
+
         <div className="l2-list">
           {filtered.slice(0, 200).map(p => (
             <a
@@ -182,7 +325,11 @@ export default function LayoutSplit({ filtered, filters, sort, setF, toggleType,
           {filtered.length === 0 && (
             <div className="l2-empty">
               <span>Nothing matches your search just yet.</span>
-              <button className="reset-btn" style={{ display: 'inline-block', width: 'auto', marginTop: 4, padding: '6px 16px', fontStyle: 'normal', fontFamily: 'var(--ff-body)', fontSize: '0.8rem' }} onClick={() => setFilters(INIT)}>
+              <button
+                className="reset-btn"
+                style={{ display: 'inline-block', width: 'auto', marginTop: 4, padding: '6px 16px', fontStyle: 'normal', fontFamily: 'var(--ff-body)', fontSize: '0.8rem' }}
+                onClick={() => setFilters(INIT)}
+              >
                 Clear filters
               </button>
             </div>

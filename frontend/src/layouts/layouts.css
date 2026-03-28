@@ -118,8 +118,185 @@
   overflow: hidden;
 }
 
+.l2-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--sb-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+
+.l2-sb-section {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hr);
+}
+.l2-sb-section:last-child { border-bottom: none }
+
+.l2-sb-label {
+  display: block;
+  font-size: 0.67rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--t3);
+  margin-bottom: 8px;
+}
+
+.l2-sb-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.l2-sb-input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--white);
+  font-size: 0.77rem;
+  color: var(--t1);
+  outline: none;
+}
+.l2-sb-input:focus { border-color: var(--ember) }
+.l2-sb-input::placeholder { color: var(--t4) }
+
+.l2-sb-select {
+  width: 100%;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--white);
+  font-size: 0.77rem;
+  color: var(--t1);
+  outline: none;
+  cursor: pointer;
+}
+.l2-sb-select:focus { border-color: var(--ember) }
+
+.l2-sb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.l2-sb-chip {
+  padding: 3px 8px;
+  font-size: 0.71rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--white);
+  color: var(--t2);
+  cursor: pointer;
+  line-height: 1.5;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+.l2-sb-chip:hover { border-color: var(--ember); color: var(--ember) }
+.l2-sb-chip.on { background: var(--ember); border-color: var(--ember); color: #fff }
+
+.l2-sb-pills {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.l2-sb-pill {
+  padding: 3px 9px;
+  font-size: 0.71rem;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--white);
+  color: var(--t2);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+.l2-sb-pill:hover { border-color: var(--ember); color: var(--ember) }
+.l2-sb-pill.on { background: var(--ember); border-color: var(--ember); color: #fff }
+
+.l2-sb-text-input {
+  width: 100%;
+  padding: 4px 0;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  font-size: 0.77rem;
+  color: var(--t1);
+  outline: none;
+  font-family: var(--ff-body);
+}
+.l2-sb-text-input:focus { border-bottom-color: var(--ember) }
+.l2-sb-text-input::placeholder { color: var(--t4) }
+
+.l2-sb-hint {
+  font-size: 0.67rem;
+  color: var(--t4);
+  margin-top: 5px;
+}
+
+.l2-sb-reset {
+  width: 100%;
+  padding: 7px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 5px;
+  font-size: 0.74rem;
+  color: var(--t3);
+  cursor: pointer;
+  font-family: var(--ff-body);
+  transition: border-color 0.15s, color 0.15s;
+}
+.l2-sb-reset:hover { border-color: var(--coal); border-style: solid; color: var(--coal) }
+
+.l2-sidebar-collapsed {
+  width: 40px;
+  overflow: hidden;
+}
+
+.l2-sb-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 10px 13px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--hr);
+  color: var(--t3);
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--ff-body);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.l2-sb-toggle:hover { color: var(--t1) }
+
+.l2-sidebar-collapsed .l2-sb-toggle {
+  padding: 10px 13px;
+  justify-content: center;
+  border-bottom: none;
+}
+
+.l2-sb-body {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex: 1;
+}
+.l2-sb-body::-webkit-scrollbar { width: 4px }
+.l2-sb-body::-webkit-scrollbar-thumb { background: var(--ash); border-radius: 2px }
+
 .l2-left {
-  width: 42%;
+  width: 350px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border);
