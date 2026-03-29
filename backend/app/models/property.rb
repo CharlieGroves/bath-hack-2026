@@ -88,6 +88,16 @@ class Property < ApplicationRecord
   scope :max_rail_noise_lden,    ->(n) { joins(:property_transport_snapshot).where("property_transport_snapshots.status = 'ready'").where("CAST(property_transport_snapshots.rail_data -> 'metrics' ->> 'lden' AS NUMERIC) <= ?", n) }
   scope :max_flight_noise_lden,  ->(n) { joins(:property_transport_snapshot).where("property_transport_snapshots.status = 'ready'").where("CAST(property_transport_snapshots.flight_data -> 'metrics' ->> 'lden' AS NUMERIC) <= ?", n) }
   scope :with_shared_ownership,  ->(flag) { where(is_shared_ownership: ActiveModel::Type::Boolean.new.cast(flag)) }
+  scope :max_crime_rate,         ->(n) { joins(:property_crime_snapshot).where("property_crime_snapshots.status = 'ready'").where("property_crime_snapshots.avg_monthly_crimes <= ?", n) }
+  scope :min_bathrooms,          ->(n) { where("bathrooms >= ?", n) }
+  scope :max_price_per_sqft,     ->(p) { where("price_per_sqft_pence <= ?", p) }
+  scope :min_price_per_sqft,     ->(p) { where("price_per_sqft_pence >= ?", p) }
+  scope :epc_rating_min,         ->(r) { where("epc_rating >= ?", r.upcase) }
+  scope :max_nte_score,          ->(n) { joins(:borough).where("boroughs.nte_score <= ?", n) }
+  scope :min_nte_score,          ->(n) { joins(:borough).where("boroughs.nte_score >= ?", n) }
+  scope :min_life_satisfaction,  ->(n) { joins(:borough).where("boroughs.life_satisfaction_score >= ?", n) }
+  scope :min_happiness,          ->(n) { joins(:borough).where("boroughs.happiness_score >= ?", n) }
+  scope :max_anxiety,            ->(n) { joins(:borough).where("boroughs.anxiety_score <= ?", n) }
 
   def self.shared_ownership_from_description?(text)
     description_text = text.to_s
