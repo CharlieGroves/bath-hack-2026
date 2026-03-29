@@ -41,6 +41,11 @@ DEFAULT_VALUATION_ARTIFACTS_DIR = PROJECT_ROOT / "ml-training" / "artifacts" / "
 INTEGRATED_GRADIENTS_STEPS = 48
 MIN_PREDICTED_LOG_PRICE = 14.0
 MAX_PREDICTED_LOG_PRICE = 23.5
+INTERVAL_RESIDUAL_CLIP_QUANTILES = (0.025, 0.975)
+INTERVAL_MULTIPLIER_BOUNDS = {
+    "80": (0.60, 1.80),
+    "95": (0.45, 2.40),
+}
 
 TEXT_FLAG_PATTERNS = {
     "has_garden": (r"\bgarden\b",),
@@ -631,14 +636,23 @@ def interval_quantiles_for_predictions(actual_pence: np.ndarray, predicted_pence
     safe_actual = np.maximum(np.nan_to_num(actual_pence.astype(np.float64), nan=1.0, posinf=1.0, neginf=1.0), 1.0)
     safe_predictions = np.maximum(np.nan_to_num(predicted_pence.astype(np.float64), nan=1.0, posinf=1.0, neginf=1.0), 1.0)
     log_residual = np.log(safe_actual) - np.log(safe_predictions)
+    finite_residual = log_residual[np.isfinite(log_residual)]
+    if finite_residual.size == 0:
+        return {
+            "80": {"lower_log": math.log(0.80), "upper_log": math.log(1.25)},
+            "95": {"lower_log": math.log(0.60), "upper_log": math.log(1.80)},
+        }
+
+    clip_lower, clip_upper = np.quantile(finite_residual, INTERVAL_RESIDUAL_CLIP_QUANTILES)
+    clipped_residual = np.clip(finite_residual, clip_lower, clip_upper)
     return {
         "80": {
-            "lower_log": float(np.quantile(log_residual, 0.10)),
-            "upper_log": float(np.quantile(log_residual, 0.90)),
+            "lower_log": float(np.quantile(clipped_residual, 0.10)),
+            "upper_log": float(np.quantile(clipped_residual, 0.90)),
         },
         "95": {
-            "lower_log": float(np.quantile(log_residual, 0.025)),
-            "upper_log": float(np.quantile(log_residual, 0.975)),
+            "lower_log": float(np.quantile(clipped_residual, 0.025)),
+            "upper_log": float(np.quantile(clipped_residual, 0.975)),
         },
     }
 
@@ -685,11 +699,38 @@ def valuation_intervals(predicted_price_pence: float, metadata: dict[str, Any]) 
         if lower is None or upper is None:
             intervals[label] = None
             continue
+        lower_multiplier = math.exp(lower)
+        upper_multiplier = math.exp(upper)
+        bound_min, bound_max = INTERVAL_MULTIPLIER_BOUNDS.get(label, (0.0, float("inf")))
+        lower_multiplier = float(np.clip(lower_multiplier, bound_min, bound_max))
+        upper_multiplier = float(np.clip(upper_multiplier, bound_min, bound_max))
+        if lower_multiplier > upper_multiplier:
+            lower_multiplier, upper_multiplier = upper_multiplier, lower_multiplier
         intervals[label] = {
-            "lower_pence": int(round(max(0.0, predicted_price_pence * math.exp(lower)))),
-            "upper_pence": int(round(max(0.0, predicted_price_pence * math.exp(upper)))),
+            "lower_pence": int(round(max(0.0, predicted_price_pence * lower_multiplier))),
+            "upper_pence": int(round(max(0.0, predicted_price_pence * upper_multiplier))),
         }
     return intervals
+
+
+def model_feature_coverage(record: dict[str, Any], feature_frame: pd.DataFrame) -> tuple[dict[str, bool], str]:
+    stations_present = False
+    if not feature_frame.empty and "station_count" in feature_frame.columns:
+        station_count = parse_number(feature_frame.iloc[0].get("station_count"))
+        stations_present = bool(station_count and station_count > 0)
+    elif record.get("nearest_stations"):
+        stations_present = len(record.get("nearest_stations") or []) > 0
+
+    coverage = {
+        "crime": parse_number((record.get("crime") or {}).get("avg_monthly_crimes")) is not None,
+        "transport_noise": any(
+            noise_metric(record, key) is not None for key in ("road_data", "rail_data", "flight_data")
+        ),
+        "air_quality": parse_number((record.get("air_quality") or {}).get("daqi_index")) is not None,
+        "stations": stations_present,
+    }
+    quality = "full_features" if all(coverage.values()) else "partial_features"
+    return coverage, quality
 
 
 def pricing_signal(
@@ -870,6 +911,7 @@ def build_valuation_inference_payload(
     transformed_feature_names = preprocessor.get_feature_names_out().tolist()
     attributions = integrated_gradients(model, transformed_row)
     feature_weights = feature_weights_from_attributions(attributions, transformed_feature_names, feature_frame, metadata)
+    feature_coverage, model_quality = model_feature_coverage(record, feature_frame)
 
     return {
         "predicted_current_price_pence": int(round(predicted_price_pence)),
@@ -880,4 +922,6 @@ def build_valuation_inference_payload(
         "prediction_interval_95": intervals.get("95"),
         "model_source": model_source,
         "feature_weights": feature_weights,
+        "model_feature_coverage": feature_coverage,
+        "model_quality": model_quality,
     }

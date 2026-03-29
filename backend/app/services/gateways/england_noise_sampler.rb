@@ -6,6 +6,8 @@ class EnglandNoiseSampler
   RESOLUTION = 10.0
   NULL_VALUE = -96.0
   BASE_URL = "https://environment.data.gov.uk".freeze
+  CONNECT_TIMEOUT_SECONDS = ENV.fetch("ENGLAND_NOISE_CONNECT_TIMEOUT", "4").to_i.to_s
+  MAX_TIME_SECONDS = ENV.fetch("ENGLAND_NOISE_MAX_TIME", "12").to_i.to_s
 
   def initialize(cache_key_prefix:, dataset_id:, coverage_prefix:, metrics:, origin_easting:, origin_northing:, bounds:, coverage_suffix: "", base_url: BASE_URL)
     @cache_key_prefix = cache_key_prefix
@@ -110,9 +112,9 @@ class EnglandNoiseSampler
       "--show-error",
       "--location",
       "--connect-timeout",
-      "10",
+      CONNECT_TIMEOUT_SECONDS,
       "--max-time",
-      "30",
+      MAX_TIME_SECONDS,
       url
     )
 

@@ -42,6 +42,13 @@ from valuation_pipeline import (
     predict_current_prices,
 )
 
+MIN_CRIME_COVERAGE_RATIO = 0.95
+MIN_TRANSPORT_COVERAGE_RATIO = 0.90
+MIN_STATIONS_COVERAGE_RATIO = 0.90
+PRICE_OUTLIER_QUANTILES = (0.01, 0.99)
+SQFT_PER_BEDROOM_MIN = 80.0
+SQFT_PER_BEDROOM_MAX = 5000.0
+
 
 def set_seed(seed: int) -> None:
     random.seed(seed)
@@ -182,6 +189,116 @@ def prediction_log_price_bounds(targets: np.ndarray) -> dict[str, float]:
     return {"lower": lower, "upper": max(lower + 0.1, upper)}
 
 
+def parse_numeric(value: Any) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(parsed):
+        return None
+    return parsed
+
+
+def dataset_coverage(records: list[dict[str, Any]]) -> dict[str, float]:
+    total = max(len(records), 1)
+    crime_count = 0
+    transport_count = 0
+    stations_count = 0
+    air_quality_count = 0
+
+    for record in records:
+        crime_value = parse_numeric((record.get("crime") or {}).get("avg_monthly_crimes"))
+        if crime_value is not None:
+            crime_count += 1
+
+        noise = record.get("noise") or {}
+        transport_ready = str(noise.get("status") or "").strip().lower() == "ready"
+        if transport_ready:
+            transport_count += 1
+
+        if len(record.get("nearest_stations") or []) > 0:
+            stations_count += 1
+
+        if parse_numeric((record.get("air_quality") or {}).get("daqi_index")) is not None:
+            air_quality_count += 1
+
+    to_ratio = lambda count: float(count / total)
+    return {
+        "total_records": int(len(records)),
+        "crime_count": int(crime_count),
+        "crime_ratio": to_ratio(crime_count),
+        "transport_count": int(transport_count),
+        "transport_ratio": to_ratio(transport_count),
+        "stations_count": int(stations_count),
+        "stations_ratio": to_ratio(stations_count),
+        "air_quality_count": int(air_quality_count),
+        "air_quality_ratio": to_ratio(air_quality_count),
+    }
+
+
+def enforce_coverage_guardrails(coverage: dict[str, float]) -> None:
+    failures: list[str] = []
+    if coverage["crime_ratio"] < MIN_CRIME_COVERAGE_RATIO:
+        failures.append(
+            f"crime {coverage['crime_count']}/{coverage['total_records']} "
+            f"({coverage['crime_ratio']:.1%}) < {MIN_CRIME_COVERAGE_RATIO:.0%}"
+        )
+    if coverage["transport_ratio"] < MIN_TRANSPORT_COVERAGE_RATIO:
+        failures.append(
+            f"transport_noise {coverage['transport_count']}/{coverage['total_records']} "
+            f"({coverage['transport_ratio']:.1%}) < {MIN_TRANSPORT_COVERAGE_RATIO:.0%}"
+        )
+    if coverage["stations_ratio"] < MIN_STATIONS_COVERAGE_RATIO:
+        failures.append(
+            f"nearest_stations {coverage['stations_count']}/{coverage['total_records']} "
+            f"({coverage['stations_ratio']:.1%}) < {MIN_STATIONS_COVERAGE_RATIO:.0%}"
+        )
+
+    if failures:
+        raise SystemExit(
+            "Coverage guardrail failed; run enrichment before valuation training: " + "; ".join(failures)
+        )
+
+
+def robust_filter_training_frame(training_frame) -> tuple[Any, dict[str, float]]:
+    if training_frame.empty:
+        return training_frame, {
+            "initial_count": 0,
+            "after_price_filter_count": 0,
+            "after_sqft_filter_count": 0,
+            "price_p1_pence": None,
+            "price_p99_pence": None,
+            "sqft_per_bedroom_min": SQFT_PER_BEDROOM_MIN,
+            "sqft_per_bedroom_max": SQFT_PER_BEDROOM_MAX,
+        }
+
+    filtered = training_frame.copy()
+    initial_count = int(len(filtered))
+
+    target_prices = filtered["target_price_pence"].to_numpy(dtype=np.float64)
+    price_low, price_high = np.quantile(target_prices, PRICE_OUTLIER_QUANTILES)
+    price_mask = (target_prices >= price_low) & (target_prices <= price_high)
+    filtered = filtered.loc[price_mask].copy()
+    after_price_filter_count = int(len(filtered))
+
+    sqft_per_bedroom = np.asarray(filtered["sqft_per_bedroom"], dtype=np.float64)
+    sqft_mask = np.isnan(sqft_per_bedroom) | (
+        (sqft_per_bedroom >= SQFT_PER_BEDROOM_MIN) & (sqft_per_bedroom <= SQFT_PER_BEDROOM_MAX)
+    )
+    filtered = filtered.loc[sqft_mask].copy().reset_index(drop=True)
+
+    stats = {
+        "initial_count": initial_count,
+        "after_price_filter_count": after_price_filter_count,
+        "after_sqft_filter_count": int(len(filtered)),
+        "price_p1_pence": float(price_low),
+        "price_p99_pence": float(price_high),
+        "sqft_per_bedroom_min": SQFT_PER_BEDROOM_MIN,
+        "sqft_per_bedroom_max": SQFT_PER_BEDROOM_MAX,
+    }
+    return filtered, stats
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train a current-price valuation model on the exported listings dataset.")
     parser.add_argument("--collect", action="store_true", help="Export the latest current-property dataset from Rails.")
@@ -200,12 +317,18 @@ def main() -> None:
     parser.add_argument("--live-max-listings", type=int, default=1_200, help="Maximum listing payloads to fetch.")
     parser.add_argument("--live-delay-seconds", type=float, default=0.15, help="Delay between live listing fetches.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
+    parser.add_argument(
+        "--skip-coverage-guardrails",
+        action="store_true",
+        help="Skip minimum feature-coverage checks before training.",
+    )
     args = parser.parse_args()
 
     artifacts_dir = args.artifacts_dir.resolve()
     artifacts_dir.mkdir(parents=True, exist_ok=True)
 
     listings_path = args.listings_path.resolve()
+    default_listings_path = DEFAULT_VALUATION_DATASET_PATH.resolve()
     if args.collect_live:
         listings_path = args.live_listings_path.resolve()
         listings_path.parent.mkdir(parents=True, exist_ok=True)
@@ -218,11 +341,19 @@ def main() -> None:
             max_listings=args.live_max_listings,
             delay_seconds=args.live_delay_seconds,
         )
-    elif args.collect or not listings_path.exists():
+    elif args.collect or listings_path == default_listings_path or not listings_path.exists():
         listings_path.parent.mkdir(parents=True, exist_ok=True)
         run_dataset_export(listings_path)
 
+    with listings_path.open("r", encoding="utf-8") as file_handle:
+        listing_payload = json.load(file_handle)
+    listing_records = listing_payload.get("properties", [])
+    coverage = dataset_coverage(listing_records)
+    if not args.skip_coverage_guardrails:
+        enforce_coverage_guardrails(coverage)
+
     training_frame = build_valuation_training_frame(listings_path)
+    training_frame, filter_stats = robust_filter_training_frame(training_frame)
     if len(training_frame) < 20:
         raise SystemExit(f"Need at least 20 priced properties to train valuation model; only found {len(training_frame)}.")
 
@@ -246,9 +377,6 @@ def main() -> None:
     feature_columns = active_numeric_features + active_categorical_features
     if not feature_columns:
         raise SystemExit("No varying features were available to train the valuation model.")
-
-    with listings_path.open("r", encoding="utf-8") as file_handle:
-        listing_payload = json.load(file_handle)
 
     targets = np.log1p(training_frame["target_price_pence"].to_numpy(dtype=np.float64))
     actual_prices = training_frame["target_price_pence"].to_numpy(dtype=np.float64)
@@ -347,6 +475,8 @@ def main() -> None:
         "prediction_intervals": prediction_intervals,
         "prediction_log_price_bounds": log_price_bounds,
         "best_epoch_median": final_epochs,
+        "coverage": coverage,
+        "row_filtering": filter_stats,
         **metrics_for_predictions(actual_prices, oof_predictions),
         "full_fit_rmse_pounds": float(
             math.sqrt(mean_squared_error(actual_prices / 100.0, final_predictions / 100.0))

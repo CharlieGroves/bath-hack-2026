@@ -73,6 +73,13 @@ export interface MlValuationFeatureWeight {
   direction: 'positive' | 'negative'
 }
 
+export interface MlValuationFeatureCoverage {
+  crime: boolean
+  transport_noise: boolean
+  air_quality: boolean
+  stations: boolean
+}
+
 export interface MlValuation {
   predicted_current_price_pence: number
   pricing_signal: 'overpriced' | 'fairly_priced' | 'underpriced' | null
@@ -82,6 +89,8 @@ export interface MlValuation {
   prediction_interval_95: MlValuationInterval | null
   model_source: 'out_of_fold' | 'full_model'
   feature_weights: MlValuationFeatureWeight[]
+  model_feature_coverage?: MlValuationFeatureCoverage
+  model_quality?: 'full_features' | 'partial_features'
 }
 
 export interface BoundingBox {
