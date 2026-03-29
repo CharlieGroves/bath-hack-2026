@@ -65,6 +65,32 @@ module Api
         render json: { error: e.message }, status: :not_found
       end
 
+      # GET /api/v1/properties/similar_by_image_maxpool?property_id=&k=20
+      # k-ANN vs +image_embeddings_maxpool_vector+ (cosine). Anchor is the whole listing, not a single photo.
+      def similar_by_image_maxpool
+        pid = params.require(:property_id).to_i
+        k   = [[params.fetch(:k, 20).to_i, 1].max, 50].min
+
+        hits = PropertyImageMaxpoolSearch.similar_properties(property_id: pid, limit: k)
+        props = Property.where(id: hits.map { |h| h[:property_id] }).index_by(&:id)
+
+        render json: {
+          mode: "maxpool",
+          anchor: { property_id: pid },
+          matches: hits.map { |h|
+            p = props[h[:property_id]]
+            next unless p
+
+            property_summary(p).merge(
+              pooled_image_similarity_distance: h[:neighbor_distance]
+            )
+          }.compact
+        }
+      rescue PropertyImageMaxpoolSearch::AnchorMissingError,
+             PropertyImageMaxpoolSearch::VectorMissingError => e
+        render json: { error: e.message }, status: :not_found
+      end
+
       # GET /api/v1/properties/heatmap
       def heatmap
         points = Property

@@ -11,6 +11,9 @@ class PropertyImageEmbedding < ApplicationRecord
   validates :fingerprint, presence: true
   validate :embedding_json_shape, if: -> { embedding.present? }
 
+  before_validation :sync_embedding_vector_from_json
+  after_commit :refresh_parent_image_embeddings_maxpool
+
   # @param query_vector [Array<Numeric>] 768 floats (same space as +PropertyImageEmbedder+)
   # @return ActiveRecord::Relation rows include +neighbor_distance+ (cosine distance)
   def self.nearest_to(query_vector, limit: 20, distance: "cosine")
@@ -19,6 +22,24 @@ class PropertyImageEmbedding < ApplicationRecord
     end
 
     nearest_neighbors(:embedding_vector, query_vector.map(&:to_f), distance: distance).limit(limit)
+  end
+
+  # Element-wise max across all non-null +embedding_vector+ rows for +property_id+ (768 floats), or +nil+ if none.
+  def self.maxpool_vector_array_for_property(property_id)
+    rows = where(property_id: property_id).where.not(embedding_vector: nil).order(:position).pluck(:embedding_vector)
+    return nil if rows.empty?
+
+    dim = EXPECTED_DIMENSIONS
+    acc = vector_to_float_array(rows.first)
+    return nil if acc.size != dim
+
+    rows.drop(1).each do |row|
+      arr = vector_to_float_array(row)
+      next if arr.size != dim
+
+      dim.times { |i| acc[i] = [acc[i], arr[i]].max }
+    end
+    acc
   end
 
   # 768 floats for ANN queries; prefers pgvector column, falls back to jsonb +embedding+ if vector not migrated yet.
@@ -33,15 +54,25 @@ class PropertyImageEmbedding < ApplicationRecord
     embedding.map(&:to_f)
   end
 
+  def self.vector_to_float_array(value)
+    return [] if value.nil?
+
+    arr = value.respond_to?(:to_a) ? value.to_a : Array(value)
+    arr.map(&:to_f)
+  end
+  private_class_method :vector_to_float_array
+
   private
+
+  def refresh_parent_image_embeddings_maxpool
+    Property.refresh_image_embeddings_maxpool!(property_id)
+  end
 
   def embedding_json_shape
     return unless embedding.is_a?(Array)
 
     errors.add(:embedding, "must have #{EXPECTED_DIMENSIONS} dimensions") if embedding.size != EXPECTED_DIMENSIONS
   end
-
-  before_validation :sync_embedding_vector_from_json
 
   def sync_embedding_vector_from_json
     if embedding.is_a?(Array) && embedding.size == EXPECTED_DIMENSIONS
