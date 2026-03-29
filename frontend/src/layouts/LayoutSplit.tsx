@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, WMSTileLayer, Marker, Popup, Polygon, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.heat'
 import L from 'leaflet'
@@ -40,7 +40,25 @@ const pinDefault = L.divIcon({
   popupAnchor: [0, -32],
 })
 
-type MapLayer = 'markers' | 'heatmap'
+type MapLayer = 'markers' | 'heatmap' | 'noise_road' | 'noise_rail' | 'noise_flight'
+
+const NOISE_WMS_LAYERS: Record<'noise_road' | 'noise_rail' | 'noise_flight', { url: string; layers: string; label: string }> = {
+  noise_road: {
+    url: 'https://environment.data.gov.uk/geoservices/datasets/562c9d56-7c2d-4d42-83bb-578d6e97a517/wms',
+    layers: 'Road_Noise_Lden_England_Round_4_All',
+    label: 'Road noise',
+  },
+  noise_rail: {
+    url: 'https://environment.data.gov.uk/geoservices/datasets/3fb3c2d7-292c-4e0a-bd5b-d8e4e1fe2947/wms',
+    layers: 'Rail_Noise_Lden_England_Round_4_All',
+    label: 'Rail noise',
+  },
+  noise_flight: {
+    url: 'https://environment.data.gov.uk/geoservices/datasets/dac9cba4-abe7-43bd-b8e9-8a83da52edd8/wms',
+    layers: 'Airport_Noise_ALL_Lden',
+    label: 'Flight noise',
+  },
+}
 
 function HeatmapLayer({ points }: { points: [number, number, number][] }) {
   const map = useMap()
@@ -197,9 +215,12 @@ interface Props {
   onClearLocationSearch: () => void
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0 }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '' }
 
 const FLOOD_RISK_LABELS: Record<number, string> = { 1: 'Very Low', 2: 'Low', 3: 'Medium', 4: 'High' }
+
+const NOISE_MIN_DB = 40
+const NOISE_MAX_DB = 80
 
 const STATION_MINUTE_OPTIONS = [
   { value: 0,  label: 'Any' },
@@ -263,6 +284,7 @@ export default function LayoutSplit({
     if (rates.length === 0) return null
     return { min: Math.floor(Math.min(...rates)), max: Math.ceil(Math.max(...rates)) }
   }, [properties])
+
 
   const mapItems = filtered.filter(p => p.latitude != null && p.longitude != null)
   const locationSearchHint = activeLocationSearch
@@ -573,6 +595,102 @@ export default function LayoutSplit({
         </div>
 
         <div className="l2-sb-section">
+          <div className="l2-sb-slider-header">
+            <span className="l2-sb-label" style={{ marginBottom: 0 }}>Road noise (Lden)</span>
+            <span className="l2-sb-slider-value">
+              {filters.maxRoadNoiseLden === '' ? 'Any' : `up to ${filters.maxRoadNoiseLden} dB`}
+            </span>
+          </div>
+          {(() => {
+            const val = filters.maxRoadNoiseLden === '' ? NOISE_MAX_DB : filters.maxRoadNoiseLden as number
+            const pct = Math.round(((val - NOISE_MIN_DB) / (NOISE_MAX_DB - NOISE_MIN_DB)) * 100)
+            return (
+              <input
+                className="l2-sb-slider"
+                type="range"
+                min={NOISE_MIN_DB}
+                max={NOISE_MAX_DB}
+                step={1}
+                value={val}
+                style={{ '--slider-pct': pct } as React.CSSProperties}
+                onChange={e => {
+                  const v = +e.target.value
+                  setF('maxRoadNoiseLden', v >= NOISE_MAX_DB ? '' : v)
+                }}
+              />
+            )
+          })()}
+          <div className="l2-sb-slider-range">
+            <span>{NOISE_MIN_DB} dB (quiet)</span>
+            <span>{NOISE_MAX_DB} dB (loud)</span>
+          </div>
+        </div>
+
+        <div className="l2-sb-section">
+          <div className="l2-sb-slider-header">
+            <span className="l2-sb-label" style={{ marginBottom: 0 }}>Rail noise (Lden)</span>
+            <span className="l2-sb-slider-value">
+              {filters.maxRailNoiseLden === '' ? 'Any' : `up to ${filters.maxRailNoiseLden} dB`}
+            </span>
+          </div>
+          {(() => {
+            const val = filters.maxRailNoiseLden === '' ? NOISE_MAX_DB : filters.maxRailNoiseLden as number
+            const pct = Math.round(((val - NOISE_MIN_DB) / (NOISE_MAX_DB - NOISE_MIN_DB)) * 100)
+            return (
+              <input
+                className="l2-sb-slider"
+                type="range"
+                min={NOISE_MIN_DB}
+                max={NOISE_MAX_DB}
+                step={1}
+                value={val}
+                style={{ '--slider-pct': pct } as React.CSSProperties}
+                onChange={e => {
+                  const v = +e.target.value
+                  setF('maxRailNoiseLden', v >= NOISE_MAX_DB ? '' : v)
+                }}
+              />
+            )
+          })()}
+          <div className="l2-sb-slider-range">
+            <span>{NOISE_MIN_DB} dB (quiet)</span>
+            <span>{NOISE_MAX_DB} dB (loud)</span>
+          </div>
+        </div>
+
+        <div className="l2-sb-section">
+          <div className="l2-sb-slider-header">
+            <span className="l2-sb-label" style={{ marginBottom: 0 }}>Flight noise (Lden)</span>
+            <span className="l2-sb-slider-value">
+              {filters.maxFlightNoiseLden === '' ? 'Any' : `up to ${filters.maxFlightNoiseLden} dB`}
+            </span>
+          </div>
+          {(() => {
+            const val = filters.maxFlightNoiseLden === '' ? NOISE_MAX_DB : filters.maxFlightNoiseLden as number
+            const pct = Math.round(((val - NOISE_MIN_DB) / (NOISE_MAX_DB - NOISE_MIN_DB)) * 100)
+            return (
+              <input
+                className="l2-sb-slider"
+                type="range"
+                min={NOISE_MIN_DB}
+                max={NOISE_MAX_DB}
+                step={1}
+                value={val}
+                style={{ '--slider-pct': pct } as React.CSSProperties}
+                onChange={e => {
+                  const v = +e.target.value
+                  setF('maxFlightNoiseLden', v >= NOISE_MAX_DB ? '' : v)
+                }}
+              />
+            )
+          })()}
+          <div className="l2-sb-slider-range">
+            <span>{NOISE_MIN_DB} dB (quiet)</span>
+            <span>{NOISE_MAX_DB} dB (loud)</span>
+          </div>
+        </div>
+
+        <div className="l2-sb-section">
           <button type="button" className="l2-sb-reset" onClick={() => setFilters(INIT)}>
             Reset filters
           </button>
@@ -675,6 +793,21 @@ export default function LayoutSplit({
             className={mapLayer === 'heatmap' ? 'on' : ''}
             onClick={() => setMapLayer('heatmap')}
           >Price / sq ft</button>
+          <button
+            type="button"
+            className={mapLayer === 'noise_road' ? 'on' : ''}
+            onClick={() => setMapLayer('noise_road')}
+          >Road noise</button>
+          <button
+            type="button"
+            className={mapLayer === 'noise_rail' ? 'on' : ''}
+            onClick={() => setMapLayer('noise_rail')}
+          >Rail noise</button>
+          <button
+            type="button"
+            className={mapLayer === 'noise_flight' ? 'on' : ''}
+            onClick={() => setMapLayer('noise_flight')}
+          >Flight noise</button>
         </div>
         <MapContainer center={[51.5074, -0.1278]} zoom={11} style={{ height: '100%', width: '100%' }}>
           <MapResizer />
@@ -688,6 +821,17 @@ export default function LayoutSplit({
           />
           <SearchIsochrone shells={activeLocationSearch?.isochroneShells ?? []} />
           {mapLayer === 'heatmap' && <HeatmapLayer points={heatmapPoints} />}
+          {(mapLayer === 'noise_road' || mapLayer === 'noise_rail' || mapLayer === 'noise_flight') && (
+            <WMSTileLayer
+              key={mapLayer}
+              url={NOISE_WMS_LAYERS[mapLayer].url}
+              layers={NOISE_WMS_LAYERS[mapLayer].layers}
+              format="image/png"
+              transparent={true}
+              opacity={0.75}
+              attribution='&copy; <a href="https://environment.data.gov.uk">Environment Agency</a>'
+            />
+          )}
           {mapLayer === 'markers' && mapItems.map(p => (
             <Marker
               key={p.id}

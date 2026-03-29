@@ -118,6 +118,9 @@ module Api
         properties = properties.max_beds(params[:max_beds].to_i)             if params[:max_beds].present?
         properties = properties.max_daqi(params[:max_daqi].to_i)             if params[:max_daqi].present?
         properties = properties.max_flood_risk_band(params[:max_flood_risk_band].to_i) if params[:max_flood_risk_band].present?
+        properties = properties.max_road_noise_lden(params[:max_road_noise_lden].to_f)   if params[:max_road_noise_lden].present?
+        properties = properties.max_rail_noise_lden(params[:max_rail_noise_lden].to_f)   if params[:max_rail_noise_lden].present?
+        properties = properties.max_flight_noise_lden(params[:max_flight_noise_lden].to_f) if params[:max_flight_noise_lden].present?
 
         if params[:sw_lat].present? && params[:sw_lng].present? &&
            params[:ne_lat].present? && params[:ne_lng].present?
