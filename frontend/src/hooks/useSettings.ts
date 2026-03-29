@@ -39,7 +39,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   defaultSort: 'newest',
 }
 
-const STORAGE_KEY = 'hearthstone_settings'
+const STORAGE_KEY = 'hestia_settings'
 
 export function useSettings() {
   const [settings, setSettings] = useState<UserSettings>(() => {

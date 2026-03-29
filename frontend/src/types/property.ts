@@ -161,6 +161,8 @@ export interface PropertyDetail {
   air_quality: AirQuality | null
   ml_forecast: MlForecast | null
   ml_valuation: MlValuation | null
+  flood_risk: FloodRisk | null
+  crime: PropertyCrime | null
 }
 
 // Matches the shape returned by API::V1::PropertiesController#property_summary

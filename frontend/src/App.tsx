@@ -96,7 +96,8 @@ function AppHeader({
     <header className="header">
       <div className="header-brand" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
         <FlameIcon size={22} />
-        <span className="brand-name">Hearthstone</span>
+        <span className="brand-name">Hestia</span>
+        <span className="brand-tagline">find your home</span>
       </div>
       <div className="header-search-wrap">
         <svg className="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none">

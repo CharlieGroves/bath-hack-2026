@@ -17,6 +17,8 @@ const AMENITY_COLOURS: Record<string, string> = {
   convenience:  '#65a30d',  // lime
   pharmacy:     '#dc2626',  // red
   cafe:         '#78716c',  // stone
+  station:      '#7c3aed',  // purple
+  halt:         '#7c3aed',  // purple
 }
 
 function amenityColour(amenity: string): string {
