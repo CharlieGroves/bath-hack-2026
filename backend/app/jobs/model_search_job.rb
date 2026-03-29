@@ -32,6 +32,9 @@ class ModelSearchJob < ApplicationJob
 
     Property details:
     - property_type       (String) one of: flat, terraced, semi_detached, detached, bungalow, land, other
+                          IMPORTANT: only set this if the user specifies a precise property type.
+                          "house" or "houses" is NOT a valid type — do NOT set property_type for generic house requests.
+                          Use terraced/semi_detached/detached/bungalow only when the user explicitly names one of those.
     - tenure              (String) one of: freehold, leasehold, share_of_freehold
     - status              (String) one of: active, under_offer, sold, let
     - is_shared_ownership (Boolean) true for shared-ownership / percentage-share listings
@@ -184,36 +187,46 @@ class ModelSearchJob < ApplicationJob
         WHERE status = 'ready' AND flight_data -> 'metrics' ->> 'lden' IS NOT NULL
       SQL
 
+      # Borough scores are computed only over boroughs that actually have properties
+      # so percentiles reflect what is achievable within the current listing set.
       life_satisfaction: fetch.call(<<~SQL),
         SELECT
-          percentile_cont(0.25) WITHIN GROUP (ORDER BY life_satisfaction_score) AS p25,
-          percentile_cont(0.50) WITHIN GROUP (ORDER BY life_satisfaction_score) AS p50,
-          percentile_cont(0.75) WITHIN GROUP (ORDER BY life_satisfaction_score) AS p75
-        FROM boroughs WHERE life_satisfaction_score IS NOT NULL
+          percentile_cont(0.25) WITHIN GROUP (ORDER BY b.life_satisfaction_score) AS p25,
+          percentile_cont(0.50) WITHIN GROUP (ORDER BY b.life_satisfaction_score) AS p50,
+          percentile_cont(0.75) WITHIN GROUP (ORDER BY b.life_satisfaction_score) AS p75
+        FROM boroughs b
+        WHERE b.life_satisfaction_score IS NOT NULL
+          AND EXISTS (SELECT 1 FROM properties p WHERE p.borough_id = b.id)
       SQL
 
       happiness: fetch.call(<<~SQL),
         SELECT
-          percentile_cont(0.25) WITHIN GROUP (ORDER BY happiness_score) AS p25,
-          percentile_cont(0.50) WITHIN GROUP (ORDER BY happiness_score) AS p50,
-          percentile_cont(0.75) WITHIN GROUP (ORDER BY happiness_score) AS p75
-        FROM boroughs WHERE happiness_score IS NOT NULL
+          percentile_cont(0.25) WITHIN GROUP (ORDER BY b.happiness_score) AS p25,
+          percentile_cont(0.50) WITHIN GROUP (ORDER BY b.happiness_score) AS p50,
+          percentile_cont(0.75) WITHIN GROUP (ORDER BY b.happiness_score) AS p75
+        FROM boroughs b
+        WHERE b.happiness_score IS NOT NULL
+          AND EXISTS (SELECT 1 FROM properties p WHERE p.borough_id = b.id)
       SQL
 
       anxiety: fetch.call(<<~SQL),
         SELECT
-          percentile_cont(0.25) WITHIN GROUP (ORDER BY anxiety_score) AS p25,
-          percentile_cont(0.50) WITHIN GROUP (ORDER BY anxiety_score) AS p50,
-          percentile_cont(0.75) WITHIN GROUP (ORDER BY anxiety_score) AS p75
-        FROM boroughs WHERE anxiety_score IS NOT NULL
+          percentile_cont(0.25) WITHIN GROUP (ORDER BY b.anxiety_score) AS p25,
+          percentile_cont(0.50) WITHIN GROUP (ORDER BY b.anxiety_score) AS p50,
+          percentile_cont(0.75) WITHIN GROUP (ORDER BY b.anxiety_score) AS p75
+        FROM boroughs b
+        WHERE b.anxiety_score IS NOT NULL
+          AND EXISTS (SELECT 1 FROM properties p WHERE p.borough_id = b.id)
       SQL
 
       nte: fetch.call(<<~SQL),
         SELECT
-          percentile_cont(0.25) WITHIN GROUP (ORDER BY nte_score) AS p25,
-          percentile_cont(0.50) WITHIN GROUP (ORDER BY nte_score) AS p50,
-          percentile_cont(0.75) WITHIN GROUP (ORDER BY nte_score) AS p75
-        FROM boroughs WHERE nte_score IS NOT NULL
+          percentile_cont(0.25) WITHIN GROUP (ORDER BY b.nte_score) AS p25,
+          percentile_cont(0.50) WITHIN GROUP (ORDER BY b.nte_score) AS p50,
+          percentile_cont(0.75) WITHIN GROUP (ORDER BY b.nte_score) AS p75
+        FROM boroughs b
+        WHERE b.nte_score IS NOT NULL
+          AND EXISTS (SELECT 1 FROM properties p WHERE p.borough_id = b.id)
       SQL
     }.compact
   end
