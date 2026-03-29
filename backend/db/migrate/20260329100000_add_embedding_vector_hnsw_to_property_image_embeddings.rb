@@ -3,13 +3,11 @@
 # To install on Ubuntu/Debian: sudo apt-get install postgresql-16-pgvector
 class AddEmbeddingVectorHnswToPropertyImageEmbeddings < ActiveRecord::Migration[7.2]
   def up
-    begin
-      enable_extension "vector" unless extension_enabled?("vector")
-    rescue ActiveRecord::StatementInvalid => e
-      raise unless e.message.include?("vector.control")
+    unless pgvector_available?
       say "pgvector not installed on this system — skipping. Install postgresql-16-pgvector to enable."
       return
     end
+    enable_extension "vector" unless extension_enabled?("vector")
 
     add_column :property_image_embeddings, :embedding_vector, :vector, limit: 768
 
@@ -36,5 +34,16 @@ class AddEmbeddingVectorHnswToPropertyImageEmbeddings < ActiveRecord::Migration[
   def down
     remove_index :property_image_embeddings, name: "idx_pie_embedding_vector_hnsw", if_exists: true
     remove_column :property_image_embeddings, :embedding_vector, if_exists: true
+  end
+
+  private
+
+  def pgvector_available?
+    return true if extension_enabled?("vector")
+
+    raw = select_value("SELECT EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'vector')")
+    ActiveModel::Type::Boolean.new.cast(raw)
+  rescue ActiveRecord::StatementInvalid
+    false
   end
 end
