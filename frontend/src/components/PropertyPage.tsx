@@ -1,8 +1,6 @@
-import { useState } from 'react'
-import { MapContainer, TileLayer, Marker } from 'react-leaflet'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import 'leaflet/dist/leaflet.css'
-import L from 'leaflet'
 import {
   AreaChart, Area, ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine,
@@ -11,18 +9,9 @@ import { useProperty } from '../hooks/useProperty'
 import { useXray } from '../hooks/useXray'
 import { useSimilarByImage } from '../hooks/useSimilarByImage'
 import type { SimilarMatch, SimilarMode } from '../hooks/useSimilarByImage'
-import type { PropertyDetail, AirQuality, YearlyGrowthEntry, MlValuation } from '../types/property'
+import type { PropertyDetail, YearlyGrowthEntry, MlValuation } from '../types/property'
 import XrayMap from './XrayMap'
 import './PropertyPage.css'
-
-// Fix default marker icons broken by Vite's asset pipeline
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
-import markerIcon   from 'leaflet/dist/images/marker-icon.png'
-import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-type LeafletDefaultIconPrototype = { _getIconUrl?: string }
-
-delete (L.Icon.Default.prototype as LeafletDefaultIconPrototype)._getIconUrl
-L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -45,17 +34,48 @@ function fmtPct(value: number | null, digits = 1) {
   return `${value > 0 ? '+' : ''}${value.toFixed(digits)}%`
 }
 
-function pricingSignalCopy(signal: MlValuation['pricing_signal']) {
-  switch (signal) {
-    case 'overpriced':
-      return 'Model sees this listing as overpriced'
-    case 'underpriced':
-      return 'Model sees this listing as underpriced'
-    case 'fairly_priced':
-      return 'Model sees this listing as fairly priced'
-    default:
-      return 'Model value estimate'
+function noiseLevel(db: number): { label: string; cls: string } {
+  if (db < 50) return { label: 'Low', cls: 'env-green' }
+  if (db < 60) return { label: 'Moderate', cls: 'env-amber' }
+  if (db < 70) return { label: 'High', cls: 'env-orange' }
+  return { label: 'Very High', cls: 'env-red' }
+}
+
+function primaryNoiseMetric(metrics: Record<string, number | null>): number | null {
+  for (const key of ['lden', 'LDEN', 'lday', 'LDAY', 'lnight', 'LNIGHT']) {
+    const v = metrics[key]
+    if (v != null) return v
   }
+  return Object.values(metrics).find(v => v != null) ?? null
+}
+
+function floodRiskCls(level: string): string {
+  const l = level.toLowerCase()
+  if (l.includes('very high') || l.includes('high')) return 'env-red'
+  if (l.includes('medium')) return 'env-amber'
+  return 'env-green'
+}
+
+function aqCls(band: string): string {
+  if (band === 'Low') return 'env-green'
+  if (band === 'Moderate') return 'env-amber'
+  if (band === 'High') return 'env-orange'
+  return 'env-red'
+}
+
+function pricingSignalLabel(signal: MlValuation['pricing_signal']) {
+  switch (signal) {
+    case 'overpriced':    return 'Overpriced'
+    case 'underpriced':   return 'Underpriced'
+    case 'fairly_priced': return 'Fair value'
+    default:              return 'Model estimate'
+  }
+}
+
+function pricingSignalCls(signal: MlValuation['pricing_signal']) {
+  if (signal === 'underpriced') return 'pp-signal-under'
+  if (signal === 'overpriced')  return 'pp-signal-over'
+  return 'pp-signal-fair'
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -74,143 +94,239 @@ function BackBar({ onBack }: { onBack: () => void }) {
   )
 }
 
-function HeroGallery({
-  property,
-  activePhoto,
-  setActivePhoto,
-  onFindSimilar,
-  onFindSimilarMaxpool,
-  similarLoading,
-  activeMode,
-}: {
-  property: PropertyDetail
-  activePhoto: number
-  setActivePhoto: (i: number) => void
-  onFindSimilar: () => void
-  onFindSimilarMaxpool: () => void
-  similarLoading: boolean
-  activeMode: SimilarMode | null
-}) {
+function HeroGallery({ property }: { property: PropertyDetail }) {
   const photos = property.photo_urls
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxPhoto, setLightboxPhoto] = useState(0)
+
+  function openLightbox(i: number) {
+    setLightboxPhoto(i)
+    setLightboxOpen(true)
+  }
+
+  function lightboxPrev() {
+    setLightboxPhoto(i => (i - 1 + photos.length) % photos.length)
+  }
+
+  function lightboxNext() {
+    setLightboxPhoto(i => (i + 1) % photos.length)
+  }
+
+  useEffect(() => {
+    if (!lightboxOpen) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'ArrowLeft')  lightboxPrev()
+      else if (e.key === 'ArrowRight') lightboxNext()
+      else if (e.key === 'Escape')     setLightboxOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightboxOpen, photos.length])
+
+  const sidePhotos = photos.slice(1, 5)
 
   return (
     <div className="pp-hero-gallery">
-      <div className="pp-gallery-stage">
-        {photos.length > 0
-          ? <img src={photos[activePhoto]} alt="" className="pp-gallery-img" />
-          : <div className="pp-gallery-empty" />
-        }
-
-        {photos.length > 1 && (
-          <>
-            <button
-              className="pp-gallery-arrow pp-gallery-prev"
-              onClick={() => setActivePhoto((activePhoto - 1 + photos.length) % photos.length)}
-              aria-label="Previous photo"
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M11 3.5L5.5 9 11 14.5" stroke="currentColor" strokeWidth="2"
-                      strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            <button
-              className="pp-gallery-arrow pp-gallery-next"
-              onClick={() => setActivePhoto((activePhoto + 1) % photos.length)}
-              aria-label="Next photo"
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M7 3.5L12.5 9 7 14.5" stroke="currentColor" strokeWidth="2"
-                      strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-          </>
-        )}
-
-        <div className="pp-similar-btn-group">
-          <button
-            className={`pp-similar-btn${activeMode === 'per_photo' ? ' pp-similar-btn-active' : ''}${similarLoading && activeMode === 'per_photo' ? ' pp-similar-btn-loading' : ''}`}
-            onClick={onFindSimilar}
-            disabled={similarLoading}
-            aria-label="Find properties similar to this photo"
-          >
-            {similarLoading && activeMode === 'per_photo' ? (
-              <span className="pp-similar-btn-spinner" />
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M8.5 8.5L13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M3.5 5.5h4M5.5 3.5v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-            )}
-            This photo
-          </button>
-          <button
-            className={`pp-similar-btn${activeMode === 'maxpool' ? ' pp-similar-btn-active' : ''}${similarLoading && activeMode === 'maxpool' ? ' pp-similar-btn-loading' : ''}`}
-            onClick={onFindSimilarMaxpool}
-            disabled={similarLoading}
-            aria-label="Find properties similar to this listing"
-          >
-            {similarLoading && activeMode === 'maxpool' ? (
-              <span className="pp-similar-btn-spinner" />
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M8.5 8.5L13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-            )}
-            All photos
-          </button>
-        </div>
-
-        <div className="pp-gallery-overlay">
-          {photos.length > 1 && (
-            <span className="pp-gallery-counter">{activePhoto + 1} / {photos.length}</span>
-          )}
-          <div className="pp-overlay-content">
-            <div className="pp-overlay-price">{fmtPrice(property.price_pence)}</div>
-            <div className="pp-overlay-address">
-              {property.address_line_1}
-              {property.postcode && `, ${property.postcode}`}
-            </div>
-            <div className="pp-overlay-stats">
-              {property.bedrooms != null && (
-                <span className="pp-overlay-stat">
-                  <strong>{property.bedrooms}</strong> bed
-                </span>
-              )}
-              {property.bathrooms != null && (
-                <span className="pp-overlay-stat">
-                  <strong>{property.bathrooms}</strong> bath
-                </span>
-              )}
-              {property.size_sqft != null && (
-                <span className="pp-overlay-stat">
-                  <strong>{property.size_sqft.toLocaleString('en-GB')}</strong> sq ft
-                </span>
-              )}
-              {property.price_per_sqft_pence != null && (
-                <span className="pp-overlay-stat pp-overlay-stat-dim">
-                  {fmtPrice(property.price_per_sqft_pence)} / sq ft
-                </span>
-              )}
+      {photos.length === 0 ? (
+        <div className="pp-gallery-empty-wrap">
+          <div className="pp-gallery-empty" />
+          <div className="pp-gallery-overlay">
+            <div className="pp-gallery-overlay-bottom">
+              <div className="pp-overlay-content">
+                <div className="pp-overlay-price">{fmtPrice(property.price_pence)}</div>
+                <div className="pp-overlay-address">
+                  {property.address_line_1}
+                  {property.postcode && `, ${property.postcode}`}
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className={`pp-gallery-grid${sidePhotos.length === 0 ? ' pp-gallery-grid-single' : ''}`}>
+          {/* Main photo */}
+          <button className="pp-gallery-main" onClick={() => openLightbox(0)} aria-label="View photos">
+            <img src={photos[0]} alt="" className="pp-gallery-main-img" />
+            <div className="pp-gallery-overlay">
+              <div className="pp-gallery-overlay-bottom">
+                <div className="pp-overlay-content">
+                  <div className="pp-overlay-price">{fmtPrice(property.price_pence)}</div>
+                  <div className="pp-overlay-address">
+                    {property.address_line_1}
+                    {property.postcode && `, ${property.postcode}`}
+                  </div>
+                  <div className="pp-overlay-stats">
+                    {property.bedrooms != null && (
+                      <span className="pp-overlay-stat"><strong>{property.bedrooms}</strong> bed</span>
+                    )}
+                    {property.bathrooms != null && (
+                      <span className="pp-overlay-stat"><strong>{property.bathrooms}</strong> bath</span>
+                    )}
+                    {property.size_sqft != null && (
+                      <span className="pp-overlay-stat">
+                        <strong>{property.size_sqft.toLocaleString('en-GB')}</strong> sq ft
+                      </span>
+                    )}
+                    {property.price_per_sqft_pence != null && (
+                      <span className="pp-overlay-stat pp-overlay-stat-dim">
+                        {fmtPrice(property.price_per_sqft_pence)} / sq ft
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {photos.length > 1 && (
+                  <div className="pp-gallery-view-all">
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                      <rect x="0.75" y="0.75" width="4.5" height="3.5" rx="0.75" stroke="currentColor" strokeWidth="1.3"/>
+                      <rect x="7.75" y="0.75" width="4.5" height="3.5" rx="0.75" stroke="currentColor" strokeWidth="1.3"/>
+                      <rect x="0.75" y="8.75" width="4.5" height="3.5" rx="0.75" stroke="currentColor" strokeWidth="1.3"/>
+                      <rect x="7.75" y="8.75" width="4.5" height="3.5" rx="0.75" stroke="currentColor" strokeWidth="1.3"/>
+                    </svg>
+                    View all {photos.length} photos
+                  </div>
+                )}
+              </div>
+            </div>
+          </button>
 
-      {photos.length > 1 && (
-        <div className="pp-gallery-strip">
-          {photos.map((url, i) => (
-            <button
-              key={i}
-              className={`pp-thumb ${i === activePhoto ? 'pp-thumb-active' : ''}`}
-              onClick={() => setActivePhoto(i)}
-            >
-              <img src={url} alt="" loading="lazy" />
-            </button>
-          ))}
+          {/* Side thumbnails */}
+          {sidePhotos.length > 0 && (
+            <div className="pp-gallery-side">
+              {sidePhotos.map((url, i) => (
+                <button key={i} className="pp-gallery-side-thumb" onClick={() => openLightbox(i + 1)}>
+                  <img src={url} alt="" loading="lazy" />
+                  {i === 3 && photos.length > 5 && (
+                    <div className="pp-gallery-more-overlay">+{photos.length - 5}</div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
+      {/* Lightbox */}
+      {lightboxOpen && createPortal(
+        <div className="pp-lightbox" onClick={() => setLightboxOpen(false)}>
+          <button className="pp-lightbox-close" onClick={() => setLightboxOpen(false)} aria-label="Close">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+
+          {photos.length > 1 && (
+            <button
+              className="pp-lightbox-arrow pp-lightbox-prev"
+              onClick={e => { e.stopPropagation(); lightboxPrev() }}
+              aria-label="Previous photo"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M11.5 3L5.5 9l6 6" stroke="currentColor" strokeWidth="2"
+                      strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+
+          <div className="pp-lightbox-stage" onClick={e => e.stopPropagation()}>
+            <img src={photos[lightboxPhoto]} alt="" className="pp-lightbox-img" />
+          </div>
+
+          {photos.length > 1 && (
+            <button
+              className="pp-lightbox-arrow pp-lightbox-next"
+              onClick={e => { e.stopPropagation(); lightboxNext() }}
+              aria-label="Next photo"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M6.5 3L12.5 9l-6 6" stroke="currentColor" strokeWidth="2"
+                      strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+
+          {photos.length > 1 && (
+            <div className="pp-lightbox-counter">{lightboxPhoto + 1} / {photos.length}</div>
+          )}
+        </div>,
+        document.body
+      )}
+    </div>
+  )
+}
+
+function IntelligenceStrip({ property }: { property: PropertyDetail }) {
+  const val = property.ml_valuation
+  const forecast = property.ml_forecast
+  const aq = property.air_quality
+  const flood = property.flood_risk
+  const noise = property.noise
+
+  const oneYr = forecast?.forecasts.find(f => f.years_ahead === 1)
+  const forecastPct = (oneYr && property.price_pence)
+    ? ((oneYr.predicted_future_price_pence / property.price_pence) - 1) * 100
+    : null
+
+  const noiseDb = (noise && noise.status !== 'pending' && noise.status !== 'failed')
+    ? (primaryNoiseMetric(noise.road_data?.metrics ?? {}) ??
+       primaryNoiseMetric(noise.rail_data?.metrics ?? {}) ??
+       primaryNoiseMetric(noise.flight_data?.metrics ?? {}))
+    : null
+
+  type Cell = { label: string; value: string; sub: string | null; cls: string }
+  const cells: Cell[] = []
+
+  if (val) cells.push({
+    label: 'AI Model',
+    value: pricingSignalLabel(val.pricing_signal),
+    sub: val.price_gap_pct != null ? fmtPct(val.price_gap_pct) + ' vs ask' : null,
+    cls: pricingSignalCls(val.pricing_signal),
+  })
+
+  if (forecastPct != null) cells.push({
+    label: '1-yr forecast',
+    value: fmtPct(forecastPct),
+    sub: 'predicted change',
+    cls: forecastPct >= 0 ? 'pp-intel-green' : 'pp-intel-red',
+  })
+
+  if (flood) cells.push({
+    label: 'Flood risk',
+    value: fmtLabel(flood.risk_level),
+    sub: `Band ${flood.risk_band}`,
+    cls: floodRiskCls(flood.risk_level),
+  })
+
+  if (aq) cells.push({
+    label: 'Air quality',
+    value: aq.daqi_band,
+    sub: `DAQI ${aq.daqi_index} / 10`,
+    cls: aqCls(aq.daqi_band),
+  })
+
+  if (noiseDb != null) {
+    const nl = noiseLevel(noiseDb)
+    cells.push({
+      label: 'Noise level',
+      value: `${Math.round(noiseDb)} dB`,
+      sub: nl.label,
+      cls: nl.cls,
+    })
+  }
+
+  if (!cells.length) return null
+
+  return (
+    <div className="pp-intel-strip">
+      <div className="pp-intel-brand">Hestia Intelligence</div>
+      <div className="pp-intel-cells">
+        {cells.map((c, i) => (
+          <div key={i} className="pp-intel-cell">
+            <div className="pp-intel-cell-label">{c.label}</div>
+            <div className={`pp-intel-cell-value ${c.cls}`}>{c.value}</div>
+            {c.sub && <div className="pp-intel-cell-sub">{c.sub}</div>}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -278,7 +394,8 @@ function TransportSection({ property }: { property: PropertyDetail }) {
 
   return (
     <section className="pp-section">
-      <h2 className="pp-section-heading">Nearest stations</h2>
+      <h2 className="pp-section-heading">Transport links</h2>
+      <p className="pp-section-sub">Walking times from this property — not shown on Rightmove</p>
       <div className="pp-stations">
         {sorted.map((s, i) => (
           <div key={i} className="pp-station-row">
@@ -393,7 +510,6 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
   const currentPrice = property.price_pence
   const horizons = [...forecast.forecasts].sort((a, b) => a.years_ahead - b.years_ahead)
 
-  // Chart data: "Now" as anchor point, then each forecast horizon
   const chartData = [
     {
       label: 'Now',
@@ -471,7 +587,6 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
                 )
               }}
             />
-            {/* Confidence band: lower as invisible baseline, range fills from lower to upper */}
             <Area
               type="monotone"
               dataKey="lower"
@@ -486,7 +601,6 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
               fill="url(#forecastBand)"
               stroke="none"
             />
-            {/* Point estimate line */}
             <Line
               type="monotone"
               dataKey="predicted"
@@ -537,78 +651,80 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
 }
 
 function ValuationSection({ property }: { property: PropertyDetail }) {
-  const valuation = property.ml_valuation
-  if (!valuation) return null
+  const val = property.ml_valuation
+  if (!val) return null
 
-  const signalClass = valuation.pricing_signal === 'overpriced'
-    ? 'pp-valuation-overpriced'
-    : valuation.pricing_signal === 'underpriced'
-      ? 'pp-valuation-underpriced'
-      : 'pp-valuation-fair'
+  const signalCls = pricingSignalCls(val.pricing_signal)
 
   return (
-    <section className="pp-section">
+    <section className="pp-section pp-section-ai">
+      <div className="pp-section-ai-tag">Hestia AI</div>
       <h2 className="pp-section-heading">Model valuation</h2>
-      <p className="pp-section-sub">
-        Current fair-value estimate from the structured house model, plus normalized Integrated Gradients feature weights.
-      </p>
 
-      <div className="pp-valuation-card">
-        <div className="pp-valuation-summary">
-          <div>
-            <div className="pp-forecast-label">Model value</div>
-            <div className="pp-forecast-value pp-forecast-value-strong">
-              {fmtPrice(valuation.predicted_current_price_pence)}
-            </div>
-            {valuation.prediction_interval_80 && (
-              <div className="pp-forecast-range">
-                80% fair-value band {fmtPrice(valuation.prediction_interval_80.lower_pence)} to {fmtPrice(valuation.prediction_interval_80.upper_pence)}
+      <div className="pp-val-card">
+        <div className={`pp-val-banner ${signalCls}`}>
+          {pricingSignalLabel(val.pricing_signal)}
+          {val.price_gap_pct != null && (
+            <span className="pp-val-banner-pct">{fmtPct(val.price_gap_pct)} vs asking price</span>
+          )}
+        </div>
+
+        <div className="pp-val-body">
+          <div className="pp-val-main">
+            <div className="pp-val-label">Model fair value</div>
+            <div className="pp-val-price">{fmtPrice(val.predicted_current_price_pence)}</div>
+            {val.prediction_interval_80 && (
+              <div className="pp-val-band">
+                80% band: {fmtPrice(val.prediction_interval_80.lower_pence)} – {fmtPrice(val.prediction_interval_80.upper_pence)}
               </div>
             )}
           </div>
-
-          <div className="pp-valuation-meta">
-            <div className={`pp-valuation-badge ${signalClass}`}>
-              {pricingSignalCopy(valuation.pricing_signal)}
-            </div>
+          <div className="pp-val-meta">
             {property.price_pence != null && (
-              <div className="pp-valuation-stat">
-                <span>Listed price</span>
+              <div className="pp-val-stat">
+                <span>Asking price</span>
                 <strong>{fmtPrice(property.price_pence)}</strong>
               </div>
             )}
-            {valuation.price_gap_pence != null && (
-              <div className="pp-valuation-stat">
+            {val.price_gap_pence != null && (
+              <div className="pp-val-stat">
                 <span>Gap vs model</span>
-                <strong className={valuation.price_gap_pence >= 0 ? 'pp-forecast-down' : 'pp-forecast-up'}>
-                  {fmtPrice(valuation.price_gap_pence)} · {fmtPct(valuation.price_gap_pct)}
+                <strong className={val.price_gap_pence >= 0 ? 'pp-val-over' : 'pp-val-under'}>
+                  {fmtPrice(val.price_gap_pence)}
                 </strong>
               </div>
             )}
-            <div className="pp-valuation-stat">
-              <span>Inference basis</span>
-              <strong>{valuation.model_source === 'out_of_fold' ? 'Out-of-fold' : 'Full model'}</strong>
+            <div className="pp-val-stat">
+              <span>Estimate basis</span>
+              <strong>{val.model_source === 'out_of_fold' ? 'Out-of-fold' : 'Full model'}</strong>
             </div>
+            {val.model_quality && (
+              <div className="pp-val-stat">
+                <span>Data coverage</span>
+                <strong>{val.model_quality === 'full_features' ? 'Full' : 'Partial'}</strong>
+              </div>
+            )}
           </div>
         </div>
 
-        {!!valuation.feature_weights.length && (
-          <div className="pp-valuation-weights">
-            {valuation.feature_weights.map((weight) => (
-              <div key={`${weight.feature_key}-${weight.label}`} className="pp-weight-row">
+        {val.feature_weights.length > 0 && (
+          <div className="pp-val-weights">
+            <div className="pp-val-weights-heading">What's driving this valuation</div>
+            {val.feature_weights.map(w => (
+              <div key={`${w.feature_key}-${w.label}`} className="pp-weight-row">
                 <div className="pp-weight-head">
                   <div>
-                    <div className="pp-weight-label">{weight.label}</div>
-                    <div className="pp-weight-value">{weight.display_value}</div>
+                    <div className="pp-weight-label">{w.label}</div>
+                    <div className="pp-weight-value">{w.display_value}</div>
                   </div>
-                  <div className={`pp-weight-score ${weight.direction === 'positive' ? 'pp-forecast-up' : 'pp-forecast-down'}`}>
-                    {fmtPct(weight.normalized_weight * 100, 1)}
+                  <div className={`pp-weight-score ${w.direction === 'positive' ? 'pp-forecast-up' : 'pp-forecast-down'}`}>
+                    {fmtPct(w.normalized_weight * 100, 1)}
                   </div>
                 </div>
                 <div className="pp-weight-track">
                   <div
-                    className={`pp-weight-fill ${weight.direction === 'positive' ? 'pp-weight-fill-positive' : 'pp-weight-fill-negative'}`}
-                    style={{ width: `${Math.max(weight.absolute_weight * 100, 6)}%` }}
+                    className={`pp-weight-fill ${w.direction === 'positive' ? 'pp-weight-fill-positive' : 'pp-weight-fill-negative'}`}
+                    style={{ width: `${Math.max(w.absolute_weight * 100, 6)}%` }}
                   />
                 </div>
               </div>
@@ -620,52 +736,197 @@ function ValuationSection({ property }: { property: PropertyDetail }) {
   )
 }
 
-const DAQI_COLORS: Record<string, string> = {
-  Low:        '#22c55e',
-  Moderate:   '#f59e0b',
-  High:       '#f97316',
-  'Very High': '#ef4444',
-}
+function SimilarPropertiesSection({
+  matches, loading, error, activeMode,
+  onFindSimilar, onFindSimilarMaxpool, onSelect, onClose,
+}: {
+  matches: SimilarMatch[]
+  loading: boolean
+  error: string | null
+  activeMode: SimilarMode | null
+  onFindSimilar: () => void
+  onFindSimilarMaxpool: () => void
+  onSelect: (id: number) => void
+  onClose: () => void
+}) {
+  const hasResults = !loading && !error && matches.length > 0
 
-function AirQualitySection({ aq }: { aq: AirQuality }) {
-  const color = DAQI_COLORS[aq.daqi_band] ?? 'var(--t3)'
   return (
-    <section className="pp-section">
-      <h2 className="pp-section-heading">Air quality</h2>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ fontSize: '2.5rem', fontWeight: 700, lineHeight: 1, color, fontFamily: 'var(--ff-body)' }}>
-          {aq.daqi_index}
+    <section className="pp-section pp-section-ai">
+      <div className="pp-section-ai-tag">Hestia AI</div>
+      <h2 className="pp-section-heading">Visual similarity search</h2>
+      <p className="pp-section-sub">
+        Our computer vision model finds properties that look aesthetically similar to this one.
+      </p>
+
+      <div className="pp-similar-triggers">
+        <button
+          className={`pp-similar-trigger${activeMode === 'per_photo' ? ' active' : ''}`}
+          onClick={onFindSimilar}
+          disabled={loading}
+        >
+          {loading && activeMode === 'per_photo'
+            ? <span className="pp-similar-btn-spinner" />
+            : <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M8.5 8.5L13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M3.5 5.5h4M5.5 3.5v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+          }
+          Match this photo
+        </button>
+        <button
+          className={`pp-similar-trigger${activeMode === 'maxpool' ? ' active' : ''}`}
+          onClick={onFindSimilarMaxpool}
+          disabled={loading}
+        >
+          {loading && activeMode === 'maxpool'
+            ? <span className="pp-similar-btn-spinner" />
+            : <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M8.5 8.5L13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+          }
+          Match all photos
+        </button>
+      </div>
+
+      {loading && (
+        <div className="pp-similar-state">
+          <span className="pp-similar-spinner" />
+          <span className="pp-similar-state-text">Searching for similar properties</span>
         </div>
-        <div>
-          <div style={{ fontWeight: 600, color, fontSize: '0.95rem' }}>{aq.daqi_band}</div>
-          <div style={{ color: 'var(--t3)', fontSize: '0.8rem', marginTop: '0.2rem' }}>
-            DAQI 1–10 · {aq.station_name}
+      )}
+
+      {error && !loading && (
+        <div className="pp-similar-state">
+          <span className="pp-similar-state-text pp-similar-error">Could not find similar properties.</span>
+        </div>
+      )}
+
+      {hasResults && (
+        <div className="pp-similar-results">
+          <div className="pp-similar-results-header">
+            <span className="pp-similar-results-label">
+              {activeMode === 'maxpool' ? 'Matched using all photos' : 'Matched using this photo'}
+              {' '}· {matches.length} results
+            </span>
+            <button className="pp-similar-close" onClick={onClose} aria-label="Clear results">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+          <div className="pp-similar-scroll">
+            {matches.map(m => (
+              <button key={m.id} className="pp-similar-card" onClick={() => onSelect(m.id)}>
+                <div className="pp-similar-card-img">
+                  {m.photo_url
+                    ? <img src={m.photo_url} alt="" loading="lazy" />
+                    : <div className="pp-similar-card-img-empty" />
+                  }
+                </div>
+                <div className="pp-similar-card-body">
+                  <div className="pp-similar-card-price">
+                    {m.price != null ? '£' + Math.round(m.price / 100).toLocaleString('en-GB') : '—'}
+                  </div>
+                  <div className="pp-similar-card-address">{m.address}</div>
+                  {m.bedrooms != null && (
+                    <div className="pp-similar-card-meta">{m.bedrooms} bed</div>
+                  )}
+                </div>
+              </button>
+            ))}
           </div>
         </div>
-      </div>
+      )}
     </section>
   )
 }
 
-function NoiseSection({ property }: { property: PropertyDetail }) {
+function EnvironmentalSection({ property }: { property: PropertyDetail }) {
+  const aq = property.air_quality
+  const flood = property.flood_risk
   const noise = property.noise
-  if (!noise || noise.status === 'pending') {
-    return (
-      <section className="pp-section">
-        <h2 className="pp-section-heading">Environmental data</h2>
-        <p className="pp-pending">Environmental noise data is being gathered for this property.</p>
-      </section>
-    )
-  }
-  if (noise.status === 'failed') {
-    return (
-      <section className="pp-section">
-        <h2 className="pp-section-heading">Environmental data</h2>
-        <p className="pp-pending">Environmental data could not be retrieved for this property.</p>
-      </section>
-    )
-  }
-  return null
+  const crime = property.crime
+
+  const noiseReady = noise && noise.status !== 'pending' && noise.status !== 'failed'
+
+  const hasAny = aq || flood || noiseReady || (crime && crime.status !== 'pending')
+  if (!hasAny) return null
+
+  return (
+    <section className="pp-section">
+      <h2 className="pp-section-heading">Environmental data</h2>
+      <p className="pp-section-sub">Data exclusive to Hestia — not shown on Rightmove</p>
+      <div className="pp-env-grid">
+
+        {aq && (() => {
+          const cls = aqCls(aq.daqi_band)
+          return (
+            <div className={`pp-env-card ${cls}`}>
+              <div className="pp-env-card-indicator" />
+              <div className="pp-env-card-label">Air quality</div>
+              <div className="pp-env-card-value">{aq.daqi_index}<span className="pp-env-card-unit"> / 10</span></div>
+              <div className={`pp-env-card-band ${cls}`}>{aq.daqi_band}</div>
+              <div className="pp-env-card-meta">DAQI scale · {aq.station_name}</div>
+            </div>
+          )
+        })()}
+
+        {flood && (() => {
+          const cls = floodRiskCls(flood.risk_level)
+          return (
+            <div className={`pp-env-card ${cls}`}>
+              <div className="pp-env-card-indicator" />
+              <div className="pp-env-card-label">Flood risk</div>
+              <div className="pp-env-card-value pp-env-card-value-text">{fmtLabel(flood.risk_level)}</div>
+              <div className={`pp-env-card-band ${cls}`}>Band {flood.risk_band}</div>
+              <div className="pp-env-card-meta">Environment Agency</div>
+            </div>
+          )
+        })()}
+
+        {noiseReady && [
+          { key: 'road',   label: 'Road noise',   src: noise!.road_data },
+          { key: 'rail',   label: 'Rail noise',   src: noise!.rail_data },
+          { key: 'flight', label: 'Flight noise', src: noise!.flight_data },
+        ].map(({ key, label, src }) => {
+          if (!src) return null
+          const db = src.covered ? primaryNoiseMetric(src.metrics) : null
+          const nl = db != null ? noiseLevel(db) : null
+          return (
+            <div key={key} className={`pp-env-card${nl ? ` ${nl.cls}` : ''}`}>
+              <div className="pp-env-card-indicator" />
+              <div className="pp-env-card-label">{label}</div>
+              {db != null && nl ? (
+                <>
+                  <div className="pp-env-card-value">{Math.round(db)}<span className="pp-env-card-unit"> dB</span></div>
+                  <div className={`pp-env-card-band ${nl.cls}`}>{nl.label}</div>
+                  <div className="pp-env-card-meta">LDEN · UK Noise Atlas</div>
+                </>
+              ) : (
+                <div className="pp-env-card-na">{src.covered ? 'No data' : 'Not applicable'}</div>
+              )}
+            </div>
+          )
+        })}
+
+        {crime && crime.status !== 'pending' && crime.avg_monthly_crimes != null && (
+          <div className="pp-env-card">
+            <div className="pp-env-card-indicator" />
+            <div className="pp-env-card-label">Local crime</div>
+            <div className="pp-env-card-value">
+              {crime.avg_monthly_crimes.toFixed(1)}
+              <span className="pp-env-card-unit"> /mo</span>
+            </div>
+            <div className="pp-env-card-meta">Average monthly incidents</div>
+          </div>
+        )}
+
+      </div>
+    </section>
+  )
 }
 
 function AgentCard({ property }: { property: PropertyDetail }) {
@@ -703,103 +964,6 @@ function AgentCard({ property }: { property: PropertyDetail }) {
   )
 }
 
-function LocationMap({ property }: { property: PropertyDetail }) {
-  if (property.latitude == null || property.longitude == null) return null
-  const pos: [number, number] = [Number(property.latitude), Number(property.longitude)]
-
-  return (
-    <div className="pp-map-wrap">
-      <MapContainer
-        key={property.id}
-        center={pos}
-        zoom={15}
-        style={{ height: '280px', width: '100%' }}
-        zoomControl={false}
-        attributionControl={false}
-      >
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-        <Marker position={pos} />
-      </MapContainer>
-    </div>
-  )
-}
-
-// ── Similar properties ──────────────────────────────────────────────────────────
-
-function SimilarPropertiesSection({
-  matches,
-  loading,
-  error,
-  activeMode,
-  onSelect,
-  onClose,
-}: {
-  matches: SimilarMatch[]
-  loading: boolean
-  error: string | null
-  activeMode: SimilarMode | null
-  onSelect: (id: number) => void
-  onClose: () => void
-}) {
-  if (!loading && !error && matches.length === 0) return null
-
-  const heading = activeMode === 'maxpool'
-    ? 'Visually similar properties (all photos)'
-    : 'Visually similar properties (this photo)'
-
-  return (
-    <section className="pp-similar-section">
-      <div className="pp-similar-header">
-        <h2 className="pp-section-heading" style={{ margin: 0 }}>{heading}</h2>
-        <button className="pp-similar-close" onClick={onClose} aria-label="Close similar properties">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-          </svg>
-        </button>
-      </div>
-
-      {loading && (
-        <div className="pp-similar-state">
-          <span className="pp-similar-spinner" />
-          <span className="pp-similar-state-text">Searching for similar properties</span>
-        </div>
-      )}
-
-      {error && !loading && (
-        <div className="pp-similar-state">
-          <span className="pp-similar-state-text pp-similar-error">
-            Could not find similar properties.
-          </span>
-        </div>
-      )}
-
-      {!loading && !error && matches.length > 0 && (
-        <div className="pp-similar-scroll">
-          {matches.map(m => (
-            <button key={m.id} className="pp-similar-card" onClick={() => onSelect(m.id)}>
-              <div className="pp-similar-card-img">
-                {m.photo_url
-                  ? <img src={m.photo_url} alt="" loading="lazy" />
-                  : <div className="pp-similar-card-img-empty" />
-                }
-              </div>
-              <div className="pp-similar-card-body">
-                <div className="pp-similar-card-price">
-                  {m.price != null ? '£' + Math.round(m.price / 100).toLocaleString('en-GB') : '—'}
-                </div>
-                <div className="pp-similar-card-address">{m.address}</div>
-                {m.bedrooms != null && (
-                  <div className="pp-similar-card-meta">{m.bedrooms} bed</div>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-    </section>
-  )
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface Props {
@@ -810,25 +974,20 @@ interface Props {
 export default function PropertyPage({ propertyId, onBack }: Props) {
   const { property, loading, error } = useProperty(propertyId)
   const { xray, loading: xrayLoading } = useXray(property ? property.id : null)
-  const [activePhoto, setActivePhoto] = useState(0)
   const { matches: similarMatches, loading: similarLoading, error: similarError, activeMode: similarMode, fetchSimilar, fetchSimilarMaxpool, clear: clearSimilar } = useSimilarByImage()
-  const [similarVisible, setSimilarVisible] = useState(false)
   const navigate = useNavigate()
 
   function handleFindSimilar() {
     if (!property) return
-    setSimilarVisible(true)
-    fetchSimilar(property.id, activePhoto)
+    fetchSimilar(property.id, 0)
   }
 
   function handleFindSimilarMaxpool() {
     if (!property) return
-    setSimilarVisible(true)
     fetchSimilarMaxpool(property.id)
   }
 
   function handleCloseSimilar() {
-    setSimilarVisible(false)
     clearSimilar()
   }
 
@@ -856,41 +1015,39 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
     <div className="pp-shell">
       <BackBar onBack={onBack} />
       <div className="pp-scroll">
-        <HeroGallery
-          property={property}
-          activePhoto={activePhoto}
-          setActivePhoto={i => { setActivePhoto(i); handleCloseSimilar() }}
-          onFindSimilar={handleFindSimilar}
-          onFindSimilarMaxpool={handleFindSimilarMaxpool}
-          similarLoading={similarLoading}
-          activeMode={similarMode}
-        />
-        {similarVisible && (
-          <SimilarPropertiesSection
-            matches={similarMatches}
-            loading={similarLoading}
-            error={similarError}
-            activeMode={similarMode}
-            onSelect={id => navigate(`/properties/${id}`)}
-            onClose={handleCloseSimilar}
-          />
-        )}
+        <HeroGallery property={property} />
+        <IntelligenceStrip property={property} />
         <div className="pp-body">
           <div className="pp-main">
-            <CoreDetails property={property} />
             <ValuationSection property={property} />
+            <SimilarPropertiesSection
+              matches={similarMatches}
+              loading={similarLoading}
+              error={similarError}
+              activeMode={similarMode}
+              onFindSimilar={handleFindSimilar}
+              onFindSimilarMaxpool={handleFindSimilarMaxpool}
+              onSelect={id => navigate(`/properties/${id}`)}
+              onClose={handleCloseSimilar}
+            />
             <ForecastSection property={property} />
+            <EnvironmentalSection property={property} />
+            <TransportSection property={property} />
+            <CoreDetails property={property} />
             <KeyFeatures property={property} />
             <Description property={property} />
-            <TransportSection property={property} />
-            {property.air_quality && <AirQualitySection aq={property.air_quality} />}
             <AreaGrowthChart property={property} />
-            <NoiseSection property={property} />
           </div>
           <div className="pp-sidebar">
             <div className="pp-sidebar-sticky">
               <AgentCard property={property} />
-              <XrayMap property={property} xray={xray} loading={xrayLoading} />
+              <div className="pp-xray-wrap">
+                <div className="pp-xray-heading">
+                  <div className="pp-section-ai-tag" style={{ marginBottom: 4 }}>Hestia XRay</div>
+                  <p className="pp-xray-sub">Walking isochrones, schools, shops, pharmacies</p>
+                </div>
+                <XrayMap property={property} xray={xray} loading={xrayLoading} />
+              </div>
             </div>
           </div>
         </div>
