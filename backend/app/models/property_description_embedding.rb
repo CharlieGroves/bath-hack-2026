@@ -5,7 +5,7 @@ class PropertyDescriptionEmbedding < ApplicationRecord
   validates :fingerprint, presence: true
   validate :embedding_vector_shape, if: -> { embedding.present? }
 
-  EXPECTED_DIMENSIONS = 768
+  EXPECTED_DIMENSIONS = 384
 
   private
 
