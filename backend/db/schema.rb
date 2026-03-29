@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_250000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_29_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -163,6 +163,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_250000) do
     t.integer "walking_minutes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "termini", default: [], array: true
     t.index ["property_id"], name: "index_property_nearest_stations_on_property_id"
   end
 
@@ -181,6 +182,23 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_250000) do
     t.datetime "updated_at", null: false
     t.index ["property_id"], name: "index_property_transport_snapshots_on_property_id", unique: true
     t.index ["status"], name: "index_property_transport_snapshots_on_status"
+  end
+
+  create_table "schools", force: :cascade do |t|
+    t.string "urn", null: false
+    t.string "name", null: false
+    t.string "address1"
+    t.string "address2"
+    t.string "town"
+    t.string "postcode", null: false
+    t.float "p8mea"
+    t.decimal "latitude", precision: 10, scale: 7
+    t.decimal "longitude", precision: 10, scale: 7
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["latitude", "longitude"], name: "index_schools_on_latitude_and_longitude"
+    t.index ["postcode"], name: "index_schools_on_postcode"
+    t.index ["urn"], name: "index_schools_on_urn", unique: true
   end
 
   add_foreign_key "properties", "air_quality_stations"
