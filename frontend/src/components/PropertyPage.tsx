@@ -321,6 +321,57 @@ function AreaGrowthChart({ property }: { property: PropertyDetail }) {
   )
 }
 
+function ForecastSection({ property }: { property: PropertyDetail }) {
+  const forecast = property.ml_forecast
+  if (!forecast) return null
+
+  const currentPrice = property.price_pence
+  const horizons = [...forecast.forecasts].sort((a, b) => a.years_ahead - b.years_ahead)
+
+  return (
+    <section className="pp-section">
+      <h2 className="pp-section-heading">ML forecasts</h2>
+      <p className="pp-section-sub">
+        Predicted prices for 1, 2, and 3 years ahead with an approximate 95% range.
+      </p>
+
+      <div className="pp-forecast-card">
+        <div className="pp-forecast-horizon-grid">
+          {horizons.map((item) => {
+            const deltaPence = currentPrice == null ? null : item.predicted_future_price_pence - currentPrice
+            const impliedGrowthPct = currentPrice
+              ? ((item.predicted_future_price_pence / currentPrice) - 1) * 100
+              : null
+
+            return (
+              <div key={item.years_ahead} className="pp-forecast-horizon-card">
+                <div className="pp-forecast-label">
+                  {item.years_ahead}-year forecast
+                </div>
+                <div className="pp-forecast-value pp-forecast-value-strong">
+                  {fmtPrice(item.predicted_future_price_pence)}
+                </div>
+
+                {deltaPence != null && (
+                  <div className={`pp-forecast-horizon-delta ${deltaPence >= 0 ? 'pp-forecast-up' : 'pp-forecast-down'}`}>
+                    {fmtPrice(deltaPence)} · {impliedGrowthPct != null ? `${impliedGrowthPct > 0 ? '+' : ''}${impliedGrowthPct.toFixed(1)}%` : '—'}
+                  </div>
+                )}
+
+                {item.prediction_interval_95 && (
+                  <div className="pp-forecast-range">
+                    95% range {fmtPrice(item.prediction_interval_95.lower_pence)} to {fmtPrice(item.prediction_interval_95.upper_pence)}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 const DAQI_COLORS: Record<string, string> = {
   Low:        '#22c55e',
   Moderate:   '#f59e0b',
@@ -466,6 +517,7 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
         <div className="pp-body">
           <div className="pp-main">
             <CoreDetails property={property} />
+            <ForecastSection property={property} />
             <KeyFeatures property={property} />
             <Description property={property} />
             <TransportSection property={property} />
