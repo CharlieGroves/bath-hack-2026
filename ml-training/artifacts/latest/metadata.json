@@ -1,0 +1,1584 @@
+{
+  "forecast_horizon_months": [
+    12,
+    24,
+    36
+  ],
+  "target_note": "Model trained on official HM Land Registry Price Paid Data transactions from 2020 to 2024 for London local authorities. The 1-year, 2-year, and 3-year targets are derived from the actual subsequent UK HPI movement for the same London area and property type, applied to each historical sale price.",
+  "feature_columns": [
+    "current_price_pence",
+    "hpi_property_avg_price_pence",
+    "hpi_property_yoy_pct",
+    "hpi_property_sales_volume",
+    "hpi_all_avg_price_pence",
+    "hpi_all_yoy_pct",
+    "price_vs_hpi_property_ratio",
+    "hpi_property_vs_all_ratio",
+    "property_type",
+    "tenure",
+    "postcode_outward",
+    "area_slug"
+  ],
+  "numeric_features": [
+    "current_price_pence",
+    "hpi_property_avg_price_pence",
+    "hpi_property_yoy_pct",
+    "hpi_property_sales_volume",
+    "hpi_all_avg_price_pence",
+    "hpi_all_yoy_pct",
+    "price_vs_hpi_property_ratio",
+    "hpi_property_vs_all_ratio"
+  ],
+  "categorical_features": [
+    "property_type",
+    "tenure",
+    "postcode_outward",
+    "area_slug"
+  ],
+  "transformed_feature_names": [
+    "num__current_price_pence",
+    "num__hpi_property_avg_price_pence",
+    "num__hpi_property_yoy_pct",
+    "num__hpi_property_sales_volume",
+    "num__hpi_all_avg_price_pence",
+    "num__hpi_all_yoy_pct",
+    "num__price_vs_hpi_property_ratio",
+    "num__hpi_property_vs_all_ratio",
+    "cat__property_type_detached",
+    "cat__property_type_flat",
+    "cat__property_type_semi_detached",
+    "cat__property_type_terraced",
+    "cat__tenure_freehold",
+    "cat__tenure_leasehold",
+    "cat__postcode_outward_BR1",
+    "cat__postcode_outward_BR2",
+    "cat__postcode_outward_BR3",
+    "cat__postcode_outward_BR4",
+    "cat__postcode_outward_BR5",
+    "cat__postcode_outward_BR6",
+    "cat__postcode_outward_BR7",
+    "cat__postcode_outward_BR8",
+    "cat__postcode_outward_CR0",
+    "cat__postcode_outward_CR2",
+    "cat__postcode_outward_CR3",
+    "cat__postcode_outward_CR4",
+    "cat__postcode_outward_CR5",
+    "cat__postcode_outward_CR6",
+    "cat__postcode_outward_CR7",
+    "cat__postcode_outward_CR8",
+    "cat__postcode_outward_DA1",
+    "cat__postcode_outward_DA14",
+    "cat__postcode_outward_DA15",
+    "cat__postcode_outward_DA16",
+    "cat__postcode_outward_DA17",
+    "cat__postcode_outward_DA18",
+    "cat__postcode_outward_DA5",
+    "cat__postcode_outward_DA6",
+    "cat__postcode_outward_DA7",
+    "cat__postcode_outward_DA8",
+    "cat__postcode_outward_DL10",
+    "cat__postcode_outward_DL11",
+    "cat__postcode_outward_E1",
+    "cat__postcode_outward_E10",
+    "cat__postcode_outward_E11",
+    "cat__postcode_outward_E12",
+    "cat__postcode_outward_E13",
+    "cat__postcode_outward_E14",
+    "cat__postcode_outward_E15",
+    "cat__postcode_outward_E16",
+    "cat__postcode_outward_E17",
+    "cat__postcode_outward_E18",
+    "cat__postcode_outward_E1W",
+    "cat__postcode_outward_E2",
+    "cat__postcode_outward_E20",
+    "cat__postcode_outward_E3",
+    "cat__postcode_outward_E4",
+    "cat__postcode_outward_E5",
+    "cat__postcode_outward_E6",
+    "cat__postcode_outward_E7",
+    "cat__postcode_outward_E8",
+    "cat__postcode_outward_E9",
+    "cat__postcode_outward_EC1A",
+    "cat__postcode_outward_EC1M",
+    "cat__postcode_outward_EC1N",
+    "cat__postcode_outward_EC1R",
+    "cat__postcode_outward_EC1V",
+    "cat__postcode_outward_EC1Y",
+    "cat__postcode_outward_EC2A",
+    "cat__postcode_outward_EC2M",
+    "cat__postcode_outward_EC2R",
+    "cat__postcode_outward_EC2Y",
+    "cat__postcode_outward_EC3A",
+    "cat__postcode_outward_EC3N",
+    "cat__postcode_outward_EC3R",
+    "cat__postcode_outward_EC4A",
+    "cat__postcode_outward_EC4M",
+    "cat__postcode_outward_EC4R",
+    "cat__postcode_outward_EC4V",
+    "cat__postcode_outward_EC4Y",
+    "cat__postcode_outward_EN1",
+    "cat__postcode_outward_EN2",
+    "cat__postcode_outward_EN3",
+    "cat__postcode_outward_EN4",
+    "cat__postcode_outward_EN5",
+    "cat__postcode_outward_EN8",
+    "cat__postcode_outward_HA0",
+    "cat__postcode_outward_HA1",
+    "cat__postcode_outward_HA2",
+    "cat__postcode_outward_HA3",
+    "cat__postcode_outward_HA4",
+    "cat__postcode_outward_HA5",
+    "cat__postcode_outward_HA6",
+    "cat__postcode_outward_HA7",
+    "cat__postcode_outward_HA8",
+    "cat__postcode_outward_HA9",
+    "cat__postcode_outward_HP3",
+    "cat__postcode_outward_IG1",
+    "cat__postcode_outward_IG11",
+    "cat__postcode_outward_IG2",
+    "cat__postcode_outward_IG3",
+    "cat__postcode_outward_IG4",
+    "cat__postcode_outward_IG5",
+    "cat__postcode_outward_IG6",
+    "cat__postcode_outward_IG7",
+    "cat__postcode_outward_IG8",
+    "cat__postcode_outward_IG9",
+    "cat__postcode_outward_KT1",
+    "cat__postcode_outward_KT17",
+    "cat__postcode_outward_KT19",
+    "cat__postcode_outward_KT2",
+    "cat__postcode_outward_KT22",
+    "cat__postcode_outward_KT3",
+    "cat__postcode_outward_KT4",
+    "cat__postcode_outward_KT5",
+    "cat__postcode_outward_KT6",
+    "cat__postcode_outward_KT8",
+    "cat__postcode_outward_KT9",
+    "cat__postcode_outward_N1",
+    "cat__postcode_outward_N10",
+    "cat__postcode_outward_N11",
+    "cat__postcode_outward_N12",
+    "cat__postcode_outward_N13",
+    "cat__postcode_outward_N14",
+    "cat__postcode_outward_N15",
+    "cat__postcode_outward_N16",
+    "cat__postcode_outward_N17",
+    "cat__postcode_outward_N18",
+    "cat__postcode_outward_N19",
+    "cat__postcode_outward_N1C",
+    "cat__postcode_outward_N2",
+    "cat__postcode_outward_N20",
+    "cat__postcode_outward_N21",
+    "cat__postcode_outward_N22",
+    "cat__postcode_outward_N3",
+    "cat__postcode_outward_N4",
+    "cat__postcode_outward_N5",
+    "cat__postcode_outward_N6",
+    "cat__postcode_outward_N7",
+    "cat__postcode_outward_N8",
+    "cat__postcode_outward_N9",
+    "cat__postcode_outward_NW1",
+    "cat__postcode_outward_NW10",
+    "cat__postcode_outward_NW11",
+    "cat__postcode_outward_NW2",
+    "cat__postcode_outward_NW3",
+    "cat__postcode_outward_NW4",
+    "cat__postcode_outward_NW5",
+    "cat__postcode_outward_NW6",
+    "cat__postcode_outward_NW7",
+    "cat__postcode_outward_NW8",
+    "cat__postcode_outward_NW9",
+    "cat__postcode_outward_RM1",
+    "cat__postcode_outward_RM10",
+    "cat__postcode_outward_RM11",
+    "cat__postcode_outward_RM12",
+    "cat__postcode_outward_RM13",
+    "cat__postcode_outward_RM14",
+    "cat__postcode_outward_RM2",
+    "cat__postcode_outward_RM3",
+    "cat__postcode_outward_RM4",
+    "cat__postcode_outward_RM5",
+    "cat__postcode_outward_RM6",
+    "cat__postcode_outward_RM7",
+    "cat__postcode_outward_RM8",
+    "cat__postcode_outward_RM9",
+    "cat__postcode_outward_SE1",
+    "cat__postcode_outward_SE10",
+    "cat__postcode_outward_SE11",
+    "cat__postcode_outward_SE12",
+    "cat__postcode_outward_SE13",
+    "cat__postcode_outward_SE14",
+    "cat__postcode_outward_SE15",
+    "cat__postcode_outward_SE16",
+    "cat__postcode_outward_SE17",
+    "cat__postcode_outward_SE18",
+    "cat__postcode_outward_SE19",
+    "cat__postcode_outward_SE2",
+    "cat__postcode_outward_SE20",
+    "cat__postcode_outward_SE21",
+    "cat__postcode_outward_SE22",
+    "cat__postcode_outward_SE23",
+    "cat__postcode_outward_SE24",
+    "cat__postcode_outward_SE25",
+    "cat__postcode_outward_SE26",
+    "cat__postcode_outward_SE27",
+    "cat__postcode_outward_SE28",
+    "cat__postcode_outward_SE3",
+    "cat__postcode_outward_SE4",
+    "cat__postcode_outward_SE5",
+    "cat__postcode_outward_SE6",
+    "cat__postcode_outward_SE7",
+    "cat__postcode_outward_SE8",
+    "cat__postcode_outward_SE9",
+    "cat__postcode_outward_SM1",
+    "cat__postcode_outward_SM2",
+    "cat__postcode_outward_SM3",
+    "cat__postcode_outward_SM4",
+    "cat__postcode_outward_SM5",
+    "cat__postcode_outward_SM6",
+    "cat__postcode_outward_SM7",
+    "cat__postcode_outward_SS1",
+    "cat__postcode_outward_SW10",
+    "cat__postcode_outward_SW11",
+    "cat__postcode_outward_SW12",
+    "cat__postcode_outward_SW13",
+    "cat__postcode_outward_SW14",
+    "cat__postcode_outward_SW15",
+    "cat__postcode_outward_SW16",
+    "cat__postcode_outward_SW17",
+    "cat__postcode_outward_SW18",
+    "cat__postcode_outward_SW19",
+    "cat__postcode_outward_SW1A",
+    "cat__postcode_outward_SW1E",
+    "cat__postcode_outward_SW1H",
+    "cat__postcode_outward_SW1P",
+    "cat__postcode_outward_SW1V",
+    "cat__postcode_outward_SW1W",
+    "cat__postcode_outward_SW1X",
+    "cat__postcode_outward_SW1Y",
+    "cat__postcode_outward_SW2",
+    "cat__postcode_outward_SW20",
+    "cat__postcode_outward_SW3",
+    "cat__postcode_outward_SW4",
+    "cat__postcode_outward_SW5",
+    "cat__postcode_outward_SW6",
+    "cat__postcode_outward_SW7",
+    "cat__postcode_outward_SW8",
+    "cat__postcode_outward_SW9",
+    "cat__postcode_outward_TN14",
+    "cat__postcode_outward_TN16",
+    "cat__postcode_outward_TW1",
+    "cat__postcode_outward_TW10",
+    "cat__postcode_outward_TW11",
+    "cat__postcode_outward_TW12",
+    "cat__postcode_outward_TW13",
+    "cat__postcode_outward_TW14",
+    "cat__postcode_outward_TW15",
+    "cat__postcode_outward_TW16",
+    "cat__postcode_outward_TW2",
+    "cat__postcode_outward_TW3",
+    "cat__postcode_outward_TW4",
+    "cat__postcode_outward_TW5",
+    "cat__postcode_outward_TW7",
+    "cat__postcode_outward_TW8",
+    "cat__postcode_outward_TW9",
+    "cat__postcode_outward_UB1",
+    "cat__postcode_outward_UB10",
+    "cat__postcode_outward_UB2",
+    "cat__postcode_outward_UB3",
+    "cat__postcode_outward_UB4",
+    "cat__postcode_outward_UB5",
+    "cat__postcode_outward_UB6",
+    "cat__postcode_outward_UB7",
+    "cat__postcode_outward_UB8",
+    "cat__postcode_outward_UB9",
+    "cat__postcode_outward_W10",
+    "cat__postcode_outward_W11",
+    "cat__postcode_outward_W12",
+    "cat__postcode_outward_W13",
+    "cat__postcode_outward_W14",
+    "cat__postcode_outward_W1B",
+    "cat__postcode_outward_W1D",
+    "cat__postcode_outward_W1F",
+    "cat__postcode_outward_W1G",
+    "cat__postcode_outward_W1H",
+    "cat__postcode_outward_W1J",
+    "cat__postcode_outward_W1K",
+    "cat__postcode_outward_W1S",
+    "cat__postcode_outward_W1T",
+    "cat__postcode_outward_W1U",
+    "cat__postcode_outward_W1W",
+    "cat__postcode_outward_W2",
+    "cat__postcode_outward_W3",
+    "cat__postcode_outward_W4",
+    "cat__postcode_outward_W5",
+    "cat__postcode_outward_W6",
+    "cat__postcode_outward_W7",
+    "cat__postcode_outward_W8",
+    "cat__postcode_outward_W9",
+    "cat__postcode_outward_WC1A",
+    "cat__postcode_outward_WC1B",
+    "cat__postcode_outward_WC1E",
+    "cat__postcode_outward_WC1H",
+    "cat__postcode_outward_WC1N",
+    "cat__postcode_outward_WC1R",
+    "cat__postcode_outward_WC1V",
+    "cat__postcode_outward_WC1X",
+    "cat__postcode_outward_WC2A",
+    "cat__postcode_outward_WC2B",
+    "cat__postcode_outward_WC2E",
+    "cat__postcode_outward_WC2H",
+    "cat__postcode_outward_WC2N",
+    "cat__postcode_outward_WC2R",
+    "cat__postcode_outward_WD3",
+    "cat__postcode_outward_WD6",
+    "cat__area_slug_BARKING_AND_DAGENHAM",
+    "cat__area_slug_BARNET",
+    "cat__area_slug_BEXLEY",
+    "cat__area_slug_BRENT",
+    "cat__area_slug_BROMLEY",
+    "cat__area_slug_CAMDEN",
+    "cat__area_slug_CITY_OF_LONDON",
+    "cat__area_slug_CITY_OF_WESTMINSTER",
+    "cat__area_slug_CROYDON",
+    "cat__area_slug_EALING",
+    "cat__area_slug_ENFIELD",
+    "cat__area_slug_GREENWICH",
+    "cat__area_slug_HACKNEY",
+    "cat__area_slug_HAMMERSMITH_AND_FULHAM",
+    "cat__area_slug_HARINGEY",
+    "cat__area_slug_HARROW",
+    "cat__area_slug_HAVERING",
+    "cat__area_slug_HILLINGDON",
+    "cat__area_slug_HOUNSLOW",
+    "cat__area_slug_ISLINGTON",
+    "cat__area_slug_KENSINGTON_AND_CHELSEA",
+    "cat__area_slug_KINGSTON_UPON_THAMES",
+    "cat__area_slug_LAMBETH",
+    "cat__area_slug_LEWISHAM",
+    "cat__area_slug_MERTON",
+    "cat__area_slug_NEWHAM",
+    "cat__area_slug_REDBRIDGE",
+    "cat__area_slug_RICHMOND_UPON_THAMES",
+    "cat__area_slug_SOUTHWARK",
+    "cat__area_slug_SUTTON",
+    "cat__area_slug_TOWER_HAMLETS",
+    "cat__area_slug_WALTHAM_FOREST",
+    "cat__area_slug_WANDSWORTH"
+  ],
+  "training_summaries": {
+    "12": {
+      "prediction_horizon_months": 12,
+      "prediction_horizon_years": 1,
+      "sample_count": 120000,
+      "holdout_count": 24000,
+      "best_epoch": 15,
+      "trained_at": "2026-03-29T00:10:14.223082+00:00",
+      "historical_years": [
+        2020,
+        2021,
+        2022,
+        2023,
+        2024
+      ],
+      "prediction_intervals": {
+        "80": {
+          "lower": -0.06872675772760194,
+          "upper": 0.24089844527766613
+        },
+        "95": {
+          "lower": -0.18267214780703012,
+          "upper": 0.30618797617660076
+        }
+      },
+      "holdout_rmse_pounds": 226921.476669276,
+      "holdout_mape": 0.11214774887592766,
+      "holdout_r2": 0.9288469814821747,
+      "full_fit_rmse_pounds": 254654.06894481622
+    },
+    "24": {
+      "prediction_horizon_months": 24,
+      "prediction_horizon_years": 2,
+      "sample_count": 120000,
+      "holdout_count": 24000,
+      "best_epoch": 22,
+      "trained_at": "2026-03-29T00:10:40.594032+00:00",
+      "historical_years": [
+        2020,
+        2021,
+        2022,
+        2023,
+        2024
+      ],
+      "prediction_intervals": {
+        "80": {
+          "lower": -0.04091135006193031,
+          "upper": 0.26409015602232233
+        },
+        "95": {
+          "lower": -0.1602562383582293,
+          "upper": 0.338537920284217
+        }
+      },
+      "holdout_rmse_pounds": 257388.15111468034,
+      "holdout_mape": 0.12406169103617719,
+      "holdout_r2": 0.9167854510490756,
+      "full_fit_rmse_pounds": 208919.33332771025
+    },
+    "36": {
+      "prediction_horizon_months": 36,
+      "prediction_horizon_years": 3,
+      "sample_count": 120000,
+      "holdout_count": 24000,
+      "best_epoch": 15,
+      "trained_at": "2026-03-29T00:11:10.647596+00:00",
+      "historical_years": [
+        2020,
+        2021,
+        2022,
+        2023,
+        2024
+      ],
+      "prediction_intervals": {
+        "80": {
+          "lower": -0.06782432445244292,
+          "upper": 0.25766468397528897
+        },
+        "95": {
+          "lower": -0.1818069995948431,
+          "upper": 0.32293521305643363
+        }
+      },
+      "holdout_rmse_pounds": 218423.03571063254,
+      "holdout_mape": 0.12255055372024022,
+      "holdout_r2": 0.924282957203082,
+      "full_fit_rmse_pounds": 217746.187275602
+    }
+  },
+  "training_basis": "historical_land_registry_hpi",
+  "latest_hpi_period": "2025-12",
+  "area_name_by_slug": {
+    "BARKING_AND_DAGENHAM": "Barking and Dagenham",
+    "BARNET": "Barnet",
+    "BEXLEY": "Bexley",
+    "BRENT": "Brent",
+    "BROMLEY": "Bromley",
+    "CAMDEN": "Camden",
+    "CITY_OF_LONDON": "City of London",
+    "CITY_OF_WESTMINSTER": "City of Westminster",
+    "CROYDON": "Croydon",
+    "EALING": "Ealing",
+    "ENFIELD": "Enfield",
+    "GREENWICH": "Greenwich",
+    "HACKNEY": "Hackney",
+    "HAMMERSMITH_AND_FULHAM": "Hammersmith and Fulham",
+    "HARINGEY": "Haringey",
+    "HARROW": "Harrow",
+    "HAVERING": "Havering",
+    "HILLINGDON": "Hillingdon",
+    "HOUNSLOW": "Hounslow",
+    "ISLINGTON": "Islington",
+    "KENSINGTON_AND_CHELSEA": "Kensington and Chelsea",
+    "KINGSTON_UPON_THAMES": "Kingston upon Thames",
+    "LAMBETH": "Lambeth",
+    "LEWISHAM": "Lewisham",
+    "london": "London",
+    "MERTON": "Merton",
+    "NEWHAM": "Newham",
+    "REDBRIDGE": "Redbridge",
+    "RICHMOND_UPON_THAMES": "Richmond upon Thames",
+    "SOUTHWARK": "Southwark",
+    "SUTTON": "Sutton",
+    "TOWER_HAMLETS": "Tower Hamlets",
+    "WALTHAM_FOREST": "Waltham Forest",
+    "WANDSWORTH": "Wandsworth"
+  },
+  "latest_hpi_snapshot": {
+    "BARKING_AND_DAGENHAM": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 35351200.0,
+        "yoy_pct": -0.5,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 62505900.0,
+        "yoy_pct": -1.0,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 23885500.0,
+        "yoy_pct": -3.3,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 46138700.0,
+        "yoy_pct": 0.4,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 38474000.0,
+        "yoy_pct": 0.5,
+        "sales_volume": null
+      }
+    },
+    "BARNET": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 59409300.0,
+        "yoy_pct": -4.5,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 155029200.0,
+        "yoy_pct": -5.3,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 37271400.0,
+        "yoy_pct": -6.3,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 83404400.0,
+        "yoy_pct": -2.7,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 62525300.0,
+        "yoy_pct": -2.6,
+        "sales_volume": null
+      }
+    },
+    "BEXLEY": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 41034600.0,
+        "yoy_pct": 1.3,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 72366700.0,
+        "yoy_pct": 0.1,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 24651700.0,
+        "yoy_pct": -0.9,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 52695900.0,
+        "yoy_pct": 2.2,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 41344500.0,
+        "yoy_pct": 2.3,
+        "sales_volume": null
+      }
+    },
+    "BRENT": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 56817100.0,
+        "yoy_pct": -1.4,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 135386100.0,
+        "yoy_pct": -1.1,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 39804200.0,
+        "yoy_pct": -3.0,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 85674400.0,
+        "yoy_pct": 0.9,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 72036500.0,
+        "yoy_pct": 0.2,
+        "sales_volume": null
+      }
+    },
+    "BROMLEY": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 53530600.0,
+        "yoy_pct": 6.8,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 110097500.0,
+        "yoy_pct": 5.4,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 32019000.0,
+        "yoy_pct": 4.6,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 67971500.0,
+        "yoy_pct": 8.6,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 50593400.0,
+        "yoy_pct": 8.6,
+        "sales_volume": null
+      }
+    },
+    "CAMDEN": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 78381200.0,
+        "yoy_pct": -11.1,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 326039300.0,
+        "yoy_pct": -10.3,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 64971000.0,
+        "yoy_pct": -11.5,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 195689100.0,
+        "yoy_pct": -8.8,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 146058900.0,
+        "yoy_pct": -8.9,
+        "sales_volume": null
+      }
+    },
+    "CITY_OF_LONDON": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 74043300.0,
+        "yoy_pct": -7.1,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 74028500.0,
+        "yoy_pct": -7.2,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2024-12",
+        "avg_price_pence": 306062000.0,
+        "yoy_pct": 2.7,
+        "sales_volume": 9.0
+      }
+    },
+    "CITY_OF_WESTMINSTER": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 88038900.0,
+        "yoy_pct": -14.8,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 366942200.0,
+        "yoy_pct": -13.3,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 78191500.0,
+        "yoy_pct": -15.3,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 267491300.0,
+        "yoy_pct": -9.8,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 159041700.0,
+        "yoy_pct": -11.8,
+        "sales_volume": null
+      }
+    },
+    "CROYDON": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 40212600.0,
+        "yoy_pct": -0.4,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 84934300.0,
+        "yoy_pct": -2.0,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 26418800.0,
+        "yoy_pct": -2.5,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 54721700.0,
+        "yoy_pct": 1.1,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 40929700.0,
+        "yoy_pct": 1.8,
+        "sales_volume": null
+      }
+    },
+    "EALING": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 57550300.0,
+        "yoy_pct": 1.6,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 135124700.0,
+        "yoy_pct": 0.0,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 40527000.0,
+        "yoy_pct": 0.2,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 86059400.0,
+        "yoy_pct": 2.9,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 69549500.0,
+        "yoy_pct": 3.5,
+        "sales_volume": null
+      }
+    },
+    "ENFIELD": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 47138100.0,
+        "yoy_pct": 0.8,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 122171800.0,
+        "yoy_pct": 0.2,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 30117400.0,
+        "yoy_pct": -2.1,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 70962700.0,
+        "yoy_pct": 2.1,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 49730800.0,
+        "yoy_pct": 2.5,
+        "sales_volume": null
+      }
+    },
+    "GREENWICH": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 47493500.0,
+        "yoy_pct": 0.6,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 100900600.0,
+        "yoy_pct": -0.4,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 36551300.0,
+        "yoy_pct": -0.6,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 71903500.0,
+        "yoy_pct": 1.5,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 55410700.0,
+        "yoy_pct": 2.4,
+        "sales_volume": null
+      }
+    },
+    "HACKNEY": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 61455200.0,
+        "yoy_pct": 0.8,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 135170900.0,
+        "yoy_pct": 0.8,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 53478000.0,
+        "yoy_pct": 0.2,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 118856200.0,
+        "yoy_pct": 3.6,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 95811100.0,
+        "yoy_pct": 3.2,
+        "sales_volume": null
+      }
+    },
+    "HAMMERSMITH_AND_FULHAM": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 71377300.0,
+        "yoy_pct": -9.5,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 163387000.0,
+        "yoy_pct": -8.5,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 55428900.0,
+        "yoy_pct": -10.2,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 142067700.0,
+        "yoy_pct": -6.9,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 108011500.0,
+        "yoy_pct": -8.1,
+        "sales_volume": null
+      }
+    },
+    "HARINGEY": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 62680700.0,
+        "yoy_pct": -0.2,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 229113800.0,
+        "yoy_pct": 0.4,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 46802500.0,
+        "yoy_pct": -1.8,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 119528700.0,
+        "yoy_pct": 1.5,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 78200600.0,
+        "yoy_pct": 2.0,
+        "sales_volume": null
+      }
+    },
+    "HARROW": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 53040900.0,
+        "yoy_pct": 1.0,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 119403700.0,
+        "yoy_pct": -0.8,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 32358800.0,
+        "yoy_pct": -1.4,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 66615400.0,
+        "yoy_pct": 3.0,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 54102400.0,
+        "yoy_pct": 3.3,
+        "sales_volume": null
+      }
+    },
+    "HAVERING": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 45223100.0,
+        "yoy_pct": 5.4,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 83529400.0,
+        "yoy_pct": 3.9,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 25761400.0,
+        "yoy_pct": 3.1,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 54223700.0,
+        "yoy_pct": 6.3,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 43909900.0,
+        "yoy_pct": 6.2,
+        "sales_volume": null
+      }
+    },
+    "HILLINGDON": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 47797900.0,
+        "yoy_pct": 1.3,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 94583200.0,
+        "yoy_pct": 0.0,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 29350900.0,
+        "yoy_pct": -0.5,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 58839400.0,
+        "yoy_pct": 2.8,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 46365400.0,
+        "yoy_pct": 2.5,
+        "sales_volume": null
+      }
+    },
+    "HOUNSLOW": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 51963900.0,
+        "yoy_pct": -1.1,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 103090400.0,
+        "yoy_pct": -0.3,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 35239000.0,
+        "yoy_pct": -2.8,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 69947400.0,
+        "yoy_pct": 0.4,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 60194000.0,
+        "yoy_pct": 0.2,
+        "sales_volume": null
+      }
+    },
+    "ISLINGTON": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 69972600.0,
+        "yoy_pct": 0.7,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 169903500.0,
+        "yoy_pct": 2.1,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 58372500.0,
+        "yoy_pct": 0.1,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 143142200.0,
+        "yoy_pct": 2.7,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 117391700.0,
+        "yoy_pct": 2.9,
+        "sales_volume": null
+      }
+    },
+    "KENSINGTON_AND_CHELSEA": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 117849700.0,
+        "yoy_pct": -11.5,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 423145900.0,
+        "yoy_pct": -7.7,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 93422500.0,
+        "yoy_pct": -12.4,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 287255100.0,
+        "yoy_pct": -7.9,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 226538800.0,
+        "yoy_pct": -8.1,
+        "sales_volume": null
+      }
+    },
+    "KINGSTON_UPON_THAMES": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 57302700.0,
+        "yoy_pct": 0.3,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 123795600.0,
+        "yoy_pct": -0.5,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 35761500.0,
+        "yoy_pct": -1.9,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 78119800.0,
+        "yoy_pct": 2.2,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 57230400.0,
+        "yoy_pct": 2.1,
+        "sales_volume": null
+      }
+    },
+    "LAMBETH": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 53850000.0,
+        "yoy_pct": -5.9,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 113559300.0,
+        "yoy_pct": -6.2,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 44337500.0,
+        "yoy_pct": -6.7,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 100845300.0,
+        "yoy_pct": -4.1,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 78916800.0,
+        "yoy_pct": -3.5,
+        "sales_volume": null
+      }
+    },
+    "LEWISHAM": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 49335600.0,
+        "yoy_pct": 3.7,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 111845500.0,
+        "yoy_pct": 4.5,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 38227000.0,
+        "yoy_pct": 1.8,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 77126300.0,
+        "yoy_pct": 5.7,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 60449500.0,
+        "yoy_pct": 6.2,
+        "sales_volume": null
+      }
+    },
+    "MERTON": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 60181400.0,
+        "yoy_pct": -2.1,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 215234800.0,
+        "yoy_pct": -2.9,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 39996900.0,
+        "yoy_pct": -4.3,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 91939200.0,
+        "yoy_pct": -0.6,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 67061800.0,
+        "yoy_pct": -0.4,
+        "sales_volume": null
+      }
+    },
+    "NEWHAM": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 40561900.0,
+        "yoy_pct": -5.3,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 73371900.0,
+        "yoy_pct": -5.2,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 34157600.0,
+        "yoy_pct": -6.5,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 51697900.0,
+        "yoy_pct": -3.4,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 46975500.0,
+        "yoy_pct": -3.9,
+        "sales_volume": null
+      }
+    },
+    "REDBRIDGE": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 49526900.0,
+        "yoy_pct": 2.0,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 111391100.0,
+        "yoy_pct": 0.9,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 31339300.0,
+        "yoy_pct": -0.8,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 69668300.0,
+        "yoy_pct": 3.2,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 54850900.0,
+        "yoy_pct": 3.4,
+        "sales_volume": null
+      }
+    },
+    "RICHMOND_UPON_THAMES": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 77716400.0,
+        "yoy_pct": -3.1,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 171037000.0,
+        "yoy_pct": -3.5,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 47548900.0,
+        "yoy_pct": -5.5,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 114245800.0,
+        "yoy_pct": -1.2,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 88611000.0,
+        "yoy_pct": -1.2,
+        "sales_volume": null
+      }
+    },
+    "SOUTHWARK": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 58963600.0,
+        "yoy_pct": 1.6,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 175853500.0,
+        "yoy_pct": 2.5,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 48633500.0,
+        "yoy_pct": 0.7,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 124401800.0,
+        "yoy_pct": 4.0,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 85097000.0,
+        "yoy_pct": 4.2,
+        "sales_volume": null
+      }
+    },
+    "SUTTON": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 45305800.0,
+        "yoy_pct": 1.8,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 102350100.0,
+        "yoy_pct": 0.4,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 28691200.0,
+        "yoy_pct": -0.7,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 65253000.0,
+        "yoy_pct": 3.5,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 46510800.0,
+        "yoy_pct": 3.7,
+        "sales_volume": null
+      }
+    },
+    "TOWER_HAMLETS": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 46352700.0,
+        "yoy_pct": -10.9,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 92340900.0,
+        "yoy_pct": -8.9,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 44603600.0,
+        "yoy_pct": -11.1,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 68485900.0,
+        "yoy_pct": -7.7,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 69910300.0,
+        "yoy_pct": -8.0,
+        "sales_volume": null
+      }
+    },
+    "WALTHAM_FOREST": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 52573800.0,
+        "yoy_pct": 3.3,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 102931400.0,
+        "yoy_pct": 3.0,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 38986400.0,
+        "yoy_pct": 0.9,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 79216400.0,
+        "yoy_pct": 4.7,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 61819000.0,
+        "yoy_pct": 5.2,
+        "sales_volume": null
+      }
+    },
+    "WANDSWORTH": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 68928500.0,
+        "yoy_pct": -2.3,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 238399600.0,
+        "yoy_pct": -1.9,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 53275500.0,
+        "yoy_pct": -3.3,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 131586000.0,
+        "yoy_pct": -0.4,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 96507800.0,
+        "yoy_pct": -0.3,
+        "sales_volume": null
+      }
+    },
+    "london": {
+      "all": {
+        "period": "2025-12",
+        "avg_price_pence": 55129400.0,
+        "yoy_pct": -1.0,
+        "sales_volume": null
+      },
+      "detached": {
+        "period": "2025-12",
+        "avg_price_pence": 113584100.0,
+        "yoy_pct": -0.6,
+        "sales_volume": null
+      },
+      "flat": {
+        "period": "2025-12",
+        "avg_price_pence": 43035800.0,
+        "yoy_pct": -3.6,
+        "sales_volume": null
+      },
+      "semi_detached": {
+        "period": "2025-12",
+        "avg_price_pence": 71479800.0,
+        "yoy_pct": 2.9,
+        "sales_volume": null
+      },
+      "terraced": {
+        "period": "2025-12",
+        "avg_price_pence": 63769200.0,
+        "yoy_pct": 1.7,
+        "sales_volume": null
+      }
+    }
+  },
+  "historical_source": {
+    "uk_hpi_url": "https://publicdata.landregistry.gov.uk/market-trend-data/house-price-index-data/UK-HPI-full-file-2025-12.csv?utm_campaign=full_fil&utm_medium=GOV.UK&utm_source=datadownload",
+    "ppd_years": [
+      2020,
+      2021,
+      2022,
+      2023,
+      2024
+    ]
+  }
+}

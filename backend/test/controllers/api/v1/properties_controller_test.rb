@@ -137,6 +137,38 @@ module Api
         assert_equal @active.rightmove_id, response.parsed_body["rightmove_id"]
       end
 
+      test "GET /api/v1/properties/:id includes ml forecast when inference is available" do
+        Ml::HousePriceForecastService.any_instance.stubs(:call).returns(
+          {
+            "forecasts" => [
+              {
+                "years_ahead" => 1,
+                "predicted_future_price_pence" => 37_800_000,
+                "prediction_interval_95" => {
+                  "lower_pence" => 33_500_000,
+                  "upper_pence" => 42_100_000
+                }
+              },
+              {
+                "years_ahead" => 2,
+                "predicted_future_price_pence" => 39_200_000,
+                "prediction_interval_95" => {
+                  "lower_pence" => 34_200_000,
+                  "upper_pence" => 44_200_000
+                }
+              }
+            ]
+          }
+        )
+
+        get api_v1_property_path(@active), as: :json
+
+        assert_response :success
+        assert_equal ["forecasts"], response.parsed_body["ml_forecast"].keys
+        assert_equal 37_800_000, response.parsed_body["ml_forecast"]["forecasts"].first["predicted_future_price_pence"]
+        assert_equal 44_200_000, response.parsed_body["ml_forecast"]["forecasts"].second["prediction_interval_95"]["upper_pence"]
+      end
+
       test "GET /api/v1/properties/:id excludes raw_data" do
         get api_v1_property_path(@active), as: :json
         assert_not response.parsed_body.key?("raw_data")
