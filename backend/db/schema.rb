@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_29_000004) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_29_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -73,6 +73,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_000004) do
     t.datetime "updated_at", null: false
     t.index ["latitude", "longitude"], name: "index_flood_risk_datapoints_on_latitude_and_longitude"
     t.index ["risk_band"], name: "index_flood_risk_datapoints_on_risk_band"
+  end
+
+  create_table "model_searches", force: :cascade do |t|
+    t.text "prompt", null: false
+    t.string "status", default: "pending", null: false
+    t.jsonb "filters", default: {}, null: false
+    t.jsonb "result_ids", default: [], null: false
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status"], name: "index_model_searches_on_status"
   end
 
   create_table "properties", force: :cascade do |t|
