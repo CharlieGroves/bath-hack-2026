@@ -31,6 +31,7 @@ class ModelSearchJob < ApplicationJob
     - max_road_noise_lden  (Float) maximum road noise in dB(A) Lden
     - max_rail_noise_lden  (Float) maximum rail noise in dB(A) Lden
     - max_flight_noise_lden (Float) maximum flight noise in dB(A) Lden
+    - is_shared_ownership  (Boolean) true if user wants shared-ownership / percentage-share listings
     - sort              (String) one of: price_asc, price_desc, newest - default newest
 
     Rules:
@@ -102,6 +103,7 @@ class ModelSearchJob < ApplicationJob
     scope = scope.max_road_noise_lden(filters["max_road_noise_lden"].to_f)   if filters["max_road_noise_lden"].present?
     scope = scope.max_rail_noise_lden(filters["max_rail_noise_lden"].to_f)   if filters["max_rail_noise_lden"].present?
     scope = scope.max_flight_noise_lden(filters["max_flight_noise_lden"].to_f) if filters["max_flight_noise_lden"].present?
+    scope = scope.with_shared_ownership(filters["is_shared_ownership"]) if filters["is_shared_ownership"].present?
     scope
   end
 

@@ -8,6 +8,7 @@ class PropertiesController < ApplicationController
     @properties = @properties.min_price(params[:min_price].to_i)           if params[:min_price].present?
     @properties = @properties.max_price(params[:max_price].to_i)           if params[:max_price].present?
     @properties = @properties.min_beds(params[:min_beds].to_i)             if params[:min_beds].present?
+    @properties = @properties.with_shared_ownership(params[:is_shared_ownership]) if params[:is_shared_ownership].present?
     @properties = @properties.page(params[:page]).per(25)
   end
 

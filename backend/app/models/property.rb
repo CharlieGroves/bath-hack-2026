@@ -28,9 +28,17 @@ class Property < ApplicationRecord
   TENURES        = %w[freehold leasehold share_of_freehold].freeze
   EPC_RATINGS    = %w[A B C D E F G].freeze
   COUNCIL_BANDS  = %w[A B C D E F G H].freeze
+  SHARED_OWNERSHIP_PERCENT_PATTERNS = [
+    /\bshared\s+ownership\b/i,
+    /\bpart[-\s]*buy[-\s]*part[-\s]*rent\b/i,
+    /\b(?:share|ownership)\s*(?:purchase|available|to\s+buy|being\s+sold)?\s*:?\s*([1-9]\d?(?:\.\d+)?)\s*%\b/i,
+    /\b([1-9]\d?(?:\.\d+)?)\s*%\s*(?:share|shared|ownership|of(?:\s+the)?\s+property)\b/i
+  ].freeze
 
   validates :rightmove_id, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }
+
+  before_validation :derive_shared_ownership_flag
 
   scope :active,        -> { where(status: "active") }
   scope :for_sale,      -> { where.not(status: %w[let]) }
@@ -58,6 +66,14 @@ class Property < ApplicationRecord
   scope :max_road_noise_lden,    ->(n) { joins(:property_transport_snapshot).where("property_transport_snapshots.status = 'ready'").where("CAST(property_transport_snapshots.road_data -> 'metrics' ->> 'lden' AS NUMERIC) <= ?", n) }
   scope :max_rail_noise_lden,    ->(n) { joins(:property_transport_snapshot).where("property_transport_snapshots.status = 'ready'").where("CAST(property_transport_snapshots.rail_data -> 'metrics' ->> 'lden' AS NUMERIC) <= ?", n) }
   scope :max_flight_noise_lden,  ->(n) { joins(:property_transport_snapshot).where("property_transport_snapshots.status = 'ready'").where("CAST(property_transport_snapshots.flight_data -> 'metrics' ->> 'lden' AS NUMERIC) <= ?", n) }
+  scope :with_shared_ownership,  ->(flag) { where(is_shared_ownership: ActiveModel::Type::Boolean.new.cast(flag)) }
+
+  def self.shared_ownership_from_description?(text)
+    description_text = text.to_s
+    return false if description_text.blank?
+
+    SHARED_OWNERSHIP_PERCENT_PATTERNS.any? { |pattern| description_text.match?(pattern) }
+  end
 
   # Recomputes element-wise max of all +embedding_vector+ rows for this listing (see +PropertyImageEmbedding+).
   def self.refresh_image_embeddings_maxpool!(property_id)
@@ -155,5 +171,9 @@ class Property < ApplicationRecord
 
   def enqueue_image_embedding
     PropertyImageEmbedJob.perform_later(id)
+  end
+
+  def derive_shared_ownership_flag
+    self.is_shared_ownership = self.class.shared_ownership_from_description?(description)
   end
 end

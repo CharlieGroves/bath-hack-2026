@@ -159,6 +159,7 @@ export interface PropertyDetail {
   nearest_stations: NearestStation[]
   area_price_growth: AreaPriceGrowth | null
   air_quality: AirQuality | null
+  is_shared_ownership: boolean
   ml_forecast: MlForecast | null
   ml_valuation: MlValuation | null
 }
@@ -183,6 +184,7 @@ export interface Property {
   crime: PropertyCrime | null
   air_quality: AirQuality | null
   flood_risk: FloodRisk | null
+  is_shared_ownership: boolean
   nearest_stations: NearestStation[]
   estate_agent: EstateAgent | null
 }

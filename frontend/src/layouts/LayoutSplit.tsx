@@ -199,7 +199,7 @@ interface Props {
   activeLocationSearch: ActiveLocationSearch | null
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '', minAgentRating: '' }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '', minAgentRating: '', sharedOwnershipFilter: 'exclude' }
 
 const STATION_MINUTE_OPTIONS = [
   { value: 0,  label: 'Any' },
@@ -318,6 +318,19 @@ export default function LayoutSplit({
             >
               <option value="">Any</option>
               {[3, 3.5, 4, 4.5].map(v => <option key={v} value={v}>{v}+</option>)}
+            </select>
+          </div>
+
+          <div className="l2-fb-row">
+            <span className="l2-fb-label">Ownership</span>
+            <select
+              className="l2-fb-select"
+              value={filters.sharedOwnershipFilter}
+              onChange={e => setF('sharedOwnershipFilter', e.target.value as Filters['sharedOwnershipFilter'])}
+            >
+              <option value="exclude">No % share</option>
+              <option value="any">Any</option>
+              <option value="only">% share only</option>
             </select>
           </div>
 

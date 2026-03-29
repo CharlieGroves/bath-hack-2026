@@ -66,6 +66,17 @@ module Api
         assert_not_includes ids, @active.rightmove_id
       end
 
+      test "GET /api/v1/properties filters by shared ownership flag" do
+        @active.update!(description: "Buy a 35% share of this property via shared ownership")
+        @under_offer.update!(description: "Traditional freehold sale")
+
+        get api_v1_properties_path, params: { is_shared_ownership: true }, as: :json
+        ids = response.parsed_body["properties"].map { |p| p["rightmove_id"] }
+
+        assert_includes ids, @active.rightmove_id
+        assert_not_includes ids, @under_offer.rightmove_id
+      end
+
       test "GET /api/v1/properties/search returns the isochrone geometry and matching properties" do
         inside = create(:property, rightmove_id: "300200100", latitude: 51.3810, longitude: -2.3610)
         create(:property, rightmove_id: "300200101", latitude: 51.3890, longitude: -2.3490)
@@ -217,6 +228,14 @@ module Api
         get api_v1_property_path(@active), as: :json
         assert_equal "england_noise_data", response.parsed_body["noise"]["provider"]
         assert_equal 62.1, response.parsed_body["noise"]["road_data"]["metrics"]["lden"]
+      end
+
+      test "GET /api/v1/properties payload includes shared ownership flag" do
+        @active.update!(description: "Shared ownership with 25% share available")
+
+        get api_v1_property_path(@active), as: :json
+
+        assert_equal true, response.parsed_body["is_shared_ownership"]
       end
 
       test "GET /api/v1/properties/:id returns 404 for missing property" do

@@ -80,4 +80,24 @@ class PropertyTest < ActiveSupport::TestCase
     assert_includes results, flat
     assert_not_includes results, terraced
   end
+
+  test "marks shared ownership from percentage in description" do
+    property = create(:property, description: "Purchase a 25% share of this property via shared ownership.")
+    assert property.is_shared_ownership
+  end
+
+  test "does not mark generic percentages without ownership context" do
+    property = create(:property, description: "Brand new boiler, 100% recently upgraded.")
+    assert_not property.is_shared_ownership
+  end
+
+  test "with_shared_ownership scope filters correctly" do
+    shared = create(:property, description: "Shared ownership opportunity with 40% share available.")
+    standard = create(:property, description: "Freehold house with private garden.")
+
+    results = Property.with_shared_ownership(true)
+
+    assert_includes results, shared
+    assert_not_includes results, standard
+  end
 end
