@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_250000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_29_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -24,6 +24,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_250000) do
     t.datetime "readings_fetched_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["daqi_index"], name: "index_air_quality_stations_on_daqi_index"
     t.index ["external_id"], name: "index_air_quality_stations_on_external_id", unique: true
     t.index ["latitude", "longitude"], name: "index_air_quality_stations_on_latitude_and_longitude"
   end
@@ -122,6 +123,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_250000) do
     t.index ["borough_id"], name: "index_properties_on_borough_id"
     t.index ["estate_agent_id"], name: "index_properties_on_estate_agent_id"
     t.index ["flood_risk_datapoint_id"], name: "index_properties_on_flood_risk_datapoint_id"
+    t.index ["latitude", "longitude", "price_per_sqft_pence"], name: "idx_on_latitude_longitude_price_per_sqft_pence_636bf349eb", where: "((latitude IS NOT NULL) AND (longitude IS NOT NULL) AND (price_per_sqft_pence IS NOT NULL))"
     t.index ["latitude", "longitude"], name: "index_properties_on_latitude_and_longitude"
     t.index ["listed_at"], name: "index_properties_on_listed_at"
     t.index ["postcode"], name: "index_properties_on_postcode"
@@ -129,6 +131,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_250000) do
     t.index ["property_type"], name: "index_properties_on_property_type"
     t.index ["rightmove_id"], name: "index_properties_on_rightmove_id", unique: true
     t.index ["slug"], name: "index_properties_on_slug", unique: true
+    t.index ["status", "property_type", "price_pence"], name: "index_properties_on_status_and_property_type_and_price_pence"
     t.index ["status"], name: "index_properties_on_status"
     t.index ["tenure"], name: "index_properties_on_tenure"
   end
@@ -144,6 +147,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_250000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["property_id"], name: "index_property_crime_snapshots_on_property_id", unique: true
+    t.index ["status", "fetched_at"], name: "index_property_crime_snapshots_on_status_and_fetched_at"
   end
 
   create_table "property_images", force: :cascade do |t|
@@ -163,7 +167,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_250000) do
     t.integer "walking_minutes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "termini", default: [], array: true
+    t.index ["distance_miles"], name: "index_property_nearest_stations_on_distance_miles"
     t.index ["property_id"], name: "index_property_nearest_stations_on_property_id"
+    t.index ["walking_minutes"], name: "index_property_nearest_stations_on_walking_minutes"
   end
 
   create_table "property_transport_snapshots", force: :cascade do |t|

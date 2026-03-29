@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pkill -f sidekiq)",
+      "Bash(sysctl kern.maxfilesperproc kern.maxfiles)",
+      "Bash(RBENV_VERSION=3.4.4 bin/rails runner \":*)",
+      "Bash(RBENV_VERSION=3.4.4 bin/rails runner \"puts Property.joins\\(:property_transport_snapshot\\).where\\(property_transport_snapshots:{status:''''ready''''}\\).pluck\\(:town\\).tally.sort_by{|_,v|-v}.first\\(10\\).inspect\")"
+    ]
+  }
+}

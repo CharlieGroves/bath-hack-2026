@@ -1,4 +1,4 @@
-:concurrency: 20
+:concurrency: 100
 :queues:
   - scraping
   - default
