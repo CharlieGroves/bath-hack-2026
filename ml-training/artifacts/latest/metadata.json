@@ -7,6 +7,7 @@
   "target_note": "Model trained on official HM Land Registry Price Paid Data transactions from 2020 to 2024 for London local authorities. The 1-year, 2-year, and 3-year targets are derived from the actual subsequent UK HPI movement for the same London area and property type, applied to each historical sale price.",
   "feature_columns": [
     "current_price_pence",
+    "prediction_horizon_months",
     "hpi_property_avg_price_pence",
     "hpi_property_yoy_pct",
     "hpi_property_sales_volume",
@@ -21,6 +22,7 @@
   ],
   "numeric_features": [
     "current_price_pence",
+    "prediction_horizon_months",
     "hpi_property_avg_price_pence",
     "hpi_property_yoy_pct",
     "hpi_property_sales_volume",
@@ -37,6 +39,7 @@
   ],
   "transformed_feature_names": [
     "num__current_price_pence",
+    "num__prediction_horizon_months",
     "num__hpi_property_avg_price_pence",
     "num__hpi_property_yoy_pct",
     "num__hpi_property_sales_volume",
@@ -372,8 +375,8 @@
       "prediction_horizon_years": 1,
       "sample_count": 120000,
       "holdout_count": 24000,
-      "best_epoch": 15,
-      "trained_at": "2026-03-29T00:10:14.223082+00:00",
+      "best_epoch": 25,
+      "trained_at": "2026-03-29T02:28:47.264146+00:00",
       "historical_years": [
         2020,
         2021,
@@ -383,26 +386,26 @@
       ],
       "prediction_intervals": {
         "80": {
-          "lower": -0.06872675772760194,
-          "upper": 0.24089844527766613
+          "lower": -0.04578896895212732,
+          "upper": 0.04098375138991007
         },
         "95": {
-          "lower": -0.18267214780703012,
-          "upper": 0.30618797617660076
+          "lower": -0.07436832550951615,
+          "upper": 0.0770098991103679
         }
       },
-      "holdout_rmse_pounds": 226921.476669276,
-      "holdout_mape": 0.11214774887592766,
-      "holdout_r2": 0.9288469814821747,
-      "full_fit_rmse_pounds": 254654.06894481622
+      "holdout_rmse_pounds": 126201.28127332816,
+      "holdout_mape": 0.029329272758896702,
+      "holdout_r2": 0.977992553483046,
+      "full_fit_rmse_pounds": 185828.35326190092
     },
     "24": {
       "prediction_horizon_months": 24,
       "prediction_horizon_years": 2,
       "sample_count": 120000,
       "holdout_count": 24000,
-      "best_epoch": 22,
-      "trained_at": "2026-03-29T00:10:40.594032+00:00",
+      "best_epoch": 24,
+      "trained_at": "2026-03-29T02:29:01.404151+00:00",
       "historical_years": [
         2020,
         2021,
@@ -412,26 +415,26 @@
       ],
       "prediction_intervals": {
         "80": {
-          "lower": -0.04091135006193031,
-          "upper": 0.26409015602232233
+          "lower": -0.04002986979099506,
+          "upper": 0.043172345841914574
         },
         "95": {
-          "lower": -0.1602562383582293,
-          "upper": 0.338537920284217
+          "lower": -0.06669695727334282,
+          "upper": 0.08657538968255922
         }
       },
-      "holdout_rmse_pounds": 257388.15111468034,
-      "holdout_mape": 0.12406169103617719,
-      "holdout_r2": 0.9167854510490756,
-      "full_fit_rmse_pounds": 208919.33332771025
+      "holdout_rmse_pounds": 206668.24036164128,
+      "holdout_mape": 0.027792340346705628,
+      "holdout_r2": 0.9463500098513246,
+      "full_fit_rmse_pounds": 166800.36475859402
     },
     "36": {
       "prediction_horizon_months": 36,
       "prediction_horizon_years": 3,
       "sample_count": 120000,
       "holdout_count": 24000,
-      "best_epoch": 15,
-      "trained_at": "2026-03-29T00:11:10.647596+00:00",
+      "best_epoch": 24,
+      "trained_at": "2026-03-29T02:29:15.507497+00:00",
       "historical_years": [
         2020,
         2021,
@@ -441,18 +444,18 @@
       ],
       "prediction_intervals": {
         "80": {
-          "lower": -0.06782432445244292,
-          "upper": 0.25766468397528897
+          "lower": -0.03213295876679173,
+          "upper": 0.03966253751145777
         },
         "95": {
-          "lower": -0.1818069995948431,
-          "upper": 0.32293521305643363
+          "lower": -0.06211483695542591,
+          "upper": 0.07868233165925652
         }
       },
-      "holdout_rmse_pounds": 218423.03571063254,
-      "holdout_mape": 0.12255055372024022,
-      "holdout_r2": 0.924282957203082,
-      "full_fit_rmse_pounds": 217746.187275602
+      "holdout_rmse_pounds": 128717.292967474,
+      "holdout_mape": 0.024160821684698977,
+      "holdout_r2": 0.9737051582462053,
+      "full_fit_rmse_pounds": 140428.7073820612
     }
   },
   "training_basis": "historical_land_registry_hpi",
