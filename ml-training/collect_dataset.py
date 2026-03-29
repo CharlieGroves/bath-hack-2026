@@ -5,7 +5,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from pipeline import BACKEND_ROOT, DEFAULT_DATASET_PATH
+from pipeline import BACKEND_ROOT, DEFAULT_CURRENT_LISTINGS_PATH
 
 
 def main() -> None:
@@ -13,7 +13,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=DEFAULT_DATASET_PATH,
+        default=DEFAULT_CURRENT_LISTINGS_PATH,
         help="Path to the exported JSON dataset.",
     )
     args = parser.parse_args()

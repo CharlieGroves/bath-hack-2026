@@ -1,8 +1,15 @@
 # Requires PostgreSQL with the pgvector extension (https://github.com/pgvector/pgvector).
-# macOS: brew install pgvector && ensure the server loads it, or use an image that includes it.
+# If pgvector is not installed, this migration skips gracefully.
+# To install on Ubuntu/Debian: sudo apt-get install postgresql-16-pgvector
 class AddEmbeddingVectorHnswToPropertyImageEmbeddings < ActiveRecord::Migration[7.2]
   def up
-    enable_extension "vector" unless extension_enabled?("vector")
+    begin
+      enable_extension "vector" unless extension_enabled?("vector")
+    rescue ActiveRecord::StatementInvalid => e
+      raise unless e.message.include?("vector.control")
+      say "pgvector not installed on this system — skipping. Install postgresql-16-pgvector to enable."
+      return
+    end
 
     add_column :property_image_embeddings, :embedding_vector, :vector, limit: 768
 
@@ -27,7 +34,7 @@ class AddEmbeddingVectorHnswToPropertyImageEmbeddings < ActiveRecord::Migration[
   end
 
   def down
-    remove_index :property_image_embeddings, name: "idx_pie_embedding_vector_hnsw"
-    remove_column :property_image_embeddings, :embedding_vector
+    remove_index :property_image_embeddings, name: "idx_pie_embedding_vector_hnsw", if_exists: true
+    remove_column :property_image_embeddings, :embedding_vector, if_exists: true
   end
 end

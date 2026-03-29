@@ -567,6 +567,139 @@
   margin-top: 10px;
 }
 
+.pp-valuation-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background:
+    linear-gradient(160deg, rgba(43, 122, 75, 0.08), rgba(255, 255, 255, 0) 42%),
+    var(--card-bg);
+  padding: 20px;
+}
+
+.pp-valuation-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.pp-valuation-meta {
+  display: grid;
+  gap: 10px;
+}
+
+.pp-valuation-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-family: var(--ff-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.pp-valuation-overpriced {
+  color: #8d362a;
+  background: rgba(163, 63, 47, 0.11);
+  border: 1px solid rgba(163, 63, 47, 0.22);
+}
+
+.pp-valuation-underpriced {
+  color: #226b42;
+  background: rgba(43, 122, 75, 0.12);
+  border: 1px solid rgba(43, 122, 75, 0.22);
+}
+
+.pp-valuation-fair {
+  color: var(--t2);
+  background: rgba(98, 92, 84, 0.08);
+  border: 1px solid var(--border);
+}
+
+.pp-valuation-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  border-bottom: 1px solid var(--hr);
+  padding-bottom: 8px;
+  font-family: var(--ff-body);
+  font-size: 0.84rem;
+  color: var(--t3);
+}
+
+.pp-valuation-stat:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pp-valuation-stat strong {
+  font-size: 0.9rem;
+  color: var(--t1);
+}
+
+.pp-valuation-weights {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  border-top: 1px solid var(--hr);
+  padding-top: 16px;
+}
+
+.pp-weight-row {
+  display: grid;
+  gap: 8px;
+}
+
+.pp-weight-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.pp-weight-label {
+  font-family: var(--ff-body);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--t1);
+}
+
+.pp-weight-value {
+  font-family: var(--ff-body);
+  font-size: 0.76rem;
+  color: var(--t3);
+  margin-top: 2px;
+}
+
+.pp-weight-score {
+  font-family: var(--ff-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.pp-weight-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(98, 92, 84, 0.10);
+  overflow: hidden;
+}
+
+.pp-weight-fill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.pp-weight-fill-positive {
+  background: linear-gradient(90deg, #2b7a4b, #57a16e);
+}
+
+.pp-weight-fill-negative {
+  background: linear-gradient(90deg, #a33f2f, #d26a56);
+}
+
 /* ── Noise pending ───────────────────────────────────────────────────────── */
 .pp-pending {
   font-family: var(--ff-body);
@@ -888,6 +1021,10 @@
   }
 
   .pp-forecast-horizon-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pp-valuation-summary {
     grid-template-columns: 1fr;
   }
 }

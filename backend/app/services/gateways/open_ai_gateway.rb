@@ -3,14 +3,15 @@ require "openai"
 # Thin wrapper around the OpenAI Chat Completions API.
 #
 # Usage:
-#   gateway = OpenAiGateway.new
+#   gateway = Gateways::OpenAiGateway.new
 #   response = gateway.chat(
 #     system: "You are a helpful assistant.",
 #     user:   "Find me a 2-bed flat under £500k"
 #   )
 #   # => String (assistant message content)
 #
-# Raises OpenAiGateway::Error on configuration or API errors.
+# Raises Gateways::OpenAiGateway::Error on configuration or API errors.
+module Gateways
 class OpenAiGateway
   class Error < StandardError; end
   class ConfigError < Error; end
@@ -60,4 +61,5 @@ class OpenAiGateway
       request_timeout: TIMEOUT
     )
   end
+end
 end
