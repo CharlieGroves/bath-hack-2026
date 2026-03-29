@@ -295,7 +295,7 @@ export default function LayoutSplit({
           <LocationAutocompleteInput
             value={locationSearch.query}
             onChange={onLocationQueryChange}
-            onEnter={onApplyLocationSearch}
+            onEnter={() => onApplyLocationSearch()}
             inputClassName="l2-sb-text-input"
             placeholder="King's Cross, SW1A 1AA, Canary Wharf..."
           />
@@ -329,7 +329,7 @@ export default function LayoutSplit({
             <button
               type="button"
               className="l2-sb-primary"
-              onClick={onApplyLocationSearch}
+              onClick={() => onApplyLocationSearch()}
               disabled={!locationSearch.query.trim() || locationSearchLoading}
             >
               {locationSearchLoading ? 'Searching...' : 'Apply search'}
