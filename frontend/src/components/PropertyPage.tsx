@@ -10,7 +10,7 @@ import {
 import { useProperty } from '../hooks/useProperty'
 import { useXray } from '../hooks/useXray'
 import { useSimilarByImage } from '../hooks/useSimilarByImage'
-import type { SimilarMatch } from '../hooks/useSimilarByImage'
+import type { SimilarMatch, SimilarMode } from '../hooks/useSimilarByImage'
 import type { PropertyDetail, AirQuality, YearlyGrowthEntry } from '../types/property'
 import XrayMap from './XrayMap'
 import './PropertyPage.css'
@@ -61,13 +61,17 @@ function HeroGallery({
   activePhoto,
   setActivePhoto,
   onFindSimilar,
+  onFindSimilarMaxpool,
   similarLoading,
+  activeMode,
 }: {
   property: PropertyDetail
   activePhoto: number
   setActivePhoto: (i: number) => void
   onFindSimilar: () => void
+  onFindSimilarMaxpool: () => void
   similarLoading: boolean
+  activeMode: SimilarMode | null
 }) {
   const photos = property.photo_urls
 
@@ -104,23 +108,41 @@ function HeroGallery({
           </>
         )}
 
-        <button
-          className={`pp-similar-btn${similarLoading ? ' pp-similar-btn-loading' : ''}`}
-          onClick={onFindSimilar}
-          disabled={similarLoading}
-          aria-label="Find visually similar properties"
-        >
-          {similarLoading ? (
-            <span className="pp-similar-btn-spinner" />
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M8.5 8.5L13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              <path d="M3.5 5.5h4M5.5 3.5v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-            </svg>
-          )}
-          Find similar
-        </button>
+        <div className="pp-similar-btn-group">
+          <button
+            className={`pp-similar-btn${activeMode === 'per_photo' ? ' pp-similar-btn-active' : ''}${similarLoading && activeMode === 'per_photo' ? ' pp-similar-btn-loading' : ''}`}
+            onClick={onFindSimilar}
+            disabled={similarLoading}
+            aria-label="Find properties similar to this photo"
+          >
+            {similarLoading && activeMode === 'per_photo' ? (
+              <span className="pp-similar-btn-spinner" />
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M8.5 8.5L13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M3.5 5.5h4M5.5 3.5v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            )}
+            This photo
+          </button>
+          <button
+            className={`pp-similar-btn${activeMode === 'maxpool' ? ' pp-similar-btn-active' : ''}${similarLoading && activeMode === 'maxpool' ? ' pp-similar-btn-loading' : ''}`}
+            onClick={onFindSimilarMaxpool}
+            disabled={similarLoading}
+            aria-label="Find properties similar to this listing"
+          >
+            {similarLoading && activeMode === 'maxpool' ? (
+              <span className="pp-similar-btn-spinner" />
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M8.5 8.5L13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            )}
+            All photos
+          </button>
+        </div>
 
         <div className="pp-gallery-overlay">
           {photos.length > 1 && (
@@ -606,21 +628,27 @@ function SimilarPropertiesSection({
   matches,
   loading,
   error,
+  activeMode,
   onSelect,
   onClose,
 }: {
   matches: SimilarMatch[]
   loading: boolean
   error: string | null
+  activeMode: SimilarMode | null
   onSelect: (id: number) => void
   onClose: () => void
 }) {
   if (!loading && !error && matches.length === 0) return null
 
+  const heading = activeMode === 'maxpool'
+    ? 'Visually similar properties (all photos)'
+    : 'Visually similar properties (this photo)'
+
   return (
     <section className="pp-similar-section">
       <div className="pp-similar-header">
-        <h2 className="pp-section-heading" style={{ margin: 0 }}>Visually similar properties</h2>
+        <h2 className="pp-section-heading" style={{ margin: 0 }}>{heading}</h2>
         <button className="pp-similar-close" onClick={onClose} aria-label="Close similar properties">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
@@ -681,7 +709,7 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
   const { property, loading, error } = useProperty(propertyId)
   const { xray, loading: xrayLoading } = useXray(property ? property.id : null)
   const [activePhoto, setActivePhoto] = useState(0)
-  const { matches: similarMatches, loading: similarLoading, error: similarError, fetchSimilar, clear: clearSimilar } = useSimilarByImage()
+  const { matches: similarMatches, loading: similarLoading, error: similarError, activeMode: similarMode, fetchSimilar, fetchSimilarMaxpool, clear: clearSimilar } = useSimilarByImage()
   const [similarVisible, setSimilarVisible] = useState(false)
   const navigate = useNavigate()
 
@@ -689,6 +717,12 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
     if (!property) return
     setSimilarVisible(true)
     fetchSimilar(property.id, activePhoto)
+  }
+
+  function handleFindSimilarMaxpool() {
+    if (!property) return
+    setSimilarVisible(true)
+    fetchSimilarMaxpool(property.id)
   }
 
   function handleCloseSimilar() {
@@ -725,13 +759,16 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
           activePhoto={activePhoto}
           setActivePhoto={i => { setActivePhoto(i); handleCloseSimilar() }}
           onFindSimilar={handleFindSimilar}
+          onFindSimilarMaxpool={handleFindSimilarMaxpool}
           similarLoading={similarLoading}
+          activeMode={similarMode}
         />
         {similarVisible && (
           <SimilarPropertiesSection
             matches={similarMatches}
             loading={similarLoading}
             error={similarError}
+            activeMode={similarMode}
             onSelect={id => navigate(`/properties/${id}`)}
             onClose={handleCloseSimilar}
           />

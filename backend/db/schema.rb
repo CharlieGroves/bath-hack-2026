@@ -13,6 +13,7 @@
 ActiveRecord::Schema[7.2].define(version: 2026_03_29_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+  enable_extension "vector"
 
   create_table "air_quality_stations", force: :cascade do |t|
     t.integer "external_id", null: false
@@ -123,8 +124,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_120000) do
     t.jsonb "raw_data"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "air_quality_station_id"
     t.bigint "area_price_growth_id"
+    t.bigint "air_quality_station_id"
     t.bigint "flood_risk_datapoint_id"
     t.bigint "estate_agent_id"
     t.bigint "borough_id"
@@ -182,6 +183,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_120000) do
     t.string "fingerprint", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.vector "embedding_vector", limit: 768
+    t.index ["embedding_vector"], name: "idx_pie_embedding_vector_hnsw", opclass: :vector_cosine_ops, using: :hnsw
     t.index ["property_id", "position"], name: "index_property_image_embeddings_on_property_and_position", unique: true
     t.index ["property_id"], name: "index_property_image_embeddings_on_property_id"
   end
