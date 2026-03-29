@@ -3,20 +3,6 @@ import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import type { NoiseSection, Property } from './types/property'
 
-// Fix default marker icons broken by Vite's asset pipeline
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
-import markerIcon from 'leaflet/dist/images/marker-icon.png'
-import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-
-type LeafletDefaultIconPrototype = { _getIconUrl?: string }
-
-delete (L.Icon.Default.prototype as LeafletDefaultIconPrototype)._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-})
-
 interface PropertyMapProps {
   properties: Property[]
   center?: [number, number]
@@ -25,6 +11,15 @@ interface PropertyMapProps {
 
 function formatPrice(pence: number) {
   return `£${(pence / 100).toLocaleString('en-GB')}`
+}
+
+function priceIcon(price: number | null | undefined) {
+  const label = price ? formatPrice(price) : '?'
+  return L.divIcon({
+    className: '',
+    html: `<div class="price-marker">${label}</div>`,
+    iconAnchor: [0, 0],
+  })
 }
 
 function formatNoiseMetric(section: NoiseSection | undefined, metric: string) {
@@ -48,7 +43,7 @@ export default function PropertyMap({
       {properties
         .filter((p) => p.latitude != null && p.longitude != null)
         .map((p) => (
-          <Marker key={p.id} position={[p.latitude, p.longitude]}>
+          <Marker key={p.id} position={[p.latitude, p.longitude]} icon={priceIcon(p.price)}>
             <Popup>
               <h2 className="popup-title">{p.title || p.address}</h2>
               <p className="popup-address">{p.address}</p>

@@ -82,7 +82,7 @@ a { text-decoration: none; color: inherit }
 /* ─── Header ─────────────────────────────────────────────────────────────── */
 .header {
   height: var(--hh);
-  background: var(--t1);
+  background: var(--bg);
   border-bottom: 2px solid var(--ember);
   display: flex;
   align-items: center;
@@ -102,7 +102,7 @@ a { text-decoration: none; color: inherit }
   font-family: var(--ff-display);
   font-size: 1.55rem;
   font-weight: 700;
-  color: var(--ash);
+  color: var(--t1);
   letter-spacing: 0.015em;
   line-height: 1;
 }
@@ -117,25 +117,24 @@ a { text-decoration: none; color: inherit }
   left: 11px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(216, 212, 188, 0.45);
+  color: var(--t3);
   pointer-events: none;
 }
 .header-search {
   width: 100%;
   height: 36px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(216, 212, 188, 0.2);
+  background: var(--white);
+  border: 1px solid var(--border);
   border-radius: 7px;
   padding: 0 12px 0 34px;
-  color: var(--ash);
+  color: var(--t1);
   font-size: 0.875rem;
   outline: none;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s;
 }
-.header-search::placeholder { color: rgba(216, 212, 188, 0.4) }
+.header-search::placeholder { color: var(--t4) }
 .header-search:focus {
   border-color: var(--ember);
-  background: rgba(255,255,255,0.12);
 }
 
 /* ─── Model search indicator ─────────────────────────────────────────────── */
@@ -213,7 +212,7 @@ a { text-decoration: none; color: inherit }
 
 .count-badge {
   font-size: 0.82rem;
-  color: var(--ash);
+  color: var(--t2);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -223,23 +222,23 @@ a { text-decoration: none; color: inherit }
 }
 
 .sort-select {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(216, 212, 188, 0.18);
+  background: var(--white);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: var(--ash);
+  color: var(--t2);
   font-size: 0.82rem;
   padding: 5px 10px;
   cursor: pointer;
   outline: none;
 }
 .sort-select:hover {
-  background: rgba(255,255,255,0.12);
+  border-color: var(--ember);
 }
 
 .view-switch {
   display: flex;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(216, 212, 188, 0.18);
+  background: var(--white);
+  border: 1px solid var(--border);
   border-radius: 7px;
   overflow: hidden;
 }
@@ -252,17 +251,17 @@ a { text-decoration: none; color: inherit }
   border: none;
   font-size: 0.8rem;
   font-weight: 500;
-  color: rgba(216, 212, 188, 0.5);
+  color: var(--t3);
   transition: all 0.15s;
 }
 .vsw-btn.on { background: var(--ember); color: #fff }
-.vsw-btn:hover:not(.on) { color: var(--ash); background: rgba(255,255,255,0.08) }
+.vsw-btn:hover:not(.on) { color: var(--t1); background: rgba(231,104,20,0.06) }
 
 /* ─── Layout picker ──────────────────────────────────────────────────────── */
 .layout-picker {
   display: flex;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(216, 212, 188, 0.18);
+  background: var(--white);
+  border: 1px solid var(--border);
   border-radius: 7px;
   overflow: hidden;
 }
@@ -272,16 +271,16 @@ a { text-decoration: none; color: inherit }
   padding: 6px 14px;
   background: none;
   border: none;
-  border-right: 1px solid rgba(216, 212, 188, 0.18);
+  border-right: 1px solid var(--border);
   font-size: 0.78rem;
   font-weight: 500;
-  color: rgba(216, 212, 188, 0.5);
+  color: var(--t3);
   white-space: nowrap;
   transition: all 0.15s;
 }
 .lp-btn:last-child { border-right: none }
 .lp-btn.lp-on { background: var(--ember); color: #fff }
-.lp-btn:hover:not(.lp-on) { color: var(--ash); background: rgba(255,255,255,0.08) }
+.lp-btn:hover:not(.lp-on) { color: var(--t1); background: rgba(231,104,20,0.06) }
 
 /* ─── Shell (sidebar + content) ─────────────────────────────────────────── */
 .shell {
@@ -694,4 +693,40 @@ a { text-decoration: none; color: inherit }
 
 .popup-noise-list li + li {
   margin-top: 4px;
+}
+
+.price-marker {
+  position: relative;
+  display: inline-block;
+  background: #fff;
+  color: #1a1a2e;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 5px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transform: translate(-50%, -100%);
+}
+
+.price-marker::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #fff;
+  border-bottom: none;
+}
+
+.price-marker--active {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.price-marker--active::after {
+  border-top-color: #1a1a2e;
 }

@@ -780,12 +780,17 @@
   box-shadow: var(--shadow);
 }
 
-/* ── Find similar button ─────────────────────────────────────────────────── */
-.pp-similar-btn {
+/* ── Find similar buttons ────────────────────────────────────────────────── */
+.pp-similar-btn-group {
   position: absolute;
   top: 14px;
   left: 18px;
   z-index: 4;
+  display: flex;
+  gap: 6px;
+}
+
+.pp-similar-btn {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -812,6 +817,16 @@
 .pp-similar-btn:disabled {
   cursor: default;
   opacity: 0.75;
+}
+
+.pp-similar-btn.pp-similar-btn-active {
+  background: rgba(231, 104, 20, 0.72);
+  border-color: rgba(231, 104, 20, 0.6);
+}
+
+.pp-similar-btn.pp-similar-btn-active:hover:not(:disabled) {
+  background: rgba(231, 104, 20, 0.9);
+  border-color: rgba(231, 104, 20, 0.85);
 }
 
 .pp-similar-btn-spinner {
