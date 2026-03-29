@@ -27,7 +27,8 @@
       "Bash(/Users/charliegroves/dev/bath-hack-2026/backend/venv-embed/bin/python3 ml-training/infer_property.py --artifacts-dir ml-training/artifacts/latest)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(f\"\"{f[''''years_ahead'''']}yr: £{f[''''predicted_future_price_pence'''']//100:,}\"\"\\) for f in d[''''forecasts'''']]\")",
       "Bash(python3 -c \":*)",
-      "Bash(/Users/charliegroves/dev/bath-hack-2026/backend/venv-embed/bin/python3 -:*)"
+      "Bash(/Users/charliegroves/dev/bath-hack-2026/backend/venv-embed/bin/python3 -:*)",
+      "Bash(python3 -:*)"
     ]
   }
 }

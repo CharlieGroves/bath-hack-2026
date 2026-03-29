@@ -54,7 +54,6 @@ function AppHeader({ locationSearch, onLocationQueryChange, onApplyLocationSearc
           }}
           inputClassName="header-search"
           placeholder="Where would you like to live?"
-          theme="dark"
         />
       </div>
     </header>
@@ -203,15 +202,7 @@ function SearchPage({
         onBoundsChange={setMapBounds}
         onSelectProperty={id => navigate(`/properties/${id}`)}
         viewportError={viewportError}
-        locationSearchError={locationSearchError}
-        locationSearchLoading={locationSearchLoading}
-        locationSearch={locationSearchDraft}
         activeLocationSearch={activeLocationSearch}
-        onLocationQueryChange={value => onLocationSearchFieldChange('query', value)}
-        onTransportationTypeChange={value => onLocationSearchFieldChange('transportationType', value as TransportationType)}
-        onTravelTimeMinutesChange={value => onLocationSearchFieldChange('travelTimeMinutes', value)}
-        onApplyLocationSearch={onApplyLocationSearch}
-        onClearLocationSearch={onClearLocationSearch}
       />
     </div>
   )

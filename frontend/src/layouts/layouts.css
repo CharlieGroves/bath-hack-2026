@@ -111,11 +111,37 @@
 /* ─── Layout 2: Split map + list ─────────────────────────────────────────── */
 .l2-shell {
   display: flex;
+  flex-direction: column;
   flex: 1;
   width: 100%;
   min-width: 0;
   height: 100%;
   overflow: hidden;
+}
+
+.l2-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ─── Top filter bar (l2 layout) ─────────────────────────────────────────── */
+.l2-fb-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--t3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.l2-fb-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
 }
 
 .l2-sidebar {
@@ -516,6 +542,109 @@
 }
 .l2-filterbar::-webkit-scrollbar { display: none }
 
+.l2-fb-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--t2);
+  font-family: var(--ff-body);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+.l2-fb-toggle:hover { border-color: var(--ember); color: var(--ember) }
+.l2-fb-toggle.on { background: var(--ember); border-color: var(--ember); color: #fff }
+
+.l2-fb-input {
+  width: 88px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+  font-size: 0.8rem;
+  font-family: var(--ff-body);
+  color: var(--t1);
+  outline: none;
+  flex-shrink: 0;
+}
+.l2-fb-input:focus { border-color: var(--ember) }
+.l2-fb-input::placeholder { color: var(--t4) }
+
+.l2-fb-dash {
+  color: var(--t4);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.l2-fb-pills {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.l2-fb-pill {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--white);
+  font-size: 0.76rem;
+  font-family: var(--ff-body);
+  color: var(--t2);
+  white-space: nowrap;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.l2-fb-pill:hover:not(.on) { border-color: var(--flame); color: var(--ember) }
+.l2-fb-pill.on { background: var(--ember); border-color: var(--ember); color: #fff; font-weight: 600 }
+
+.l2-fb-reset {
+  padding: 4px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: none;
+  font-size: 0.75rem;
+  font-family: var(--ff-body);
+  color: var(--t3);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+.l2-fb-reset:hover { border-style: solid; border-color: var(--coal); color: var(--coal) }
+
+.l2-fb-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.l2-fb-count {
+  font-size: 0.78rem;
+  color: var(--t3);
+  white-space: nowrap;
+}
+
+.l2-fb-sort {
+  height: 30px;
+  padding: 0 9px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-family: var(--ff-body);
+  color: var(--t2);
+  outline: none;
+  cursor: pointer;
+}
+.l2-fb-sort:hover { border-color: var(--ember) }
+
 .l2-list {
   flex: 1;
   overflow-y: auto;
@@ -604,6 +733,21 @@
   font-size: 0.71rem;
   color: var(--t3);
 }
+
+.l2-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 5px;
+  padding: 2px 6px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--t4);
+  cursor: pointer;
+  font-size: 0.68rem;
+  transition: border-color 0.12s, color 0.12s;
+}
+.l2-expand-btn:hover { border-color: var(--ember); color: var(--ember) }
 
 .l2-badge {
   align-self: center;
