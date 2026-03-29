@@ -1,0 +1,3 @@
+# For scripts/embed_mpnet.py (property description embeddings)
+sentence-transformers>=2.2.0
+torch

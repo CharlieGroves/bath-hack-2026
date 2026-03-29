@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_220000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_28_250000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -132,6 +132,29 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_220000) do
     t.index ["property_id"], name: "index_property_crime_snapshots_on_property_id", unique: true
   end
 
+  create_table "property_description_embeddings", force: :cascade do |t|
+    t.bigint "property_id", null: false
+    t.jsonb "embedding", default: [], null: false
+    t.string "embedding_model", null: false
+    t.string "fingerprint", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["property_id"], name: "index_property_description_embeddings_on_property_id", unique: true
+  end
+
+  create_table "property_image_embeddings", force: :cascade do |t|
+    t.bigint "property_id", null: false
+    t.integer "position", null: false
+    t.text "source_url", null: false
+    t.jsonb "embedding", default: [], null: false
+    t.string "embedding_model", null: false
+    t.string "fingerprint", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["property_id", "position"], name: "index_property_image_embeddings_on_property_and_position", unique: true
+    t.index ["property_id"], name: "index_property_image_embeddings_on_property_id"
+  end
+
   create_table "property_images", force: :cascade do |t|
     t.bigint "property_id", null: false
     t.string "url", null: false
@@ -174,6 +197,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_220000) do
   add_foreign_key "properties", "estate_agents"
   add_foreign_key "properties", "flood_risk_datapoints"
   add_foreign_key "property_crime_snapshots", "properties"
+  add_foreign_key "property_description_embeddings", "properties"
+  add_foreign_key "property_image_embeddings", "properties"
   add_foreign_key "property_images", "properties"
   add_foreign_key "property_nearest_stations", "properties"
   add_foreign_key "property_transport_snapshots", "properties"

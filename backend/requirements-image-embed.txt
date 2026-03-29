@@ -1,0 +1,6 @@
+# For scripts/embed_openclip_images.py (OpenCLIP ViT-L/14 image embeddings)
+open-clip-torch
+torch
+torchvision
+pillow
+requests
