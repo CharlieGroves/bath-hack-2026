@@ -24,8 +24,13 @@ Rails.application.routes.draw do
           get :search
           get :heatmap
         end
+        member do
+          get :xray
+        end
       end
       resources :air_quality_stations, only: [:show]
+      resources :flood_risk_datapoints, only: [:show]
+      resources :boroughs, only: [:show]
     end
   end
 end

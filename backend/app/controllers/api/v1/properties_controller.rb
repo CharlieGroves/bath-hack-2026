@@ -2,7 +2,7 @@ module Api
   module V1
     class PropertiesController < ApplicationController
       skip_before_action :verify_authenticity_token
-      before_action :set_property, only: %i[show update destroy]
+      before_action :set_property, only: %i[show update destroy xray]
 
       # GET /api/v1/properties
       def index
@@ -51,6 +51,16 @@ module Api
         render json: property_detail(@property)
       end
 
+      # GET /api/v1/properties/:id/xray
+      def xray
+        result = PropertyXrayService.new(@property).call
+        render json: result
+      rescue TravelTimeGateway::ConfigError => e
+        render json: { error: e.message }, status: :service_unavailable
+      rescue TravelTimeGateway::RequestError => e
+        render json: { error: e.message }, status: :bad_gateway
+      end
+
       # POST /api/v1/properties
       def create
         property = Property.create!(property_params)
@@ -73,7 +83,7 @@ module Api
 
       def set_property
         @property = Property
-          .includes(:property_nearest_stations, :area_price_growth, :property_transport_snapshot, :air_quality_station)
+          .includes(:property_nearest_stations, :area_price_growth, :property_transport_snapshot, :air_quality_station, :estate_agent)
           .friendly.find(params[:id])
       end
 
@@ -94,7 +104,7 @@ module Api
       end
 
       def base_properties
-        Property.includes(:property_transport_snapshot, :property_crime_snapshot, :property_nearest_stations, :air_quality_station)
+        Property.includes(:property_transport_snapshot, :property_crime_snapshot, :property_nearest_stations, :air_quality_station, :flood_risk_datapoint, :estate_agent)
           .order(created_at: :desc)
       end
 
@@ -107,6 +117,7 @@ module Api
         properties = properties.min_beds(params[:min_beds].to_i)             if params[:min_beds].present?
         properties = properties.max_beds(params[:max_beds].to_i)             if params[:max_beds].present?
         properties = properties.max_daqi(params[:max_daqi].to_i)             if params[:max_daqi].present?
+        properties = properties.max_flood_risk_band(params[:max_flood_risk_band].to_i) if params[:max_flood_risk_band].present?
 
         if params[:sw_lat].present? && params[:sw_lng].present? &&
            params[:ne_lat].present? && params[:ne_lng].present?
@@ -158,12 +169,14 @@ module Api
           noise:            noise_payload(property.property_transport_snapshot),
           crime:            crime_payload(property.property_crime_snapshot),
           air_quality:      air_quality_payload(property.air_quality_station),
+          flood_risk:       flood_risk_payload(property.flood_risk_datapoint),
           nearest_stations: property.property_nearest_stations.sort_by(&:distance_miles).map { |station|
             {
               name: station.name,
               distance_miles: station.distance_miles,
               walking_minutes: station.walking_minutes,
-              transport_type: station.transport_type
+              transport_type: station.transport_type,
+              termini: station.termini
             }
           }
         }
@@ -183,6 +196,7 @@ module Api
           photo_urls: property.photo_urls, key_features: property.key_features,
           latitude: property.latitude, longitude: property.longitude,
           agent_name: property.agent_name, agent_phone: property.agent_phone,
+          estate_agent: estate_agent_payload(property.estate_agent),
           status: property.status, listed_at: property.listed_at,
           noise: noise_payload(property.property_transport_snapshot),
           nearest_stations: property.property_nearest_stations
@@ -192,12 +206,23 @@ module Api
                 name: station.name,
                 distance_miles: station.distance_miles,
                 walking_minutes: station.walking_minutes,
-                transport_type: station.transport_type
+                transport_type: station.transport_type,
+                termini: station.termini
               }
             },
           area_price_growth: area_price_growth_payload(property.area_price_growth),
           air_quality:       air_quality_payload(property.air_quality_station),
           ml_forecast:       Ml::HousePriceForecastService.new(property).call
+        }
+      end
+
+      def estate_agent_payload(estate_agent)
+        return nil unless estate_agent
+
+        {
+          display_name: estate_agent.display_name,
+          rating: estate_agent.rating&.to_f,
+          google_place_id: estate_agent.google_place_id
         }
       end
 
@@ -237,6 +262,11 @@ module Api
       def air_quality_payload(station)
         return nil unless station&.daqi_index
         { daqi_index: station.daqi_index, daqi_band: station.daqi_band, station_name: station.name }
+      end
+
+      def flood_risk_payload(datapoint)
+        return nil unless datapoint
+        { risk_level: datapoint.risk_level, risk_band: datapoint.risk_band }
       end
     end
   end
