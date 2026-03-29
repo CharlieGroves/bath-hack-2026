@@ -199,7 +199,7 @@ interface Props {
   activeLocationSearch: ActiveLocationSearch | null
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '', minAgentRating: '', sharedOwnershipOnly: false }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '', minAgentRating: '', sharedOwnershipFilter: 'exclude' }
 
 const STATION_MINUTE_OPTIONS = [
   { value: 0,  label: 'Any' },
@@ -310,20 +310,28 @@ export default function LayoutSplit({
           <span className="l2-fb-label">Ownership</span>
           <div className="l2-fb-pills">
             <button
+              key="ownership_exclude"
+              type="button"
+              className={`l2-fb-pill${filters.sharedOwnershipFilter === 'exclude' ? ' on' : ''}`}
+              onClick={() => setF('sharedOwnershipFilter', 'exclude')}
+            >
+              No % share
+            </button>
+            <button
               key="ownership_any"
               type="button"
-              className={`l2-fb-pill${!filters.sharedOwnershipOnly ? ' on' : ''}`}
-              onClick={() => setF('sharedOwnershipOnly', false)}
+              className={`l2-fb-pill${filters.sharedOwnershipFilter === 'any' ? ' on' : ''}`}
+              onClick={() => setF('sharedOwnershipFilter', 'any')}
             >
               Any
             </button>
             <button
               key="ownership_share"
               type="button"
-              className={`l2-fb-pill${filters.sharedOwnershipOnly ? ' on' : ''}`}
-              onClick={() => setF('sharedOwnershipOnly', true)}
+              className={`l2-fb-pill${filters.sharedOwnershipFilter === 'only' ? ' on' : ''}`}
+              onClick={() => setF('sharedOwnershipFilter', 'only')}
             >
-              % share
+              % share only
             </button>
           </div>
 
