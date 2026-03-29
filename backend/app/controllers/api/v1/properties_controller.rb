@@ -14,7 +14,9 @@ module Api
         result = PropertyLocationSearch.new(scope: filtered_properties).call(
           query: params[:query],
           transportation_type: params[:transportation_type],
-          travel_time: travel_time_seconds
+          travel_time: travel_time_seconds,
+          latitude: params[:lat],
+          longitude: params[:lng]
         )
 
         render json: collection_payload(result.fetch(:properties)).merge(
@@ -29,9 +31,11 @@ module Api
              PropertyLocationSearch::InvalidTransportationType,
              PropertyLocationSearch::InvalidTravelTime => e
         render json: { error: e.message }, status: :unprocessable_entity
-      rescue NominatimGeocoder::LocationNotFound => e
+      rescue NominatimGeocoder::LocationNotFound,
+             TravelTimeGeocoder::LocationNotFound => e
         render json: { error: e.message }, status: :not_found
       rescue NominatimGeocoder::RequestError,
+             TravelTimeGeocoder::RequestError,
              TravelTimeGateway::RequestError => e
         render json: { error: e.message }, status: :bad_gateway
       rescue TravelTimeGateway::ConfigError => e

@@ -14,6 +14,8 @@ export interface LocationSearchParams {
   query: string
   transportationType: TransportationType
   travelTimeMinutes: number
+  latitude?: number | null
+  longitude?: number | null
 }
 
 export interface ActiveLocationSearch {
@@ -56,6 +58,8 @@ export function useProperties(
   const searchQuery = locationSearchParams?.query ?? ''
   const transportationType = locationSearchParams?.transportationType
   const travelTimeMinutes = locationSearchParams?.travelTimeMinutes
+  const searchLatitude = locationSearchParams?.latitude ?? null
+  const searchLongitude = locationSearchParams?.longitude ?? null
 
   useEffect(() => {
     const trimmedQuery = searchQuery.trim()
@@ -119,6 +123,11 @@ export function useProperties(
       travel_time_minutes: String(travelTimeMinutes!),
     })
 
+    if (searchLatitude != null && searchLongitude != null) {
+      params.set('lat', String(searchLatitude))
+      params.set('lng', String(searchLongitude))
+    }
+
     fetch(`/api/v1/properties/search?${params}`, { signal: abortRef.current.signal })
       .then(async res => {
         const payload = await res.json().catch(() => null)
@@ -153,7 +162,7 @@ export function useProperties(
       cancelled = true
       abortRef.current?.abort()
     }
-  }, [searchQuery, transportationType, travelTimeMinutes])
+  }, [searchQuery, transportationType, travelTimeMinutes, searchLatitude, searchLongitude])
 
   return { properties, total, loading, error, activeLocationSearch }
 }

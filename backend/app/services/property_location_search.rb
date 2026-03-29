@@ -11,21 +11,25 @@ class PropertyLocationSearch
   class InvalidTravelTime < Error; end
 
   def initialize(scope: Property.all,
-                 geocoder: NominatimGeocoder.new,
+                 geocoder: TravelTimeGeocoder.new,
                  travel_time_gateway: TravelTimeGateway.new)
     @scope = scope
     @geocoder = geocoder
     @travel_time_gateway = travel_time_gateway
   end
 
-  def call(query:, transportation_type: DEFAULT_TRANSPORTATION_TYPE, travel_time: DEFAULT_TRAVEL_TIME)
+  def call(query:, transportation_type: DEFAULT_TRANSPORTATION_TYPE, travel_time: DEFAULT_TRAVEL_TIME, latitude: nil, longitude: nil)
     normalized_query = query.to_s.strip
     raise InvalidQuery, "Query can't be blank" if normalized_query.blank?
 
     normalized_transportation_type = normalize_transportation_type(transportation_type)
     normalized_travel_time = normalize_travel_time(travel_time)
 
-    location = @geocoder.search!(normalized_query)
+    location = if latitude.present? && longitude.present?
+                 { latitude: latitude.to_f, longitude: longitude.to_f, label: normalized_query }
+               else
+                 @geocoder.search!(normalized_query)
+               end
     isochrone = @travel_time_gateway.isochrone!(
       latitude: location.fetch(:latitude),
       longitude: location.fetch(:longitude),

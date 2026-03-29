@@ -70,7 +70,7 @@ function ModelSearchIndicator({
 interface AppHeaderProps {
   locationSearch: LocationSearchParams
   onLocationQueryChange: (value: string) => void
-  onApplyLocationSearch: (queryOverride?: string) => boolean
+  onApplyLocationSearch: (queryOverride?: string, coords?: { latitude: number; longitude: number } | null) => boolean
   onModelSearch: (prompt: string) => void
   onClearModelSearch: () => void
   modelSearchStatus: ModelSearchStatus
@@ -115,7 +115,10 @@ function AppHeader({
           }}
           onSelect={suggestion => {
             onClearModelSearch()
-            if (onApplyLocationSearch(suggestion.label)) navigate('/')
+            const coords = suggestion.latitude != null && suggestion.longitude != null
+              ? { latitude: suggestion.latitude, longitude: suggestion.longitude }
+              : null
+            if (onApplyLocationSearch(suggestion.label, coords)) navigate('/')
           }}
           inputClassName="header-search"
           placeholder="Describe your ideal home, or pick a location below"
@@ -159,6 +162,8 @@ const DEFAULT_LOCATION_SEARCH: LocationSearchParams = {
   query: '',
   transportationType: 'driving',
   travelTimeMinutes: 15,
+  latitude: null,
+  longitude: null,
 }
 
 type SortKey = 'price_asc' | 'price_desc' | 'beds_asc' | 'beds_desc' | 'newest'
@@ -167,7 +172,7 @@ interface SearchPageProps {
   locationSearchDraft: LocationSearchParams
   appliedLocationSearch: LocationSearchParams | null
   onLocationSearchFieldChange: <K extends keyof LocationSearchParams>(key: K, value: LocationSearchParams[K]) => void
-  onApplyLocationSearch: (queryOverride?: string) => boolean
+  onApplyLocationSearch: (queryOverride?: string, coords?: { latitude: number; longitude: number } | null) => boolean
   onClearLocationSearch: () => void
   modelSearchActive: boolean
   modelSearchProperties: Property[]
@@ -329,24 +334,26 @@ export default function App() {
   const modelSearch = useModelSearch()
 
   function setLocationSearchField<K extends keyof LocationSearchParams>(key: K, value: LocationSearchParams[K]) {
-    setLocationSearchDraft(current => ({ ...current, [key]: value }))
+    setLocationSearchDraft(current => {
+      const next = { ...current, [key]: value }
+      if (key === 'query') { next.latitude = null; next.longitude = null }
+      return next
+    })
     if (key !== 'query') {
       setAppliedLocationSearch(current => current === null ? null : { ...current, [key]: value })
     }
   }
 
-  function applyLocationSearch(queryOverride?: string) {
+  function applyLocationSearch(queryOverride?: string, coords?: { latitude: number; longitude: number } | null) {
     const query = (queryOverride ?? locationSearchDraft.query).trim()
     if (!query) {
       setAppliedLocationSearch(null)
       return false
     }
 
-    setLocationSearchDraft(current => ({ ...current, query }))
-    setAppliedLocationSearch({
-      ...locationSearchDraft,
-      query,
-    })
+    const next: LocationSearchParams = { ...locationSearchDraft, query, latitude: coords?.latitude ?? null, longitude: coords?.longitude ?? null }
+    setLocationSearchDraft(next)
+    setAppliedLocationSearch(next)
     return true
   }
 

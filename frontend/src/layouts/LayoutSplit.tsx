@@ -200,7 +200,7 @@ interface Props {
   activeLocationSearch: ActiveLocationSearch | null
   locationSearchDraft: LocationSearchParams
   onLocationSearchFieldChange: <K extends keyof LocationSearchParams>(key: K, value: LocationSearchParams[K]) => void
-  onApplyLocationSearch: (queryOverride?: string) => boolean
+  onApplyLocationSearch: (queryOverride?: string, coords?: { latitude: number; longitude: number } | null) => boolean
   onClearLocationSearch: () => void
 }
 
@@ -432,7 +432,12 @@ export default function LayoutSplit({
             <LocationAutocompleteInput
               value={locationSearchDraft.query}
               onChange={q => onLocationSearchFieldChange('query', q)}
-              onSelect={suggestion => onApplyLocationSearch(suggestion.label)}
+              onSelect={suggestion => {
+                const coords = suggestion.latitude != null && suggestion.longitude != null
+                  ? { latitude: suggestion.latitude, longitude: suggestion.longitude }
+                  : null
+                onApplyLocationSearch(suggestion.label, coords)
+              }}
               onEnter={() => { if (locationSearchDraft.query.trim()) onApplyLocationSearch() }}
               placeholder="Any location"
               inputClassName="l2-fb-input"
