@@ -39,56 +39,105 @@ module Api
       end
 
       # GET /api/v1/properties/similar_by_image?property_id=&position=0&k=20
-      # k-ANN vs stored image embeddings (pgvector HNSW + cosine). Requires pgvector migration + embeddings.
+      # Optional: text_query=…&text_weight=0.35 — re-rank image k-ANN candidates using description
+      # embedding similarity (same model as +PropertyDescriptionEmbedder+, default MiniLM-L6-v2).
       def similar_by_image
         pid = params.require(:property_id).to_i
         pos = params.fetch(:position, 0).to_i
         k   = [[params.fetch(:k, 20).to_i, 1].max, 50].min
+        text_query = params[:text_query].to_s.strip
+        text_w = params.fetch(:text_weight, 0.35).to_f.clamp(0.0, 1.0)
 
-        hits = PropertyImageEmbeddingSearch.similar_properties(property_id: pid, position: pos, limit: k)
+        hits =
+          if text_query.present? && text_w.positive?
+            PropertyHybridImageTextRanking.for_per_image(
+              property_id: pid,
+              position: pos,
+              text_query: text_query,
+              limit: k,
+              text_weight: text_w
+            )
+          else
+            PropertyImageEmbeddingSearch.similar_properties(property_id: pid, position: pos, limit: k)
+          end
+
         props = Property.where(id: hits.map { |h| h[:property_id] }).index_by(&:id)
 
         render json: {
-          anchor: { property_id: pid, position: pos },
+          anchor: {
+            property_id: pid,
+            position: pos,
+            **(text_query.present? && text_w.positive? ? { text_query: text_query, text_weight: text_w } : {})
+          },
           matches: hits.map { |h|
             p = props[h[:property_id]]
             next unless p
 
-            property_summary(p).merge(
+            row = property_summary(p).merge(
               image_similarity_distance: h[:neighbor_distance],
               matched_image_position: h[:image_position]
             )
+            if h.key?(:hybrid_distance)
+              row[:description_query_distance] = h[:description_query_distance]
+              row[:hybrid_distance] = h[:hybrid_distance]
+            end
+            row
           }.compact
         }
       rescue PropertyImageEmbeddingSearch::AnchorMissingError,
              PropertyImageEmbeddingSearch::VectorMissingError => e
         render json: { error: e.message }, status: :not_found
+      rescue PropertyDescriptionEmbedder::Error => e
+        render json: { error: e.message }, status: :unprocessable_entity
       end
 
       # GET /api/v1/properties/similar_by_image_maxpool?property_id=&k=20
-      # k-ANN vs +image_embeddings_maxpool_vector+ (cosine). Anchor is the whole listing, not a single photo.
+      # Optional: text_query=…&text_weight=0.35 — same hybrid re-ranking as +similar_by_image+.
       def similar_by_image_maxpool
         pid = params.require(:property_id).to_i
         k   = [[params.fetch(:k, 20).to_i, 1].max, 50].min
+        text_query = params[:text_query].to_s.strip
+        text_w = params.fetch(:text_weight, 0.35).to_f.clamp(0.0, 1.0)
 
-        hits = PropertyImageMaxpoolSearch.similar_properties(property_id: pid, limit: k)
+        hits =
+          if text_query.present? && text_w.positive?
+            PropertyHybridImageTextRanking.for_maxpool(
+              property_id: pid,
+              text_query: text_query,
+              limit: k,
+              text_weight: text_w
+            )
+          else
+            PropertyImageMaxpoolSearch.similar_properties(property_id: pid, limit: k)
+          end
+
         props = Property.where(id: hits.map { |h| h[:property_id] }).index_by(&:id)
 
         render json: {
           mode: "maxpool",
-          anchor: { property_id: pid },
+          anchor: {
+            property_id: pid,
+            **(text_query.present? && text_w.positive? ? { text_query: text_query, text_weight: text_w } : {})
+          },
           matches: hits.map { |h|
             p = props[h[:property_id]]
             next unless p
 
-            property_summary(p).merge(
+            row = property_summary(p).merge(
               pooled_image_similarity_distance: h[:neighbor_distance]
             )
+            if h.key?(:hybrid_distance)
+              row[:description_query_distance] = h[:description_query_distance]
+              row[:hybrid_distance] = h[:hybrid_distance]
+            end
+            row
           }.compact
         }
       rescue PropertyImageMaxpoolSearch::AnchorMissingError,
              PropertyImageMaxpoolSearch::VectorMissingError => e
         render json: { error: e.message }, status: :not_found
+      rescue PropertyDescriptionEmbedder::Error => e
+        render json: { error: e.message }, status: :unprocessable_entity
       end
 
       # GET /api/v1/properties/heatmap

@@ -2,14 +2,14 @@ require "digest"
 require "json"
 require "open3"
 
-# Runs +scripts/embed_mpnet.py+ (Sentence Transformers) to produce a 768-d vector for
-# +sentence-transformers/all-mpnet-base-v2+.
+# Runs +scripts/embed_mpnet.py+ (Sentence Transformers) to produce a vector for the configured model.
+# Default: +sentence-transformers/all-MiniLM-L6-v2+ (384-d, L2-normalized in the Python script).
 #
 # Requires Python 3 with: pip install -r requirements-embed.txt
 # Override interpreter: ENV["PYTHON_BIN"] (default +python3+).
 class PropertyDescriptionEmbedder
-  MODEL_ID = "sentence-transformers/all-mpnet-base-v2".freeze
-  EXPECTED_DIM = 768
+  MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2".freeze
+  EXPECTED_DIM = 384
 
   class Error < StandardError; end
 
