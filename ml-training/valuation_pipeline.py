@@ -87,8 +87,6 @@ NUMERIC_FEATURES = [
     "bathrooms_per_bedroom",
     "lease_years_remaining",
     "service_charge_annual_pence",
-    "latitude",
-    "longitude",
     "photo_count",
     "key_feature_count",
     "description_word_count",
@@ -171,8 +169,6 @@ DISPLAY_LABELS = {
     "bathrooms_per_bedroom": "Bathrooms per bedroom",
     "lease_years_remaining": "Lease years remaining",
     "service_charge_annual_pence": "Service charge",
-    "latitude": "Latitude",
-    "longitude": "Longitude",
     "photo_count": "Photo count",
     "key_feature_count": "Key feature count",
     "description_word_count": "Description length",
@@ -296,18 +292,39 @@ def cached_hpi_context() -> dict[str, Any]:
 
 def resolved_hpi_area_slug(record: dict[str, Any]) -> str:
     hpi_context = cached_hpi_context()
+    area_slugs = set(hpi_context.get("area_name_by_slug", {}).keys())
+    area_price_growth = record.get("area_price_growth") or {}
+    borough = record.get("borough") or {}
+    postcode_outward = extract_outward_code(record.get("postcode"), (record.get("raw_address") or {}).get("outcode"))
+
+    direct_candidates = [
+        str(area_price_growth.get("area_slug") or "").strip().upper().replace(" ", "_"),
+        str(borough.get("name") or "").strip().upper().replace(" ", "_"),
+    ]
+    for candidate in direct_candidates:
+        if candidate and candidate in area_slugs:
+            return candidate
+
     area_slug = match_area_slug_from_texts(
         [
             record.get("town"),
             record.get("postcode"),
+            postcode_outward,
             (record.get("raw_address") or {}).get("display_address"),
             (record.get("raw_address") or {}).get("outcode"),
             (record.get("raw_address") or {}).get("town"),
             record.get("address_line_1"),
+            area_price_growth.get("area_name"),
+            area_price_growth.get("area_slug"),
+            borough.get("name"),
         ],
-        set(hpi_context.get("area_name_by_slug", {}).keys()),
+        area_slugs,
     )
-    return area_slug or "unknown"
+    if area_slug:
+        return area_slug
+    if "london" in area_slugs:
+        return "london"
+    return "unknown"
 
 
 def latest_hpi_features(record: dict[str, Any]) -> dict[str, float | str | None]:
@@ -546,8 +563,6 @@ def build_valuation_row(record: dict[str, Any], include_target: bool = True) -> 
         "bathrooms_per_bedroom": (bathrooms / bedrooms) if bathrooms is not None and bedrooms else None,
         "lease_years_remaining": parse_number(record.get("lease_years_remaining")),
         "service_charge_annual_pence": parse_number(record.get("service_charge_annual_pence")),
-        "latitude": parse_number(record.get("latitude")),
-        "longitude": parse_number(record.get("longitude")),
         "photo_count": float(len(record.get("photo_urls") or [])),
         "key_feature_count": float(len(record.get("key_features") or [])),
         "description_word_count": float(len(re.findall(r"\w+", str(record.get("description") or "")))),
