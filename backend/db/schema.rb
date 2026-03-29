@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_29_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_29_153000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
   enable_extension "vector"
@@ -129,6 +129,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_100000) do
     t.bigint "flood_risk_datapoint_id"
     t.bigint "estate_agent_id"
     t.bigint "borough_id"
+    t.boolean "is_shared_ownership", default: false, null: false
     t.index ["air_quality_station_id"], name: "index_properties_on_air_quality_station_id"
     t.index ["area_price_growth_id"], name: "index_properties_on_area_price_growth_id"
     t.index ["bedrooms"], name: "index_properties_on_bedrooms"
@@ -142,6 +143,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_100000) do
     t.index ["price_pence"], name: "index_properties_on_price_pence"
     t.index ["property_type"], name: "index_properties_on_property_type"
     t.index ["rightmove_id"], name: "index_properties_on_rightmove_id", unique: true
+    t.index ["is_shared_ownership"], name: "index_properties_on_is_shared_ownership"
     t.index ["slug"], name: "index_properties_on_slug", unique: true
     t.index ["status", "property_type", "price_pence"], name: "index_properties_on_status_and_property_type_and_price_pence"
     t.index ["status"], name: "index_properties_on_status"

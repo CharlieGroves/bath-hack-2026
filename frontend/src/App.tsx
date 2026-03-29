@@ -150,9 +150,10 @@ export interface Filters {
   maxRailNoiseLden:   number | ''
   maxFlightNoiseLden: number | ''
   minAgentRating:     number | ''
+  sharedOwnershipOnly: boolean
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '', minAgentRating: '' }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '', minAgentRating: '', sharedOwnershipOnly: false }
 const DEFAULT_LOCATION_SEARCH: LocationSearchParams = {
   query: '',
   transportationType: 'driving',
@@ -251,6 +252,7 @@ function SearchPage({
         const rating = p.estate_agent?.rating
         if (rating == null || rating < (filters.minAgentRating as number)) return false
       }
+      if (filters.sharedOwnershipOnly && !p.is_shared_ownership) return false
       return true
     })
     return [...result].sort((a: Property, b: Property) => {

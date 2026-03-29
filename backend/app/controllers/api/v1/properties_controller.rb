@@ -174,6 +174,7 @@ module Api
         properties = properties.max_road_noise_lden(params[:max_road_noise_lden].to_f)   if params[:max_road_noise_lden].present?
         properties = properties.max_rail_noise_lden(params[:max_rail_noise_lden].to_f)   if params[:max_rail_noise_lden].present?
         properties = properties.max_flight_noise_lden(params[:max_flight_noise_lden].to_f) if params[:max_flight_noise_lden].present?
+        properties = properties.with_shared_ownership(params[:is_shared_ownership]) if params[:is_shared_ownership].present?
 
         if params[:sw_lat].present? && params[:sw_lng].present? &&
            params[:ne_lat].present? && params[:ne_lng].present?
@@ -226,6 +227,7 @@ module Api
           crime:            crime_payload(property.property_crime_snapshot),
           air_quality:      air_quality_payload(property.air_quality_station),
           flood_risk:       flood_risk_payload(property.flood_risk_datapoint),
+          is_shared_ownership: property.is_shared_ownership,
           nearest_stations: property.property_nearest_stations.sort_by(&:distance_miles).map { |station|
             {
               name: station.name,
@@ -269,6 +271,7 @@ module Api
             },
           area_price_growth: area_price_growth_payload(property.area_price_growth),
           air_quality:       air_quality_payload(property.air_quality_station),
+          is_shared_ownership: property.is_shared_ownership,
           ml_forecast:       Ml::HousePriceForecastService.new(property).call,
           ml_valuation:      Ml::HousePriceValuationService.new(property).call
         }

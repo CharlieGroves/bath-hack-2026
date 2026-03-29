@@ -199,7 +199,7 @@ interface Props {
   activeLocationSearch: ActiveLocationSearch | null
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '', minAgentRating: '' }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '', minAgentRating: '', sharedOwnershipOnly: false }
 
 const STATION_MINUTE_OPTIONS = [
   { value: 0,  label: 'Any' },
@@ -304,6 +304,27 @@ export default function LayoutSplit({
                 {v === '' ? 'Any' : `${v}+`}
               </button>
             ))}
+          </div>
+
+          <div className="l2-fb-sep" />
+          <span className="l2-fb-label">Ownership</span>
+          <div className="l2-fb-pills">
+            <button
+              key="ownership_any"
+              type="button"
+              className={`l2-fb-pill${!filters.sharedOwnershipOnly ? ' on' : ''}`}
+              onClick={() => setF('sharedOwnershipOnly', false)}
+            >
+              Any
+            </button>
+            <button
+              key="ownership_share"
+              type="button"
+              className={`l2-fb-pill${filters.sharedOwnershipOnly ? ' on' : ''}`}
+              onClick={() => setF('sharedOwnershipOnly', true)}
+            >
+              % share
+            </button>
           </div>
 
           <div className="l2-fb-sep" />
