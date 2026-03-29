@@ -549,6 +549,9 @@ function AgentCard({ property }: { property: PropertyDetail }) {
     <div className="pp-agent-card">
       <div className="pp-agent-label">Listed by</div>
       {property.agent_name && <div className="pp-agent-name">{property.agent_name}</div>}
+      {property.estate_agent?.rating != null && (
+        <div className="pp-agent-rating">{property.estate_agent.rating.toFixed(1)} / 5 on Google</div>
+      )}
       {property.agent_phone && (
         <a className="pp-agent-phone" href={`tel:${property.agent_phone}`}>
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">

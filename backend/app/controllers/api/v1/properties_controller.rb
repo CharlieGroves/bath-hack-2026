@@ -208,7 +208,8 @@ module Api
               transport_type: station.transport_type,
               termini: station.termini
             }
-          }
+          },
+          estate_agent: estate_agent_payload(property.estate_agent)
         }
       end
 
