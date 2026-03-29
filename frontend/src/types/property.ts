@@ -50,6 +50,12 @@ export interface AreaPriceGrowth {
   yearly_growth_data: Record<string, YearlyGrowthEntry>
 }
 
+export interface EstateAgent {
+  display_name: string | null
+  rating: number | null
+  google_place_id: string | null
+}
+
 export interface MlPredictionInterval {
   lower_pence: number
   upper_pence: number
@@ -112,6 +118,7 @@ export interface PropertyDetail {
   longitude: number | null
   agent_name: string | null
   agent_phone: string | null
+  estate_agent: EstateAgent | null
   status: string
   listed_at: string | null
   noise: PropertyNoise | null
@@ -142,4 +149,5 @@ export interface Property {
   air_quality: AirQuality | null
   flood_risk: FloodRisk | null
   nearest_stations: NearestStation[]
+  estate_agent: EstateAgent | null
 }

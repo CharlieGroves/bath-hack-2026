@@ -215,7 +215,7 @@ interface Props {
   onClearLocationSearch: () => void
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '' }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '', minAgentRating: '' }
 
 const FLOOD_RISK_LABELS: Record<number, string> = { 1: 'Very Low', 2: 'Low', 3: 'Medium', 4: 'High' }
 
@@ -687,6 +687,25 @@ export default function LayoutSplit({
           <div className="l2-sb-slider-range">
             <span>{NOISE_MIN_DB} dB (quiet)</span>
             <span>{NOISE_MAX_DB} dB (loud)</span>
+          </div>
+        </div>
+
+        <div className="l2-sb-section">
+          <div className="l2-sb-slider-header">
+            <span className="l2-sb-label" style={{ marginBottom: 0 }}>Agent rating (Google)</span>
+            <span className="l2-sb-slider-value">
+              {filters.minAgentRating === '' ? 'Any' : `${filters.minAgentRating}+`}
+            </span>
+          </div>
+          <div className="l2-sb-pills">
+            {(['', 3, 3.5, 4, 4.5] as (number | '')[]).map(v => (
+              <button
+                key={String(v)}
+                type="button"
+                className={`l2-sb-pill${filters.minAgentRating === v ? ' on' : ''}`}
+                onClick={() => setF('minAgentRating', filters.minAgentRating === v ? '' : v)}
+              >{v === '' ? 'Any' : `${v}+`}</button>
+            ))}
           </div>
         </div>
 

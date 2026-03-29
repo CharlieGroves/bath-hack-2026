@@ -78,9 +78,10 @@ export interface Filters {
   maxRoadNoiseLden:   number | ''
   maxRailNoiseLden:   number | ''
   maxFlightNoiseLden: number | ''
+  minAgentRating:     number | ''
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '' }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '', minAgentRating: '' }
 const DEFAULT_LOCATION_SEARCH: LocationSearchParams = {
   query: '',
   transportationType: 'driving',
@@ -158,6 +159,10 @@ function SearchPage({
       if (filters.maxFlightNoiseLden !== '') {
         const lden = p.noise?.flight_data?.metrics?.lden
         if (lden != null && lden > (filters.maxFlightNoiseLden as number)) return false
+      }
+      if (filters.minAgentRating !== '') {
+        const rating = p.estate_agent?.rating
+        if (rating == null || rating < (filters.minAgentRating as number)) return false
       }
       return true
     })
