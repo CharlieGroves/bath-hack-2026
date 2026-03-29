@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MapContainer, TileLayer, Marker } from 'react-leaflet'
+import { useNavigate } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import {
@@ -8,6 +9,8 @@ import {
 } from 'recharts'
 import { useProperty } from '../hooks/useProperty'
 import { useXray } from '../hooks/useXray'
+import { useSimilarByImage } from '../hooks/useSimilarByImage'
+import type { SimilarMatch } from '../hooks/useSimilarByImage'
 import type { PropertyDetail, AirQuality, YearlyGrowthEntry } from '../types/property'
 import XrayMap from './XrayMap'
 import './PropertyPage.css'
@@ -57,10 +60,14 @@ function HeroGallery({
   property,
   activePhoto,
   setActivePhoto,
+  onFindSimilar,
+  similarLoading,
 }: {
   property: PropertyDetail
   activePhoto: number
   setActivePhoto: (i: number) => void
+  onFindSimilar: () => void
+  similarLoading: boolean
 }) {
   const photos = property.photo_urls
 
@@ -96,6 +103,24 @@ function HeroGallery({
             </button>
           </>
         )}
+
+        <button
+          className={`pp-similar-btn${similarLoading ? ' pp-similar-btn-loading' : ''}`}
+          onClick={onFindSimilar}
+          disabled={similarLoading}
+          aria-label="Find visually similar properties"
+        >
+          {similarLoading ? (
+            <span className="pp-similar-btn-spinner" />
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M8.5 8.5L13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M3.5 5.5h4M5.5 3.5v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+          )}
+          Find similar
+        </button>
 
         <div className="pp-gallery-overlay">
           {photos.length > 1 && (
@@ -572,6 +597,76 @@ function LocationMap({ property }: { property: PropertyDetail }) {
   )
 }
 
+// ── Similar properties ──────────────────────────────────────────────────────────
+
+function SimilarPropertiesSection({
+  matches,
+  loading,
+  error,
+  onSelect,
+  onClose,
+}: {
+  matches: SimilarMatch[]
+  loading: boolean
+  error: string | null
+  onSelect: (id: number) => void
+  onClose: () => void
+}) {
+  if (!loading && !error && matches.length === 0) return null
+
+  return (
+    <section className="pp-similar-section">
+      <div className="pp-similar-header">
+        <h2 className="pp-section-heading" style={{ margin: 0 }}>Visually similar properties</h2>
+        <button className="pp-similar-close" onClick={onClose} aria-label="Close similar properties">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      {loading && (
+        <div className="pp-similar-state">
+          <span className="pp-similar-spinner" />
+          <span className="pp-similar-state-text">Searching for similar properties</span>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="pp-similar-state">
+          <span className="pp-similar-state-text pp-similar-error">
+            Could not find similar properties.
+          </span>
+        </div>
+      )}
+
+      {!loading && !error && matches.length > 0 && (
+        <div className="pp-similar-scroll">
+          {matches.map(m => (
+            <button key={m.id} className="pp-similar-card" onClick={() => onSelect(m.id)}>
+              <div className="pp-similar-card-img">
+                {m.photo_url
+                  ? <img src={m.photo_url} alt="" loading="lazy" />
+                  : <div className="pp-similar-card-img-empty" />
+                }
+              </div>
+              <div className="pp-similar-card-body">
+                <div className="pp-similar-card-price">
+                  {m.price != null ? '£' + Math.round(m.price / 100).toLocaleString('en-GB') : '—'}
+                </div>
+                <div className="pp-similar-card-address">{m.address}</div>
+                {m.bedrooms != null && (
+                  <div className="pp-similar-card-meta">{m.bedrooms} bed</div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface Props {
@@ -583,6 +678,20 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
   const { property, loading, error } = useProperty(propertyId)
   const { xray, loading: xrayLoading } = useXray(property ? property.id : null)
   const [activePhoto, setActivePhoto] = useState(0)
+  const { matches: similarMatches, loading: similarLoading, error: similarError, fetchSimilar, clear: clearSimilar } = useSimilarByImage()
+  const [similarVisible, setSimilarVisible] = useState(false)
+  const navigate = useNavigate()
+
+  function handleFindSimilar() {
+    if (!property) return
+    setSimilarVisible(true)
+    fetchSimilar(property.id, activePhoto)
+  }
+
+  function handleCloseSimilar() {
+    setSimilarVisible(false)
+    clearSimilar()
+  }
 
   if (loading) {
     return (
@@ -611,8 +720,19 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
         <HeroGallery
           property={property}
           activePhoto={activePhoto}
-          setActivePhoto={setActivePhoto}
+          setActivePhoto={i => { setActivePhoto(i); handleCloseSimilar() }}
+          onFindSimilar={handleFindSimilar}
+          similarLoading={similarLoading}
         />
+        {similarVisible && (
+          <SimilarPropertiesSection
+            matches={similarMatches}
+            loading={similarLoading}
+            error={similarError}
+            onSelect={id => navigate(`/properties/${id}`)}
+            onClose={handleCloseSimilar}
+          />
+        )}
         <div className="pp-body">
           <div className="pp-main">
             <CoreDetails property={property} />
