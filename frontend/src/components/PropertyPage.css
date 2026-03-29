@@ -819,13 +819,14 @@
   opacity: 0.75;
 }
 
-.pp-similar-btn-active {
+.pp-similar-btn.pp-similar-btn-active {
   background: rgba(231, 104, 20, 0.72);
   border-color: rgba(231, 104, 20, 0.6);
 }
 
-.pp-similar-btn-active:hover:not(:disabled) {
+.pp-similar-btn.pp-similar-btn-active:hover:not(:disabled) {
   background: rgba(231, 104, 20, 0.9);
+  border-color: rgba(231, 104, 20, 0.85);
 }
 
 .pp-similar-btn-spinner {
