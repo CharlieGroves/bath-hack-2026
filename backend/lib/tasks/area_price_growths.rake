@@ -24,5 +24,7 @@ namespace :auto_import do
   end
 end
 
-Rake::Task["db:migrate"].enhance(["auto_import:area_price_growths"])
-Rake::Task["db:prepare"].enhance(["auto_import:area_price_growths"])
+# Run after migrate so new columns/tables exist; avoid blocking every migrate with a heavy import first.
+Rake::Task["db:migrate"].enhance do
+  Rake::Task["auto_import:area_price_growths"].invoke
+end
