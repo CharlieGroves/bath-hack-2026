@@ -6,6 +6,7 @@ import math
 import os
 import pickle
 import re
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -24,13 +25,18 @@ from pipeline import (
     BACKEND_ROOT,
     DEFAULT_CURRENT_LISTINGS_PATH,
     PROJECT_ROOT,
+    build_hpi_context,
     extract_outward_code,
+    latest_hpi_record_for,
     make_preprocessor,
+    match_area_slug_from_texts,
     matrix_from_frame,
     parse_number,
+    property_type_key,
 )
 
 DEFAULT_VALUATION_DATASET_PATH = DEFAULT_CURRENT_LISTINGS_PATH
+DEFAULT_VALUATION_LIVE_DATASET_PATH = PROJECT_ROOT / "ml-training" / "data" / "properties_live.json"
 DEFAULT_VALUATION_ARTIFACTS_DIR = PROJECT_ROOT / "ml-training" / "artifacts" / "valuation" / "latest"
 INTEGRATED_GRADIENTS_STEPS = 48
 MIN_PREDICTED_LOG_PRICE = 14.0
@@ -92,6 +98,13 @@ NUMERIC_FEATURES = [
     "avg_monthly_crimes",
     "air_quality_daqi_index",
     "area_growth_latest_pct",
+    "hpi_local_avg_price_pence",
+    "hpi_local_yoy_pct",
+    "hpi_local_sales_volume",
+    "hpi_all_avg_price_pence",
+    "hpi_all_yoy_pct",
+    "price_vs_hpi_local_ratio",
+    "hpi_local_vs_all_ratio",
     "borough_nte_score",
     "borough_life_satisfaction_score",
     "borough_happiness_score",
@@ -129,13 +142,14 @@ CATEGORICAL_FEATURES = [
     "tenure",
     "postcode_outward",
     "town_slug",
+    "hpi_area_slug",
     "epc_rating",
     "council_tax_band",
 ]
 
 TARGET_NOTE = (
-    "Model trained on the current property dataset exported from Rails. It predicts the current fair-value "
-    "listing price from house characteristics and local context rather than future appreciation."
+    "Model trained on current London listing data. It predicts the current fair-value listing price "
+    "from structured house features and local market context rather than future appreciation."
 )
 
 DISPLAY_LABELS = {
@@ -168,6 +182,13 @@ DISPLAY_LABELS = {
     "avg_monthly_crimes": "Nearby crime rate",
     "air_quality_daqi_index": "Air quality index",
     "area_growth_latest_pct": "Area growth",
+    "hpi_local_avg_price_pence": "Local type average price",
+    "hpi_local_yoy_pct": "Local type YoY",
+    "hpi_local_sales_volume": "Local sales volume",
+    "hpi_all_avg_price_pence": "Local all-property average",
+    "hpi_all_yoy_pct": "Local all-property YoY",
+    "price_vs_hpi_local_ratio": "Listing vs local average",
+    "hpi_local_vs_all_ratio": "Local type vs all-property ratio",
     "borough_nte_score": "Borough NTE score",
     "borough_life_satisfaction_score": "Borough life satisfaction",
     "borough_happiness_score": "Borough happiness",
@@ -177,6 +198,7 @@ DISPLAY_LABELS = {
     "tenure": "Tenure",
     "postcode_outward": "Postcode area",
     "town_slug": "Town",
+    "hpi_area_slug": "Market area",
     "epc_rating": "EPC rating",
     "council_tax_band": "Council tax band",
     "has_floor_plan": "Has floor plan",
@@ -211,13 +233,15 @@ class HouseValuationNet(nn.Module):
     def __init__(self, input_dim: int) -> None:
         super().__init__()
         self.layers = nn.Sequential(
-            nn.Linear(input_dim, 96),
-            nn.ReLU(),
-            nn.Dropout(0.12),
-            nn.Linear(96, 48),
-            nn.ReLU(),
-            nn.Dropout(0.08),
-            nn.Linear(48, 1),
+            nn.Linear(input_dim, 192),
+            nn.GELU(),
+            nn.Dropout(0.04),
+            nn.Linear(192, 96),
+            nn.GELU(),
+            nn.Dropout(0.02),
+            nn.Linear(96, 32),
+            nn.GELU(),
+            nn.Linear(32, 1),
         )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
@@ -252,6 +276,61 @@ def latest_area_growth_pct(area_price_growth: dict[str, Any] | None) -> float | 
             latest_year = year_int
             latest_value = pct
     return latest_value
+
+
+@lru_cache(maxsize=1)
+def cached_hpi_context() -> dict[str, Any]:
+    return build_hpi_context()
+
+
+def resolved_hpi_area_slug(record: dict[str, Any]) -> str:
+    hpi_context = cached_hpi_context()
+    area_slug = match_area_slug_from_texts(
+        [
+            record.get("town"),
+            record.get("postcode"),
+            (record.get("raw_address") or {}).get("display_address"),
+            (record.get("raw_address") or {}).get("outcode"),
+            (record.get("raw_address") or {}).get("town"),
+            record.get("address_line_1"),
+        ],
+        set(hpi_context.get("area_name_by_slug", {}).keys()),
+    )
+    return area_slug or "unknown"
+
+
+def latest_hpi_features(record: dict[str, Any]) -> dict[str, float | str | None]:
+    area_slug = resolved_hpi_area_slug(record)
+    if area_slug == "unknown":
+        return {
+            "hpi_area_slug": "unknown",
+            "hpi_local_avg_price_pence": None,
+            "hpi_local_yoy_pct": None,
+            "hpi_local_sales_volume": None,
+            "hpi_all_avg_price_pence": None,
+            "hpi_all_yoy_pct": None,
+            "price_vs_hpi_local_ratio": None,
+            "hpi_local_vs_all_ratio": None,
+        }
+
+    hpi_context = cached_hpi_context()
+    property_type = property_type_key(record.get("property_type"))
+    local_record = latest_hpi_record_for(hpi_context["latest_snapshot"], area_slug, property_type)
+    all_record = latest_hpi_record_for(hpi_context["latest_snapshot"], area_slug, "other")
+    listing_price = parse_number(record.get("price_pence"))
+    local_avg_price = parse_number((local_record or {}).get("avg_price_pence"))
+    all_avg_price = parse_number((all_record or {}).get("avg_price_pence"))
+
+    return {
+        "hpi_area_slug": area_slug,
+        "hpi_local_avg_price_pence": local_avg_price,
+        "hpi_local_yoy_pct": parse_number((local_record or {}).get("yoy_pct")),
+        "hpi_local_sales_volume": parse_number((local_record or {}).get("sales_volume")),
+        "hpi_all_avg_price_pence": all_avg_price,
+        "hpi_all_yoy_pct": parse_number((all_record or {}).get("yoy_pct")),
+        "price_vs_hpi_local_ratio": (listing_price / local_avg_price) if listing_price and local_avg_price else None,
+        "hpi_local_vs_all_ratio": (local_avg_price / all_avg_price) if local_avg_price and all_avg_price else None,
+    }
 
 
 def structured_feature_entries(raw_property_data: dict[str, Any], group: str) -> list[dict[str, Any]]:
@@ -412,6 +491,7 @@ def build_valuation_row(record: dict[str, Any], include_target: bool = True) -> 
     bathrooms = parse_number(record.get("bathrooms"))
     station_features = station_summary(record)
     bool_flags = text_boolean_flags(text, raw_property_data, record)
+    hpi_features = latest_hpi_features(record)
 
     row = {
         "sample_id": sample_id_for_record(record),
@@ -454,10 +534,12 @@ def build_valuation_row(record: dict[str, Any], include_target: bool = True) -> 
         or "unknown",
         "town_slug": normalise_text(record.get("town") or (record.get("raw_address") or {}).get("town")).replace(" ", "_")
         or "unknown",
+        "hpi_area_slug": hpi_features["hpi_area_slug"] or "unknown",
         "epc_rating": str(record.get("epc_rating") or "unknown").strip().upper() or "unknown",
         "council_tax_band": str(record.get("council_tax_band") or "unknown").strip().upper() or "unknown",
     }
     row.update(station_features)
+    row.update(hpi_features)
     row.update({key: float(value) for key, value in bool_flags.items() if key in NUMERIC_FEATURES})
     return row
 
@@ -469,7 +551,10 @@ def build_valuation_training_frame(dataset_path: Path = DEFAULT_VALUATION_DATASE
 
     rows = [build_valuation_row(record, include_target=True) for record in payload.get("properties", [])]
     rows = [row for row in rows if row]
-    return pd.DataFrame(rows)
+    frame = pd.DataFrame(rows)
+    if frame.empty:
+        return frame
+    return frame.drop_duplicates(subset=["sample_id"]).reset_index(drop=True)
 
 
 def build_valuation_inference_frame(record: dict[str, Any]) -> pd.DataFrame:
@@ -486,22 +571,37 @@ def predict_log_prices(model: HouseValuationNet, matrix: np.ndarray) -> np.ndarr
         return model(tensor).cpu().numpy().reshape(-1)
 
 
-def predict_current_prices(model: HouseValuationNet, matrix: np.ndarray) -> np.ndarray:
-    clipped_log_prices = np.clip(predict_log_prices(model, matrix), MIN_PREDICTED_LOG_PRICE, MAX_PREDICTED_LOG_PRICE)
+def log_price_bounds(metadata: dict[str, Any] | None = None) -> tuple[float, float]:
+    lower = parse_number(((metadata or {}).get("prediction_log_price_bounds") or {}).get("lower"))
+    upper = parse_number(((metadata or {}).get("prediction_log_price_bounds") or {}).get("upper"))
+    return (
+        lower if lower is not None else MIN_PREDICTED_LOG_PRICE,
+        upper if upper is not None else MAX_PREDICTED_LOG_PRICE,
+    )
+
+
+def predict_current_prices(
+    model: HouseValuationNet,
+    matrix: np.ndarray,
+    metadata: dict[str, Any] | None = None,
+) -> np.ndarray:
+    lower, upper = log_price_bounds(metadata)
+    clipped_log_prices = np.clip(predict_log_prices(model, matrix), lower, upper)
     return np.expm1(clipped_log_prices)
 
 
 def interval_quantiles_for_predictions(actual_pence: np.ndarray, predicted_pence: np.ndarray) -> dict[str, dict[str, float]]:
+    safe_actual = np.maximum(np.nan_to_num(actual_pence.astype(np.float64), nan=1.0, posinf=1.0, neginf=1.0), 1.0)
     safe_predictions = np.maximum(np.nan_to_num(predicted_pence.astype(np.float64), nan=1.0, posinf=1.0, neginf=1.0), 1.0)
-    relative_error = (actual_pence.astype(np.float64) - safe_predictions) / safe_predictions
+    log_residual = np.log(safe_actual) - np.log(safe_predictions)
     return {
         "80": {
-            "lower": float(np.quantile(relative_error, 0.10)),
-            "upper": float(np.quantile(relative_error, 0.90)),
+            "lower_log": float(np.quantile(log_residual, 0.10)),
+            "upper_log": float(np.quantile(log_residual, 0.90)),
         },
         "95": {
-            "lower": float(np.quantile(relative_error, 0.025)),
-            "upper": float(np.quantile(relative_error, 0.975)),
+            "lower_log": float(np.quantile(log_residual, 0.025)),
+            "upper_log": float(np.quantile(log_residual, 0.975)),
         },
     }
 
@@ -543,14 +643,14 @@ def valuation_intervals(predicted_price_pence: float, metadata: dict[str, Any]) 
     intervals = {}
     for label in ("80", "95"):
         quantiles = (metadata.get("prediction_intervals") or {}).get(label) or {}
-        lower = parse_number(quantiles.get("lower"))
-        upper = parse_number(quantiles.get("upper"))
+        lower = parse_number(quantiles.get("lower_log"))
+        upper = parse_number(quantiles.get("upper_log"))
         if lower is None or upper is None:
             intervals[label] = None
             continue
         intervals[label] = {
-            "lower_pence": int(round(max(0.0, predicted_price_pence * (1.0 + lower)))),
-            "upper_pence": int(round(max(0.0, predicted_price_pence * (1.0 + upper)))),
+            "lower_pence": int(round(max(0.0, predicted_price_pence * math.exp(lower)))),
+            "upper_pence": int(round(max(0.0, predicted_price_pence * math.exp(upper)))),
         }
     return intervals
 
@@ -565,6 +665,13 @@ def pricing_signal(
 
     gap_pence = int(round(actual_price_pence - predicted_price_pence))
     gap_pct = float(((actual_price_pence / max(predicted_price_pence, 1.0)) - 1.0) * 100.0)
+    interval_80 = intervals.get("80")
+    if interval_80:
+        if actual_price_pence > interval_80["upper_pence"]:
+            return "overpriced", gap_pence, gap_pct
+        if actual_price_pence < interval_80["lower_pence"]:
+            return "underpriced", gap_pence, gap_pct
+        return "fairly_priced", gap_pence, gap_pct
     if gap_pct >= 15.0:
         return "overpriced", gap_pence, gap_pct
     if gap_pct <= -15.0:
@@ -682,6 +789,9 @@ def select_runtime_model(
     fold_models: dict[str, HouseValuationNet],
     fold_preprocessors: dict[str, ColumnTransformer],
 ) -> tuple[HouseValuationNet, ColumnTransformer, str]:
+    if os.environ.get("ML_VALUATION_USE_OOF") != "1":
+        return final_model, final_preprocessor, "full_model"
+
     sample_id = sample_id_for_record(record)
     fold_key = (metadata.get("sample_fold_assignments") or {}).get(sample_id)
     if fold_key is not None:
@@ -716,7 +826,7 @@ def build_valuation_inference_payload(
         raise ValueError("Property record is missing the fields required for valuation inference.")
 
     transformed_row = matrix_from_frame(preprocessor, feature_frame).reshape(1, -1)
-    predicted_price_pence = float(predict_current_prices(model, transformed_row)[0])
+    predicted_price_pence = float(predict_current_prices(model, transformed_row, metadata)[0])
     intervals = valuation_intervals(predicted_price_pence, metadata)
     actual_price_pence = parse_number(record.get("price_pence"))
     signal, gap_pence, gap_pct = pricing_signal(actual_price_pence, predicted_price_pence, intervals)

@@ -28,7 +28,10 @@ from valuation_pipeline import (
     CATEGORICAL_FEATURES,
     DEFAULT_VALUATION_ARTIFACTS_DIR,
     DEFAULT_VALUATION_DATASET_PATH,
+    DEFAULT_VALUATION_LIVE_DATASET_PATH,
     HouseValuationNet,
+    MAX_PREDICTED_LOG_PRICE,
+    MIN_PREDICTED_LOG_PRICE,
     NUMERIC_FEATURES,
     TARGET_NOTE,
     build_valuation_inference_payload,
@@ -57,20 +60,45 @@ def run_dataset_export(output_path: Path) -> None:
     )
 
 
+def run_live_dataset_collection(
+    output_path: Path,
+    min_price_gbp: int,
+    max_price_gbp: int,
+    band_size_gbp: int,
+    per_band_limit: int,
+    max_listings: int,
+    delay_seconds: float,
+) -> None:
+    env = os.environ.copy()
+    env["OUTPUT"] = str(output_path)
+    env["MIN_PRICE"] = str(min_price_gbp)
+    env["MAX_PRICE"] = str(max_price_gbp)
+    env["BAND_SIZE"] = str(band_size_gbp)
+    env["PER_BAND_LIMIT"] = str(per_band_limit)
+    env["MAX_LISTINGS"] = str(max_listings)
+    env["DELAY"] = str(delay_seconds)
+    subprocess.run(
+        ["mise", "exec", "ruby@3.4.4", "--", "bundle", "exec", "rake", "ml:collect_live_dataset"],
+        cwd=BACKEND_ROOT,
+        env=env,
+        check=True,
+    )
+
+
 def train_with_validation(
     train_matrix: np.ndarray,
     train_targets: np.ndarray,
     val_matrix: np.ndarray,
     val_targets: np.ndarray,
     seed: int,
-    epochs: int = 220,
+    epochs: int = 320,
 ) -> tuple[HouseValuationNet, int]:
     set_seed(seed)
     model = HouseValuationNet(train_matrix.shape[1])
-    optimizer = torch.optim.Adam(model.parameters(), lr=8e-4, weight_decay=4e-4)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=6e-4, weight_decay=5e-5)
     criterion = nn.SmoothL1Loss()
 
-    batch_size = max(4, min(16, len(train_matrix)))
+    batch_size = max(8, min(32, len(train_matrix)))
     train_dataset = TensorDataset(
         torch.tensor(train_matrix, dtype=torch.float32),
         torch.tensor(train_targets.reshape(-1, 1), dtype=torch.float32),
@@ -82,7 +110,7 @@ def train_with_validation(
     best_state = None
     best_epoch = 0
     best_val_loss = math.inf
-    patience = 24
+    patience = 40
     stale_epochs = 0
 
     for epoch in range(1, epochs + 1):
@@ -120,15 +148,15 @@ def train_with_validation(
 def train_fixed_epochs(matrix: np.ndarray, targets: np.ndarray, input_dim: int, epochs: int, seed: int) -> HouseValuationNet:
     set_seed(seed)
     model = HouseValuationNet(input_dim)
-    optimizer = torch.optim.Adam(model.parameters(), lr=8e-4, weight_decay=4e-4)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=6e-4, weight_decay=5e-5)
     criterion = nn.SmoothL1Loss()
     dataset = TensorDataset(
         torch.tensor(matrix, dtype=torch.float32),
         torch.tensor(targets.reshape(-1, 1), dtype=torch.float32),
     )
-    loader = DataLoader(dataset, batch_size=max(4, min(16, len(matrix))), shuffle=True)
+    loader = DataLoader(dataset, batch_size=max(8, min(32, len(matrix))), shuffle=True)
 
-    for _ in range(max(epochs, 24)):
+    for _ in range(max(epochs, 40)):
         model.train()
         for batch_inputs, batch_targets in loader:
             optimizer.zero_grad()
@@ -148,22 +176,53 @@ def metrics_for_predictions(actual_pence: np.ndarray, predicted_pence: np.ndarra
     }
 
 
+def prediction_log_price_bounds(targets: np.ndarray) -> dict[str, float]:
+    lower = max(MIN_PREDICTED_LOG_PRICE, float(np.quantile(targets, 0.005) - 0.08))
+    upper = min(MAX_PREDICTED_LOG_PRICE, float(np.quantile(targets, 0.995) + 0.08))
+    return {"lower": lower, "upper": max(lower + 0.1, upper)}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train a current-price valuation model on the exported listings dataset.")
     parser.add_argument("--collect", action="store_true", help="Export the latest current-property dataset from Rails.")
+    parser.add_argument(
+        "--collect-live",
+        action="store_true",
+        help="Collect a larger live Rightmove current-listings dataset before training.",
+    )
     parser.add_argument("--artifacts-dir", type=Path, default=DEFAULT_VALUATION_ARTIFACTS_DIR, help="Artifact output directory.")
     parser.add_argument("--listings-path", type=Path, default=DEFAULT_VALUATION_DATASET_PATH, help="Current listings dataset path.")
+    parser.add_argument("--live-listings-path", type=Path, default=DEFAULT_VALUATION_LIVE_DATASET_PATH, help="Collected live listings dataset path.")
+    parser.add_argument("--live-min-price-gbp", type=int, default=200_000, help="Minimum listing price for live collection.")
+    parser.add_argument("--live-max-price-gbp", type=int, default=10_000_000, help="Maximum listing price for live collection.")
+    parser.add_argument("--live-band-size-gbp", type=int, default=250_000, help="Price band width for live collection.")
+    parser.add_argument("--live-per-band-limit", type=int, default=30, help="Maximum ids to collect per price band.")
+    parser.add_argument("--live-max-listings", type=int, default=1_200, help="Maximum listing payloads to fetch.")
+    parser.add_argument("--live-delay-seconds", type=float, default=0.15, help="Delay between live listing fetches.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
     args = parser.parse_args()
 
     artifacts_dir = args.artifacts_dir.resolve()
     artifacts_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.collect or not args.listings_path.exists():
-        args.listings_path.parent.mkdir(parents=True, exist_ok=True)
-        run_dataset_export(args.listings_path.resolve())
+    listings_path = args.listings_path.resolve()
+    if args.collect_live:
+        listings_path = args.live_listings_path.resolve()
+        listings_path.parent.mkdir(parents=True, exist_ok=True)
+        run_live_dataset_collection(
+            listings_path,
+            min_price_gbp=args.live_min_price_gbp,
+            max_price_gbp=args.live_max_price_gbp,
+            band_size_gbp=args.live_band_size_gbp,
+            per_band_limit=args.live_per_band_limit,
+            max_listings=args.live_max_listings,
+            delay_seconds=args.live_delay_seconds,
+        )
+    elif args.collect or not listings_path.exists():
+        listings_path.parent.mkdir(parents=True, exist_ok=True)
+        run_dataset_export(listings_path)
 
-    training_frame = build_valuation_training_frame(args.listings_path.resolve())
+    training_frame = build_valuation_training_frame(listings_path)
     if len(training_frame) < 20:
         raise SystemExit(f"Need at least 20 priced properties to train valuation model; only found {len(training_frame)}.")
 
@@ -188,8 +247,13 @@ def main() -> None:
     if not feature_columns:
         raise SystemExit("No varying features were available to train the valuation model.")
 
+    with listings_path.open("r", encoding="utf-8") as file_handle:
+        listing_payload = json.load(file_handle)
+
     targets = np.log1p(training_frame["target_price_pence"].to_numpy(dtype=np.float64))
     actual_prices = training_frame["target_price_pence"].to_numpy(dtype=np.float64)
+    log_price_bounds = prediction_log_price_bounds(targets)
+    prediction_metadata = {"prediction_log_price_bounds": log_price_bounds}
 
     kfold = KFold(n_splits=fold_count, shuffle=True, random_state=args.seed)
 
@@ -241,7 +305,7 @@ def main() -> None:
         )
 
         val_matrix = matrix_from_frame(fold_preprocessor, val_frame)
-        val_predictions = predict_current_prices(fold_model, val_matrix)
+        val_predictions = predict_current_prices(fold_model, val_matrix, prediction_metadata)
         oof_predictions[val_indices] = val_predictions
 
         fold_key = str(fold_index)
@@ -259,12 +323,20 @@ def main() -> None:
     final_matrix = matrix_from_frame(final_preprocessor, training_frame)
     final_epochs = int(round(float(np.median(best_epochs)))) if best_epochs else 40
     final_model = train_fixed_epochs(final_matrix, targets, final_matrix.shape[1], final_epochs, args.seed)
-    final_predictions = predict_current_prices(final_model, final_matrix)
+    final_predictions = predict_current_prices(final_model, final_matrix, prediction_metadata)
 
     prediction_intervals = interval_quantiles_for_predictions(actual_prices, oof_predictions)
+    data_source = str(listing_payload.get("source") or "current_listings")
+    if data_source == "rightmove_live_collection":
+        training_basis = "rightmove_live_structured_valuation"
+    elif data_source == "rightmove_live_plus_local_export":
+        training_basis = "rightmove_live_plus_local_export_valuation"
+    else:
+        training_basis = "current_listings_structured_valuation"
     metadata = {
         "trained_at": datetime.now(timezone.utc).isoformat(),
-        "training_basis": "current_listings_structured_valuation",
+        "training_basis": training_basis,
+        "data_source": data_source,
         "target_note": TARGET_NOTE,
         "sample_count": int(len(training_frame)),
         "feature_columns": feature_columns,
@@ -273,6 +345,7 @@ def main() -> None:
         "transformed_feature_names": final_preprocessor.get_feature_names_out().tolist(),
         "sample_fold_assignments": fold_assignments,
         "prediction_intervals": prediction_intervals,
+        "prediction_log_price_bounds": log_price_bounds,
         "best_epoch_median": final_epochs,
         **metrics_for_predictions(actual_prices, oof_predictions),
         "full_fit_rmse_pounds": float(
@@ -303,9 +376,6 @@ def main() -> None:
     ).astype(int)
     with (artifacts_dir / "valuation_predictions.json").open("w", encoding="utf-8") as file_handle:
         json.dump(prediction_rows.to_dict(orient="records"), file_handle, indent=2)
-
-    with args.listings_path.resolve().open("r", encoding="utf-8") as file_handle:
-        listing_payload = json.load(file_handle)
 
     runtime_fold_models: dict[str, HouseValuationNet] = {}
     for fold_key, fold_payload in fold_models_payload.items():
