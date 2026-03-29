@@ -35,11 +35,6 @@ function fmtDate(iso: string | null) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function fmtPct(value: number | null | undefined, digits = 1) {
-  if (value == null || Number.isNaN(value)) return '—'
-  return `${value > 0 ? '+' : ''}${value.toFixed(digits)}%`
-}
-
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function BackBar({ onBack }: { onBack: () => void }) {
@@ -323,60 +318,48 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
   const forecast = property.ml_forecast
   if (!forecast) return null
 
-  const areaName = forecast.historical_context.area_name
-  const localHpi = forecast.historical_context.local_hpi_yoy_pct
-  const horizons = [...forecast.forecasts].sort((a, b) => a.prediction_horizon_months - b.prediction_horizon_months)
+  const currentPrice = property.price_pence
+  const horizons = [...forecast.forecasts].sort((a, b) => a.years_ahead - b.years_ahead)
 
   return (
     <section className="pp-section">
       <h2 className="pp-section-heading">ML forecasts</h2>
       <p className="pp-section-sub">
-        Trained on historical London sales for 1-year, 2-year, and 3-year horizons.
+        Predicted prices for 1, 2, and 3 years ahead with an approximate 95% range.
       </p>
 
       <div className="pp-forecast-card">
-        <div className="pp-forecast-topline">
-          <div className="pp-forecast-stat pp-forecast-stat-wide">
-            <div className="pp-forecast-label">Current asking price</div>
-            <div className="pp-forecast-value">{fmtPrice(forecast.current_price_pence)}</div>
-          </div>
-        </div>
-
-        <div className="pp-forecast-meta">
-          <span>
-            Local HPI trend {fmtPct(localHpi)} · {areaName} · {forecast.historical_context.latest_hpi_period}
-          </span>
-          <span>{horizons.length} forecast horizons returned</span>
-        </div>
-
         <div className="pp-forecast-horizon-grid">
           {horizons.map((item) => {
-            const deltaPence = item.predicted_future_price_pence - forecast.current_price_pence
-            const rmse = item.training_summary?.holdout_rmse_pounds
+            const deltaPence = currentPrice == null ? null : item.predicted_future_price_pence - currentPrice
+            const impliedGrowthPct = currentPrice
+              ? ((item.predicted_future_price_pence / currentPrice) - 1) * 100
+              : null
 
             return (
-              <div key={item.prediction_horizon_months} className="pp-forecast-horizon-card">
+              <div key={item.years_ahead} className="pp-forecast-horizon-card">
                 <div className="pp-forecast-label">
-                  {item.prediction_horizon_years}-year forecast
+                  {item.years_ahead}-year forecast
                 </div>
                 <div className="pp-forecast-value pp-forecast-value-strong">
                   {fmtPrice(item.predicted_future_price_pence)}
                 </div>
-                <div className={`pp-forecast-horizon-delta ${deltaPence >= 0 ? 'pp-forecast-up' : 'pp-forecast-down'}`}>
-                  {fmtPrice(deltaPence)} · {fmtPct(item.predicted_growth_pct)}
-                </div>
 
-                {rmse != null && (
-                  <div className="pp-forecast-card-meta">
-                    Holdout RMSE about £{Math.round(rmse).toLocaleString('en-GB')}
+                {deltaPence != null && (
+                  <div className={`pp-forecast-horizon-delta ${deltaPence >= 0 ? 'pp-forecast-up' : 'pp-forecast-down'}`}>
+                    {fmtPrice(deltaPence)} · {impliedGrowthPct != null ? `${impliedGrowthPct > 0 ? '+' : ''}${impliedGrowthPct.toFixed(1)}%` : '—'}
+                  </div>
+                )}
+
+                {item.prediction_interval_95 && (
+                  <div className="pp-forecast-range">
+                    95% range {fmtPrice(item.prediction_interval_95.lower_pence)} to {fmtPrice(item.prediction_interval_95.upper_pence)}
                   </div>
                 )}
               </div>
             )
           })}
         </div>
-
-        <div className="pp-forecast-note">{forecast.target_note}</div>
       </div>
     </section>
   )

@@ -140,17 +140,22 @@ module Api
       test "GET /api/v1/properties/:id includes ml forecast when inference is available" do
         Ml::HousePriceForecastService.any_instance.stubs(:call).returns(
           {
-            "current_price_pence" => 35_000_000,
             "forecasts" => [
               {
-                "prediction_horizon_months" => 12,
+                "years_ahead" => 1,
                 "predicted_future_price_pence" => 37_800_000,
-                "predicted_growth_pct" => 8.0
+                "prediction_interval_95" => {
+                  "lower_pence" => 33_500_000,
+                  "upper_pence" => 42_100_000
+                }
               },
               {
-                "prediction_horizon_months" => 24,
+                "years_ahead" => 2,
                 "predicted_future_price_pence" => 39_200_000,
-                "predicted_growth_pct" => 12.0
+                "prediction_interval_95" => {
+                  "lower_pence" => 34_200_000,
+                  "upper_pence" => 44_200_000
+                }
               }
             ]
           }
@@ -159,8 +164,9 @@ module Api
         get api_v1_property_path(@active), as: :json
 
         assert_response :success
+        assert_equal ["forecasts"], response.parsed_body["ml_forecast"].keys
         assert_equal 37_800_000, response.parsed_body["ml_forecast"]["forecasts"].first["predicted_future_price_pence"]
-        assert_equal 12.0, response.parsed_body["ml_forecast"]["forecasts"].second["predicted_growth_pct"]
+        assert_equal 44_200_000, response.parsed_body["ml_forecast"]["forecasts"].second["prediction_interval_95"]["upper_pence"]
       end
 
       test "GET /api/v1/properties/:id excludes raw_data" do

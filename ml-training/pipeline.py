@@ -39,6 +39,7 @@ DEFAULT_PPD_YEARS = tuple(range(2020, 2025))
 FORECAST_HORIZON_MONTHS = (12, 24, 36)
 TARGET_GROWTH_CLIP_MIN = -20.0
 TARGET_GROWTH_CLIP_MAX = 25.0
+APPROX_INTERVAL_Z_95 = 1.96
 TARGET_NOTE = (
     "Model trained on official HM Land Registry Price Paid Data transactions from 2020 to 2024 "
     "for London local authorities. The 1-year, 2-year, and 3-year targets are derived from the "
@@ -704,35 +705,42 @@ def build_inference_payload(
         predicted_future_price_pence = float(
             stabilize_future_price_predictions(raw_prediction, np.array([current_price_pence]))[0]
         )
-        baseline_prediction_pence = float(
-            stabilize_future_price_predictions(
-                predict_future_prices(model, np.zeros_like(transformed_row)),
-                np.array([current_price_pence]),
-            )[0]
-        )
-        predicted_growth_pct = ((predicted_future_price_pence / current_price_pence) - 1.0) * 100.0 if current_price_pence else None
+        training_summary = metadata.get("training_summaries", {}).get(horizon_key) or {}
+        prediction_interval_95 = None
+        interval_quantiles = ((training_summary.get("prediction_intervals") or {}).get("95")) or {}
+        interval_lower = parse_number(interval_quantiles.get("lower"))
+        interval_upper = parse_number(interval_quantiles.get("upper"))
+        if interval_lower is not None and interval_upper is not None:
+            prediction_interval_95 = {
+                "lower_pence": int(round(max(0.0, predicted_future_price_pence * (1.0 + interval_lower)))),
+                "upper_pence": int(round(max(0.0, predicted_future_price_pence * (1.0 + interval_upper)))),
+            }
+        else:
+            holdout_rmse_pounds = parse_number(training_summary.get("holdout_rmse_pounds"))
+            if holdout_rmse_pounds is None:
+                holdout_rmse_pounds = parse_number(training_summary.get("full_fit_rmse_pounds"))
+            if holdout_rmse_pounds is None:
+                holdout_rmse_pounds = parse_number(training_summary.get("holdout_mape"))
+                if holdout_rmse_pounds is not None:
+                    holdout_rmse_pounds = (predicted_future_price_pence / 100.0) * holdout_rmse_pounds
+            if holdout_rmse_pounds is None:
+                holdout_rmse_pounds = None
+            if holdout_rmse_pounds is None:
+                prediction_interval_95 = None
+            else:
+                estimated_error_pence = holdout_rmse_pounds * 100.0
+                interval_half_width = estimated_error_pence * APPROX_INTERVAL_Z_95
+                prediction_interval_95 = {
+                    "lower_pence": int(round(max(0.0, predicted_future_price_pence - interval_half_width))),
+                    "upper_pence": int(round(predicted_future_price_pence + interval_half_width)),
+                }
 
         forecasts.append(
             {
-                "prediction_horizon_months": int(horizon),
-                "prediction_horizon_years": int(horizon) // 12,
+                "years_ahead": int(horizon) // 12,
                 "predicted_future_price_pence": int(round(predicted_future_price_pence)),
-                "predicted_growth_pct": float(predicted_growth_pct) if predicted_growth_pct is not None else None,
-                "baseline_prediction_pence": int(round(baseline_prediction_pence)),
-                "training_summary": metadata.get("training_summaries", {}).get(horizon_key),
+                "prediction_interval_95": prediction_interval_95,
             }
         )
 
-    return {
-        "current_price_pence": int(round(current_price_pence)),
-        "historical_context": {
-            "area_slug": feature_frame.iloc[0]["area_slug"],
-            "area_name": feature_frame.iloc[0]["area_name"],
-            "latest_hpi_period": metadata["latest_hpi_period"],
-            "local_hpi_yoy_pct": feature_frame.iloc[0]["hpi_property_yoy_pct"],
-        },
-        "forecast_horizon_months": horizon_months,
-        "training_summaries": metadata.get("training_summaries", {}),
-        "target_note": metadata["target_note"],
-        "forecasts": forecasts,
-    }
+    return {"forecasts": forecasts}

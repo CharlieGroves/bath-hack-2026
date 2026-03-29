@@ -157,6 +157,21 @@ def metrics_for_predictions(actual_pence: np.ndarray, predicted_pence: np.ndarra
     }
 
 
+def interval_quantiles_for_predictions(actual_pence: np.ndarray, predicted_pence: np.ndarray) -> dict[str, dict[str, float]]:
+    safe_predictions = np.maximum(predicted_pence.astype(np.float64), 1.0)
+    relative_error = (actual_pence.astype(np.float64) - safe_predictions) / safe_predictions
+    return {
+        "80": {
+            "lower": float(np.quantile(relative_error, 0.10)),
+            "upper": float(np.quantile(relative_error, 0.90)),
+        },
+        "95": {
+            "lower": float(np.quantile(relative_error, 0.025)),
+            "upper": float(np.quantile(relative_error, 0.975)),
+        },
+    }
+
+
 def generate_listing_forecasts(
     listings_path: Path,
     models: dict[str, PriceForecastNet],
@@ -199,6 +214,7 @@ def training_summary_for_horizon(
         "best_epoch": int(best_epoch),
         "trained_at": datetime.now(timezone.utc).isoformat(),
         "historical_years": list(DEFAULT_PPD_YEARS),
+        "prediction_intervals": interval_quantiles_for_predictions(holdout_actual, holdout_predictions),
         **metrics_for_predictions(holdout_actual, holdout_predictions),
     }
 

@@ -44,41 +44,18 @@ export interface AreaPriceGrowth {
   yearly_growth_data: Record<string, YearlyGrowthEntry>
 }
 
-export interface MlHistoricalContext {
-  area_slug: string
-  area_name: string
-  latest_hpi_period: string
-  local_hpi_yoy_pct: number | null
-}
-
-export interface MlTrainingSummary {
-  prediction_horizon_months?: number
-  prediction_horizon_years?: number
-  sample_count: number
-  holdout_count: number
-  best_epoch: number
-  trained_at: string
-  holdout_rmse_pounds: number
-  holdout_mape: number
-  holdout_r2: number
-  full_fit_rmse_pounds: number
+export interface MlPredictionInterval {
+  lower_pence: number
+  upper_pence: number
 }
 
 export interface MlForecastResult {
-  prediction_horizon_months: number
-  prediction_horizon_years: number
+  years_ahead: number
   predicted_future_price_pence: number
-  predicted_growth_pct: number | null
-  baseline_prediction_pence: number
-  training_summary: MlTrainingSummary | null
+  prediction_interval_95: MlPredictionInterval | null
 }
 
 export interface MlForecast {
-  current_price_pence: number
-  historical_context: MlHistoricalContext
-  forecast_horizon_months: number[]
-  training_summaries: Record<string, MlTrainingSummary>
-  target_note: string
   forecasts: MlForecastResult[]
 }
 
