@@ -33,6 +33,7 @@ Rails.application.routes.draw do
       resources :flood_risk_datapoints, only: [:show]
       resources :boroughs, only: [:show]
       resources :schools, only: [:show]
+      resources :model_searches, only: [:create, :show]
     end
   end
 end
