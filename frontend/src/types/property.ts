@@ -3,6 +3,7 @@ export interface NearestStation {
   distance_miles: number
   walking_minutes: number
   transport_type: string
+  termini: string[]
 }
 
 export interface NoiseSection {
@@ -33,6 +34,11 @@ export interface AirQuality {
   station_name: string
 }
 
+export interface FloodRisk {
+  risk_level: string
+  risk_band: number
+}
+
 export interface YearlyGrowthEntry {
   average_change_pct_per_year: number
   sale_pairs_count: number
@@ -42,6 +48,12 @@ export interface AreaPriceGrowth {
   area_name: string
   area_slug: string
   yearly_growth_data: Record<string, YearlyGrowthEntry>
+}
+
+export interface EstateAgent {
+  display_name: string | null
+  rating: number | null
+  google_place_id: string | null
 }
 
 export interface MlPredictionInterval {
@@ -140,6 +152,7 @@ export interface PropertyDetail {
   longitude: number | null
   agent_name: string | null
   agent_phone: string | null
+  estate_agent: EstateAgent | null
   status: string
   listed_at: string | null
   noise: PropertyNoise | null
@@ -169,5 +182,7 @@ export interface Property {
   noise: PropertyNoise | null
   crime: PropertyCrime | null
   air_quality: AirQuality | null
+  flood_risk: FloodRisk | null
   nearest_stations: NearestStation[]
+  estate_agent: EstateAgent | null
 }

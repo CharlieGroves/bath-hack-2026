@@ -8,17 +8,20 @@ module Gateways
 
     class Error < StandardError; end
 
-    def fetch_letting_agent_rating(name)
+    # @return [Hash, nil] :place_id, :name, :rating (float)
+    def fetch_letting_agent_data(name)
       place_id = find_place_id(name)
       return nil unless place_id
 
       data = fetch_place_details(place_id)
       return nil unless data
 
-      {
-        name: data[:name],
-        rating: data[:rating]
-      }
+      data.merge(place_id: place_id)
+    end
+
+    def fetch_letting_agent_rating(name)
+      d = fetch_letting_agent_data(name)
+      d && { name: d[:name], rating: d[:rating] }
     end
 
     private

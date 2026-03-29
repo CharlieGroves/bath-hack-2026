@@ -3,17 +3,25 @@ class Property < ApplicationRecord
   friendly_id :rightmove_id, use: :slugged
 
   belongs_to :area_price_growth, optional: true
-  belongs_to :borough, optional: true
   belongs_to :estate_agent, optional: true
+  belongs_to :borough, optional: true
   has_one  :property_transport_snapshot, dependent: :destroy
   has_one  :property_crime_snapshot, dependent: :destroy
   has_many :property_images, dependent: :destroy
   belongs_to :air_quality_station, optional: true
+  belongs_to :flood_risk_datapoint, optional: true
   has_many :property_nearest_stations, dependent: :destroy
+  has_one :property_description_embedding, dependent: :destroy
+  has_many :property_image_embeddings, dependent: :destroy
+
+  has_neighbors :image_embeddings_maxpool_vector, dimensions: 768
 
   after_commit :enqueue_transport_refresh,        on: %i[create update], if: :transport_refresh_needed?
   after_commit :enqueue_nearest_stations_refresh, on: %i[create update], if: :nearest_stations_refresh_needed?
   after_commit :enqueue_crime_refresh,            on: %i[create update], if: :crime_refresh_needed?
+  after_commit :enqueue_estate_agent_resolution, on: %i[create update], if: :estate_agent_resolution_needed?
+  after_commit :enqueue_description_embedding, on: %i[create update], if: :description_embedding_needed?
+  after_commit :enqueue_image_embedding, on: %i[create update], if: :image_embedding_needed?
 
   STATUSES       = %w[active under_offer sold let].freeze
   PROPERTY_TYPES = %w[flat terraced semi_detached detached bungalow land other].freeze
@@ -46,6 +54,32 @@ class Property < ApplicationRecord
   scope :within_station_miles,   ->(m) { joins(:property_nearest_stations).where("property_nearest_stations.distance_miles <= ?", m).distinct }
   scope :within_station_minutes, ->(t) { joins(:property_nearest_stations).where("property_nearest_stations.walking_minutes <= ?", t).distinct }
   scope :max_daqi,               ->(n) { joins(:air_quality_station).where("air_quality_stations.daqi_index <= ?", n) }
+  scope :max_flood_risk_band,    ->(n) { joins(:flood_risk_datapoint).where("flood_risk_datapoints.risk_band <= ?", n) }
+  scope :max_road_noise_lden,    ->(n) { joins(:property_transport_snapshot).where("property_transport_snapshots.status = 'ready'").where("CAST(property_transport_snapshots.road_data -> 'metrics' ->> 'lden' AS NUMERIC) <= ?", n) }
+  scope :max_rail_noise_lden,    ->(n) { joins(:property_transport_snapshot).where("property_transport_snapshots.status = 'ready'").where("CAST(property_transport_snapshots.rail_data -> 'metrics' ->> 'lden' AS NUMERIC) <= ?", n) }
+  scope :max_flight_noise_lden,  ->(n) { joins(:property_transport_snapshot).where("property_transport_snapshots.status = 'ready'").where("CAST(property_transport_snapshots.flight_data -> 'metrics' ->> 'lden' AS NUMERIC) <= ?", n) }
+
+  # Recomputes element-wise max of all +embedding_vector+ rows for this listing (see +PropertyImageEmbedding+).
+  def self.refresh_image_embeddings_maxpool!(property_id)
+    property = find_by(id: property_id)
+    return unless property
+
+    pooled = PropertyImageEmbedding.maxpool_vector_array_for_property(property_id)
+    property.update_columns(
+      image_embeddings_maxpool_vector: pooled,
+      updated_at: Time.current
+    )
+  end
+
+  # @param query_vector [Array<Numeric>] 768 floats (max-pool space; same dim as image embeddings)
+  def self.nearest_by_maxpool_vector(query_vector, limit: 20, distance: "cosine")
+    dim = PropertyImageEmbedding::EXPECTED_DIMENSIONS
+    unless query_vector.is_a?(Array) && query_vector.size == dim
+      raise ArgumentError, "expected Array of #{dim} floats"
+    end
+
+    nearest_neighbors(:image_embeddings_maxpool_vector, query_vector.map(&:to_f), distance: distance).limit(limit)
+  end
 
   # Returns a human-readable price string, e.g. "£450,000"
   def formatted_price
@@ -90,5 +124,36 @@ class Property < ApplicationRecord
 
   def enqueue_crime_refresh
     PropertyCrimeSnapshotJob.perform_later(id)
+  end
+
+  def estate_agent_resolution_needed?
+    return false if agent_name.blank?
+
+    estate_agent_id.nil? || previous_changes.key?("agent_name")
+  end
+
+  def enqueue_estate_agent_resolution
+    EstateAgentLinkJob.perform_later(id)
+  end
+
+  def description_embedding_needed?
+    return false if description.blank?
+
+    property_description_embedding.nil? || previous_changes.key?("description")
+  end
+
+  def enqueue_description_embedding
+    PropertyDescriptionEmbedJob.perform_later(id)
+  end
+
+  def image_embedding_needed?
+    urls = Array(photo_urls).map(&:to_s).map(&:strip).reject(&:blank?)
+    return false if urls.empty?
+
+    property_image_embeddings.empty? || previous_changes.key?("photo_urls")
+  end
+
+  def enqueue_image_embedding
+    PropertyImageEmbedJob.perform_later(id)
   end
 end

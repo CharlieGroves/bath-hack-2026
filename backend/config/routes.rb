@@ -23,9 +23,18 @@ Rails.application.routes.draw do
         collection do
           get :search
           get :heatmap
+          get :similar_by_image
+          get :similar_by_image_maxpool
+        end
+        member do
+          get :xray
         end
       end
       resources :air_quality_stations, only: [:show]
+      resources :flood_risk_datapoints, only: [:show]
+      resources :boroughs, only: [:show]
+      resources :schools, only: [:show]
+      resources :model_searches, only: [:create, :show]
     end
   end
 end

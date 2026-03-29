@@ -7,6 +7,7 @@ import {
   type MapBounds,
   type TransportationType,
 } from './hooks/useProperties'
+import { useModelSearch, type ModelSearchStatus } from './hooks/useModelSearch'
 import LayoutSplit from './layouts/LayoutSplit'
 import LocationAutocompleteInput from './components/LocationAutocompleteInput'
 import PropertyPage from './components/PropertyPage'
@@ -23,13 +24,72 @@ function FlameIcon({ size = 24 }: { size?: number }) {
   )
 }
 
+function ModelSearchIndicator({
+  status,
+  prompt,
+  resultCount,
+  error,
+  onClear,
+}: {
+  status: ModelSearchStatus
+  prompt: string
+  resultCount: number
+  error: string | null
+  onClear: () => void
+}) {
+  if (status === 'idle') return null
+
+  return (
+    <div className="ms-indicator">
+      {status === 'pending' && (
+        <>
+          <span className="ms-spinner" />
+          <span className="ms-label">Searching&hellip;</span>
+        </>
+      )}
+      {status === 'complete' && (
+        <>
+          <span className="ms-count">{resultCount}</span>
+          <span className="ms-label ms-label-dim">
+            {resultCount === 1 ? 'result' : 'results'} for &ldquo;{prompt.length > 40 ? prompt.slice(0, 40) + '…' : prompt}&rdquo;
+          </span>
+        </>
+      )}
+      {status === 'failed' && (
+        <span className="ms-label ms-label-error">{error ?? 'Search failed'}</span>
+      )}
+      <button type="button" className="ms-clear" onClick={onClear} title="Clear search">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+        </svg>
+      </button>
+    </div>
+  )
+}
+
 interface AppHeaderProps {
   locationSearch: LocationSearchParams
   onLocationQueryChange: (value: string) => void
   onApplyLocationSearch: (queryOverride?: string) => boolean
+  onModelSearch: (prompt: string) => void
+  onClearModelSearch: () => void
+  modelSearchStatus: ModelSearchStatus
+  modelSearchPrompt: string
+  modelSearchResultCount: number
+  modelSearchError: string | null
 }
 
-function AppHeader({ locationSearch, onLocationQueryChange, onApplyLocationSearch }: AppHeaderProps) {
+function AppHeader({
+  locationSearch,
+  onLocationQueryChange,
+  onApplyLocationSearch,
+  onModelSearch,
+  onClearModelSearch,
+  modelSearchStatus,
+  modelSearchPrompt,
+  modelSearchResultCount,
+  modelSearchError,
+}: AppHeaderProps) {
   const navigate = useNavigate()
 
   return (
@@ -47,35 +107,52 @@ function AppHeader({ locationSearch, onLocationQueryChange, onApplyLocationSearc
           value={locationSearch.query}
           onChange={onLocationQueryChange}
           onEnter={() => {
-            if (onApplyLocationSearch()) navigate('/')
+            const query = locationSearch.query.trim()
+            if (!query) return
+            onModelSearch(query)
+            navigate('/')
           }}
           onSelect={suggestion => {
+            onClearModelSearch()
             if (onApplyLocationSearch(suggestion.label)) navigate('/')
           }}
           inputClassName="header-search"
-          placeholder="Where would you like to live?"
+          placeholder="Describe your ideal home, or pick a location below"
           theme="dark"
         />
       </div>
+      <ModelSearchIndicator
+        status={modelSearchStatus}
+        prompt={modelSearchPrompt}
+        resultCount={modelSearchResultCount}
+        error={modelSearchError}
+        onClear={onClearModelSearch}
+      />
     </header>
   )
 }
 
 // ─── Filter state ────────────────────────────────────────────────────────────
 export interface Filters {
-  minPrice:          number | ''
-  maxPrice:          number | ''
-  minBeds:           number
-  maxBeds:           number
-  types:             string[]
-  maxStationMinutes: number
-  maxCrimeRate:      number | ''
-  minPricePerSqft:   number | ''
-  maxPricePerSqft:   number | ''
-  maxDaqi:           number
+  minPrice:           number | ''
+  maxPrice:           number | ''
+  minBeds:            number
+  maxBeds:            number
+  types:              string[]
+  maxStationMinutes:  number
+  maxCrimeRate:       number | ''
+  minPricePerSqft:    number | ''
+  maxPricePerSqft:    number | ''
+  maxDaqi:            number
+  minFloodRisk:       number
+  maxFloodRisk:       number
+  maxRoadNoiseLden:   number | ''
+  maxRailNoiseLden:   number | ''
+  maxFlightNoiseLden: number | ''
+  minAgentRating:     number | ''
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0 }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '', minAgentRating: '' }
 const DEFAULT_LOCATION_SEARCH: LocationSearchParams = {
   query: '',
   transportationType: 'driving',
@@ -90,6 +167,10 @@ interface SearchPageProps {
   onLocationSearchFieldChange: <K extends keyof LocationSearchParams>(key: K, value: LocationSearchParams[K]) => void
   onApplyLocationSearch: (queryOverride?: string) => boolean
   onClearLocationSearch: () => void
+  modelSearchActive: boolean
+  modelSearchProperties: Property[]
+  modelSearchLoading: boolean
+  modelSearchError: string | null
 }
 
 // ─── Search page ─────────────────────────────────────────────────────────────
@@ -99,15 +180,27 @@ function SearchPage({
   onLocationSearchFieldChange,
   onApplyLocationSearch,
   onClearLocationSearch,
+  modelSearchActive,
+  modelSearchProperties,
+  modelSearchLoading,
+  modelSearchError,
 }: SearchPageProps) {
   const navigate = useNavigate()
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
   const [filters, setFilters] = useState<Filters>(INIT)
   const [sort, setSort]       = useState<SortKey>('newest')
-  const { properties, total, loading, error, activeLocationSearch } = useProperties(mapBounds, appliedLocationSearch)
-  const locationSearchError = appliedLocationSearch ? error : null
-  const viewportError = appliedLocationSearch ? null : error
-  const locationSearchLoading = loading && appliedLocationSearch !== null
+
+  const { properties: locationProperties, total: locationTotal, loading: locationLoading, error: locationError, activeLocationSearch } =
+    useProperties(modelSearchActive ? null : mapBounds, modelSearchActive ? null : appliedLocationSearch)
+
+  const locationSearchError = appliedLocationSearch && !modelSearchActive ? locationError : null
+  const viewportError       = appliedLocationSearch || modelSearchActive ? null : locationError
+  const locationSearchLoading = locationLoading && appliedLocationSearch !== null && !modelSearchActive
+
+  // When model search is active, use its results instead of the location/viewport results
+  const properties = modelSearchActive ? modelSearchProperties : locationProperties
+  const total      = modelSearchActive ? modelSearchProperties.length : locationTotal
+  const loading    = modelSearchActive ? modelSearchLoading : locationLoading
 
   const filtered = useMemo(() => {
     const result = properties.filter((p: Property) => {
@@ -134,6 +227,30 @@ function SearchPage({
         const idx = p.air_quality?.daqi_index
         if (idx == null || idx > filters.maxDaqi) return false
       }
+      if (filters.minFloodRisk > 0) {
+        const band = p.flood_risk?.risk_band
+        if (band == null || band < filters.minFloodRisk) return false
+      }
+      if (filters.maxFloodRisk > 0) {
+        const band = p.flood_risk?.risk_band
+        if (band == null || band > filters.maxFloodRisk) return false
+      }
+      if (filters.maxRoadNoiseLden !== '') {
+        const lden = p.noise?.road_data?.metrics?.lden
+        if (lden != null && lden > (filters.maxRoadNoiseLden as number)) return false
+      }
+      if (filters.maxRailNoiseLden !== '') {
+        const lden = p.noise?.rail_data?.metrics?.lden
+        if (lden != null && lden > (filters.maxRailNoiseLden as number)) return false
+      }
+      if (filters.maxFlightNoiseLden !== '') {
+        const lden = p.noise?.flight_data?.metrics?.lden
+        if (lden != null && lden > (filters.maxFlightNoiseLden as number)) return false
+      }
+      if (filters.minAgentRating !== '') {
+        const rating = p.estate_agent?.rating
+        if (rating == null || rating < (filters.minAgentRating as number)) return false
+      }
       return true
     })
     return [...result].sort((a: Property, b: Property) => {
@@ -158,7 +275,11 @@ function SearchPage({
   }
 
   return (
-    <div className="shell" style={{ overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      {modelSearchError && (
+        <div className="ms-error-banner">{modelSearchError}</div>
+      )}
+      <div className="shell" style={{ overflow: 'hidden', flex: 1 }}>
       <LayoutSplit
         properties={properties}
         total={total}
@@ -183,6 +304,7 @@ function SearchPage({
         onApplyLocationSearch={onApplyLocationSearch}
         onClearLocationSearch={onClearLocationSearch}
       />
+      </div>
     </div>
   )
 }
@@ -203,6 +325,8 @@ function PropertyDetailPage() {
 export default function App() {
   const [locationSearchDraft, setLocationSearchDraft] = useState<LocationSearchParams>(DEFAULT_LOCATION_SEARCH)
   const [appliedLocationSearch, setAppliedLocationSearch] = useState<LocationSearchParams | null>(null)
+
+  const modelSearch = useModelSearch()
 
   function setLocationSearchField<K extends keyof LocationSearchParams>(key: K, value: LocationSearchParams[K]) {
     setLocationSearchDraft(current => ({ ...current, [key]: value }))
@@ -228,12 +352,26 @@ export default function App() {
     setLocationSearchDraft(current => ({ ...current, query: '' }))
   }
 
+  const modelSearchActive = modelSearch.status !== 'idle'
+
   return (
     <div className="app">
       <AppHeader
         locationSearch={locationSearchDraft}
         onLocationQueryChange={value => setLocationSearchField('query', value)}
         onApplyLocationSearch={applyLocationSearch}
+        onModelSearch={prompt => {
+          clearLocationSearch()
+          modelSearch.trigger(prompt)
+        }}
+        onClearModelSearch={() => {
+          modelSearch.clear()
+          setLocationSearchDraft(current => ({ ...current, query: '' }))
+        }}
+        modelSearchStatus={modelSearch.status}
+        modelSearchPrompt={modelSearch.prompt}
+        modelSearchResultCount={modelSearch.properties.length}
+        modelSearchError={modelSearch.error}
       />
       <Routes>
         <Route
@@ -245,6 +383,10 @@ export default function App() {
               onLocationSearchFieldChange={setLocationSearchField}
               onApplyLocationSearch={applyLocationSearch}
               onClearLocationSearch={clearLocationSearch}
+              modelSearchActive={modelSearchActive}
+              modelSearchProperties={modelSearch.properties}
+              modelSearchLoading={modelSearch.status === 'pending'}
+              modelSearchError={modelSearch.error}
             />
           }
         />

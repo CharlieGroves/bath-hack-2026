@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_29_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+  enable_extension "vector"
 
   create_table "air_quality_stations", force: :cascade do |t|
     t.integer "external_id", null: false
@@ -24,6 +25,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
     t.datetime "readings_fetched_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["daqi_index"], name: "index_air_quality_stations_on_daqi_index"
     t.index ["external_id"], name: "index_air_quality_stations_on_external_id", unique: true
     t.index ["latitude", "longitude"], name: "index_air_quality_stations_on_latitude_and_longitude"
   end
@@ -35,6 +37,54 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["area_slug"], name: "index_area_price_growths_on_area_slug", unique: true
+  end
+
+  create_table "boroughs", force: :cascade do |t|
+    t.string "name", null: false
+    t.float "nte_score_raw"
+    t.float "nte_score", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.float "life_satisfaction_score_raw"
+    t.float "life_satisfaction_score"
+    t.float "happiness_score_raw"
+    t.float "happiness_score"
+    t.float "anxiety_score_raw"
+    t.float "anxiety_score"
+    t.index ["name"], name: "index_boroughs_on_name", unique: true
+  end
+
+  create_table "estate_agents", force: :cascade do |t|
+    t.string "lookup_key", null: false
+    t.string "google_place_id", null: false
+    t.string "display_name"
+    t.decimal "rating", precision: 2, scale: 1
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["google_place_id"], name: "index_estate_agents_on_google_place_id", unique: true
+    t.index ["lookup_key"], name: "index_estate_agents_on_lookup_key", unique: true
+  end
+
+  create_table "flood_risk_datapoints", force: :cascade do |t|
+    t.decimal "latitude", precision: 10, scale: 7, null: false
+    t.decimal "longitude", precision: 10, scale: 7, null: false
+    t.string "risk_level", null: false
+    t.integer "risk_band", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["latitude", "longitude"], name: "index_flood_risk_datapoints_on_latitude_and_longitude"
+    t.index ["risk_band"], name: "index_flood_risk_datapoints_on_risk_band"
+  end
+
+  create_table "model_searches", force: :cascade do |t|
+    t.text "prompt", null: false
+    t.string "status", default: "pending", null: false
+    t.jsonb "filters", default: {}, null: false
+    t.jsonb "result_ids", default: [], null: false
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status"], name: "index_model_searches_on_status"
   end
 
   create_table "properties", force: :cascade do |t|
@@ -74,11 +124,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
     t.jsonb "raw_data"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "area_price_growth_id"
     t.bigint "air_quality_station_id"
+    t.bigint "area_price_growth_id"
+    t.bigint "flood_risk_datapoint_id"
+    t.bigint "estate_agent_id"
+    t.bigint "borough_id"
     t.index ["air_quality_station_id"], name: "index_properties_on_air_quality_station_id"
     t.index ["area_price_growth_id"], name: "index_properties_on_area_price_growth_id"
     t.index ["bedrooms"], name: "index_properties_on_bedrooms"
+    t.index ["borough_id"], name: "index_properties_on_borough_id"
+    t.index ["estate_agent_id"], name: "index_properties_on_estate_agent_id"
+    t.index ["flood_risk_datapoint_id"], name: "index_properties_on_flood_risk_datapoint_id"
+    t.index ["latitude", "longitude", "price_per_sqft_pence"], name: "idx_on_latitude_longitude_price_per_sqft_pence_636bf349eb", where: "((latitude IS NOT NULL) AND (longitude IS NOT NULL) AND (price_per_sqft_pence IS NOT NULL))"
     t.index ["latitude", "longitude"], name: "index_properties_on_latitude_and_longitude"
     t.index ["listed_at"], name: "index_properties_on_listed_at"
     t.index ["postcode"], name: "index_properties_on_postcode"
@@ -86,6 +143,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
     t.index ["property_type"], name: "index_properties_on_property_type"
     t.index ["rightmove_id"], name: "index_properties_on_rightmove_id", unique: true
     t.index ["slug"], name: "index_properties_on_slug", unique: true
+    t.index ["status", "property_type", "price_pence"], name: "index_properties_on_status_and_property_type_and_price_pence"
     t.index ["status"], name: "index_properties_on_status"
     t.index ["tenure"], name: "index_properties_on_tenure"
   end
@@ -101,6 +159,32 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["property_id"], name: "index_property_crime_snapshots_on_property_id", unique: true
+    t.index ["status", "fetched_at"], name: "index_property_crime_snapshots_on_status_and_fetched_at"
+  end
+
+  create_table "property_description_embeddings", force: :cascade do |t|
+    t.bigint "property_id", null: false
+    t.jsonb "embedding", default: [], null: false
+    t.string "embedding_model", null: false
+    t.string "fingerprint", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["property_id"], name: "index_property_description_embeddings_on_property_id", unique: true
+  end
+
+  create_table "property_image_embeddings", force: :cascade do |t|
+    t.bigint "property_id", null: false
+    t.integer "position", null: false
+    t.text "source_url", null: false
+    t.jsonb "embedding", default: [], null: false
+    t.string "embedding_model", null: false
+    t.string "fingerprint", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.vector "embedding_vector", limit: 768
+    t.index ["embedding_vector"], name: "idx_pie_embedding_vector_hnsw", opclass: :vector_cosine_ops, using: :hnsw
+    t.index ["property_id", "position"], name: "index_property_image_embeddings_on_property_and_position", unique: true
+    t.index ["property_id"], name: "index_property_image_embeddings_on_property_id"
   end
 
   create_table "property_images", force: :cascade do |t|
@@ -120,7 +204,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
     t.integer "walking_minutes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "termini", default: [], array: true
+    t.index ["distance_miles"], name: "index_property_nearest_stations_on_distance_miles"
     t.index ["property_id"], name: "index_property_nearest_stations_on_property_id"
+    t.index ["walking_minutes"], name: "index_property_nearest_stations_on_walking_minutes"
   end
 
   create_table "property_transport_snapshots", force: :cascade do |t|
@@ -140,9 +227,31 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_210000) do
     t.index ["status"], name: "index_property_transport_snapshots_on_status"
   end
 
+  create_table "schools", force: :cascade do |t|
+    t.string "urn", null: false
+    t.string "name", null: false
+    t.string "address1"
+    t.string "address2"
+    t.string "town"
+    t.string "postcode", null: false
+    t.float "p8mea"
+    t.decimal "latitude", precision: 10, scale: 7
+    t.decimal "longitude", precision: 10, scale: 7
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["latitude", "longitude"], name: "index_schools_on_latitude_and_longitude"
+    t.index ["postcode"], name: "index_schools_on_postcode"
+    t.index ["urn"], name: "index_schools_on_urn", unique: true
+  end
+
   add_foreign_key "properties", "air_quality_stations"
   add_foreign_key "properties", "area_price_growths"
+  add_foreign_key "properties", "boroughs"
+  add_foreign_key "properties", "estate_agents"
+  add_foreign_key "properties", "flood_risk_datapoints"
   add_foreign_key "property_crime_snapshots", "properties"
+  add_foreign_key "property_description_embeddings", "properties"
+  add_foreign_key "property_image_embeddings", "properties"
   add_foreign_key "property_images", "properties"
   add_foreign_key "property_nearest_stations", "properties"
   add_foreign_key "property_transport_snapshots", "properties"

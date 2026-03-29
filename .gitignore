@@ -10,3 +10,4 @@ ml-training/artifacts/latest/property_forecasts.json
 ml-training/artifacts/latest/training_predictions.json
 ml-training/artifacts/valuation/latest/property_valuations.json
 ml-training/artifacts/valuation/latest/valuation_predictions.json
+.claude/

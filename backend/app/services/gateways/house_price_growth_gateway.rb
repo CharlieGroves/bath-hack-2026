@@ -19,6 +19,7 @@ module Gateways
     DATA_FILE = "london_area_house_growth_per_year.csv".freeze
 
     class Error < StandardError; end
+    class RateLimitError < Error; end
 
     # @return [Array<Hash>] every row whose +area_name+ matches the geocoded segment:
     #   either string contains the other (case-insensitive). Multiple rows are all returned.
@@ -82,6 +83,7 @@ module Gateways
         http.request(req)
       end
 
+      raise RateLimitError, "Nominatim HTTP 429 for #{uri}" if response.code == "429"
       raise Error, "Nominatim HTTP #{response.code} for #{uri}" unless response.is_a?(Net::HTTPSuccess)
 
       response.body
