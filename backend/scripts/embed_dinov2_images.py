@@ -71,7 +71,10 @@ def main() -> None:
         return
 
     device = pick_device()
+    _real_stdout = sys.stdout
+    sys.stdout = sys.stderr
     model = torch.hub.load("facebookresearch/dinov2", hub_model, pretrained=True)
+    sys.stdout = _real_stdout
     model = model.to(device)
     model.eval()
     preprocess = build_preprocess()

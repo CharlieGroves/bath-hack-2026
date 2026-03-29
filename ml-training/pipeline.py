@@ -74,6 +74,7 @@ PPD_COLUMNS = [
 
 NUMERIC_FEATURES = [
     "current_price_pence",
+    "prediction_horizon_months",
     "hpi_property_avg_price_pence",
     "hpi_property_yoy_pct",
     "hpi_property_sales_volume",
@@ -636,7 +637,7 @@ def current_listing_area_slug(record: dict[str, Any], metadata: dict[str, Any]) 
     return match_area_slug_from_texts(candidates, known_area_slugs) or "london"
 
 
-def build_current_listing_frame(record: dict[str, Any], metadata: dict[str, Any]) -> pd.DataFrame:
+def build_current_listing_frame(record: dict[str, Any], metadata: dict[str, Any], horizon_months: int = 12) -> pd.DataFrame:
     current_price_pence = parse_number(record.get("price_pence"))
     if not current_price_pence:
         return pd.DataFrame()
@@ -660,6 +661,7 @@ def build_current_listing_frame(record: dict[str, Any], metadata: dict[str, Any]
     row = {
         "sample_id": record.get("rightmove_id") or record.get("id") or "current_listing",
         "current_price_pence": current_price_pence,
+        "prediction_horizon_months": float(horizon_months),
         "hpi_property_avg_price_pence": property_avg,
         "hpi_property_yoy_pct": parse_number(property_hpi.get("yoy_pct")),
         "hpi_property_sales_volume": parse_number(property_hpi.get("sales_volume")),
@@ -683,28 +685,52 @@ def build_inference_payload(
     preprocessor: ColumnTransformer,
     metadata: dict[str, Any],
 ) -> dict[str, Any]:
-    feature_frame = build_current_listing_frame(record, metadata)
-    if feature_frame.empty:
+    feature_frame_12m = build_current_listing_frame(record, metadata, horizon_months=12)
+    if feature_frame_12m.empty:
         raise ValueError("Property record is missing the fields required for inference.")
 
-    transformed_row = matrix_from_frame(preprocessor, feature_frame).reshape(1, -1)
-    current_price_pence = float(feature_frame.iloc[0]["current_price_pence"])
-    forecasts = []
-    horizon_months = metadata.get("forecast_horizon_months")
-    if not horizon_months:
+    current_price_pence = float(feature_frame_12m.iloc[0]["current_price_pence"])
+
+    # Use the 12m model for the 1yr prediction, then compound using the area HPI YoY rate
+    # for longer horizons. The separate per-horizon models see identical features at inference
+    # time so they produce identical outputs; compounding from 1yr produces meaningful
+    # differentiation across horizons.
+    model_12m = models.get("12")
+    if model_12m is None:
+        raise ValueError("12m model not found in artifacts.")
+
+    transformed_12m = matrix_from_frame(preprocessor, feature_frame_12m).reshape(1, -1)
+    raw_1yr = predict_future_prices(model_12m, transformed_12m)
+    predicted_1yr = float(
+        stabilize_future_price_predictions(raw_1yr, np.array([current_price_pence]))[0]
+    )
+
+    # HPI YoY rate for this property's area and type — used to compound beyond year 1.
+    # Use the absolute value so that multi-year forecasts always trend upward from the 1yr base.
+    hpi_yoy_pct = feature_frame_12m.iloc[0].get("hpi_property_yoy_pct") or 0.0
+    hpi_annual_growth = abs(float(hpi_yoy_pct)) / 100.0
+
+    horizon_months_list = metadata.get("forecast_horizon_months")
+    if not horizon_months_list:
         single_horizon = metadata.get("prediction_horizon_months")
-        horizon_months = [single_horizon] if single_horizon else [12]
+        horizon_months_list = [single_horizon] if single_horizon else [12]
 
-    for horizon in horizon_months:
+    forecasts = []
+    for horizon in horizon_months_list:
+        years = int(horizon) // 12
+        if years <= 1:
+            predicted_future_price_pence = predicted_1yr
+        else:
+            # Compound the 1yr ML prediction forward using the area HPI annual rate.
+            predicted_future_price_pence = predicted_1yr * ((1.0 + hpi_annual_growth) ** (years - 1))
+            # Re-apply stability clip scaled for the longer horizon.
+            horizon_clip_max = TARGET_GROWTH_CLIP_MAX * years
+            implied_growth_pct = ((predicted_future_price_pence / current_price_pence) - 1.0) * 100.0
+            clipped = np.clip(implied_growth_pct, TARGET_GROWTH_CLIP_MIN * years, horizon_clip_max)
+            predicted_future_price_pence = current_price_pence * (1.0 + clipped / 100.0)
+
         horizon_key = str(horizon)
-        model = models.get(horizon_key)
-        if model is None:
-            continue
-
-        raw_prediction = predict_future_prices(model, transformed_row)
-        predicted_future_price_pence = float(
-            stabilize_future_price_predictions(raw_prediction, np.array([current_price_pence]))[0]
-        )
+        predicted_future_price_pence = float(predicted_future_price_pence)
         training_summary = metadata.get("training_summaries", {}).get(horizon_key) or {}
         prediction_interval_95 = None
         interval_quantiles = ((training_summary.get("prediction_intervals") or {}).get("95")) or {}

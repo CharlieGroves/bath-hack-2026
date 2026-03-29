@@ -4,7 +4,30 @@
       "Bash(pkill -f sidekiq)",
       "Bash(sysctl kern.maxfilesperproc kern.maxfiles)",
       "Bash(RBENV_VERSION=3.4.4 bin/rails runner \":*)",
-      "Bash(RBENV_VERSION=3.4.4 bin/rails runner \"puts Property.joins\\(:property_transport_snapshot\\).where\\(property_transport_snapshots:{status:''''ready''''}\\).pluck\\(:town\\).tally.sort_by{|_,v|-v}.first\\(10\\).inspect\")"
+      "Bash(RBENV_VERSION=3.4.4 bin/rails runner \"puts Property.joins\\(:property_transport_snapshot\\).where\\(property_transport_snapshots:{status:''''ready''''}\\).pluck\\(:town\\).tally.sort_by{|_,v|-v}.first\\(10\\).inspect\")",
+      "Bash(python3 -m venv venv-embed)",
+      "Bash(venv-embed/bin/pip install:*)",
+      "Bash(ls backend/db/migrate/*20260328240001*)",
+      "Bash(ls backend/db/migrate/*20260328250000*)",
+      "Bash(ls -la /Users/charliegroves/dev/bath-hack-2026/backend/db/migrate/20260329000000*)",
+      "Bash(curl -s http://localhost:3000/api/v1/properties/7850)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(''''ml_forecast:'''', d.get\\(''''ml_forecast''''\\)\\)\")",
+      "Bash(python3 ml-training/infer_property.py --artifacts-dir ml-training/artifacts/latest)",
+      "Bash(python3 -c \"import sklearn; print\\(sklearn.__version__\\)\")",
+      "Bash(python3 -c \"import torch; print\\(torch.__version__\\)\")",
+      "Read(//Users/charliegroves/.local/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//usr/local/**)",
+      "Read(//Users/charliegroves/**)",
+      "Bash(ruby --version)",
+      "Read(//opt/anaconda3/bin/**)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''''ml_forecast''''\\), indent=2\\)\\)\")",
+      "Bash(find /Users/charliegroves/dev/bath-hack-2026 -name python3 -path */venv*)",
+      "Bash(/Users/charliegroves/dev/bath-hack-2026/backend/venv-embed/bin/python3 -c \"import numpy, sklearn, torch, pandas; print\\(''all ok'', sklearn.__version__\\)\")",
+      "Bash(/Users/charliegroves/dev/bath-hack-2026/backend/venv-embed/bin/python3 ml-training/infer_property.py --artifacts-dir ml-training/artifacts/latest)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(f\"\"{f[''''years_ahead'''']}yr: £{f[''''predicted_future_price_pence'''']//100:,}\"\"\\) for f in d[''''forecasts'''']]\")",
+      "Bash(python3 -c \":*)",
+      "Bash(/Users/charliegroves/dev/bath-hack-2026/backend/venv-embed/bin/python3 -:*)"
     ]
   }
 }

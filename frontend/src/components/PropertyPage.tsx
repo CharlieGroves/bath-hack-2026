@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area, ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { useProperty } from '../hooks/useProperty'
@@ -328,12 +328,111 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
   const currentPrice = property.price_pence
   const horizons = [...forecast.forecasts].sort((a, b) => a.years_ahead - b.years_ahead)
 
+  // Chart data: "Now" as anchor point, then each forecast horizon
+  const chartData = [
+    {
+      label: 'Now',
+      predicted: currentPrice != null ? Math.round(currentPrice / 100) : null,
+      lower: currentPrice != null ? Math.round(currentPrice / 100) : null,
+      range: 0,
+    },
+    ...horizons.map((item) => {
+      const predicted = Math.round(item.predicted_future_price_pence / 100)
+      const lower = item.prediction_interval_95
+        ? Math.round(item.prediction_interval_95.lower_pence / 100)
+        : predicted
+      const upper = item.prediction_interval_95
+        ? Math.round(item.prediction_interval_95.upper_pence / 100)
+        : predicted
+      return {
+        label: `${item.years_ahead} yr`,
+        predicted,
+        lower,
+        range: upper - lower,
+      }
+    }),
+  ]
+
   return (
     <section className="pp-section">
       <h2 className="pp-section-heading">ML forecasts</h2>
       <p className="pp-section-sub">
         Predicted prices for 1, 2, and 3 years ahead with an approximate 95% range.
       </p>
+
+      <div className="pp-chart-wrap">
+        <ResponsiveContainer width="100%" height={224}>
+          <ComposedChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id="forecastBand" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor="var(--ember)" stopOpacity={0.18} />
+                <stop offset="100%" stopColor="var(--ember)" stopOpacity={0.06} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--hr)" vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 11, fill: 'var(--t3)', fontFamily: 'var(--ff-body)' }}
+              tickLine={false}
+              axisLine={{ stroke: 'var(--border)' }}
+            />
+            <YAxis
+              tickFormatter={(v: number) => `£${Math.round(v / 1000)}k`}
+              tick={{ fontSize: 11, fill: 'var(--t3)', fontFamily: 'var(--ff-body)' }}
+              tickLine={false}
+              axisLine={false}
+              width={52}
+            />
+            <Tooltip
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null
+                const item = payload.find(p => p.dataKey === 'predicted')
+                if (!item) return null
+                return (
+                  <div style={{
+                    background: 'var(--card-bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontFamily: 'var(--ff-body)',
+                    fontSize: '12px',
+                    boxShadow: 'var(--shadow)',
+                  }}>
+                    <div style={{ color: 'var(--t2)', fontWeight: 600, marginBottom: 4 }}>{label}</div>
+                    <div style={{ color: 'var(--t1)' }}>
+                      {`£${Math.round(Number(item.value)).toLocaleString('en-GB')}`}
+                    </div>
+                  </div>
+                )
+              }}
+            />
+            {/* Confidence band: lower as invisible baseline, range fills from lower to upper */}
+            <Area
+              type="monotone"
+              dataKey="lower"
+              stackId="band"
+              fill="transparent"
+              stroke="none"
+            />
+            <Area
+              type="monotone"
+              dataKey="range"
+              stackId="band"
+              fill="url(#forecastBand)"
+              stroke="none"
+            />
+            {/* Point estimate line */}
+            <Line
+              type="monotone"
+              dataKey="predicted"
+              stroke="var(--ember)"
+              strokeWidth={2.5}
+              dot={{ fill: 'var(--ember)', r: 4, strokeWidth: 0 }}
+              activeDot={{ fill: 'var(--coal)', r: 5, strokeWidth: 0 }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
 
       <div className="pp-forecast-card">
         <div className="pp-forecast-horizon-grid">
