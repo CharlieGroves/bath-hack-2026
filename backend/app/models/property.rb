@@ -11,11 +11,15 @@ class Property < ApplicationRecord
   belongs_to :air_quality_station, optional: true
   belongs_to :flood_risk_datapoint, optional: true
   has_many :property_nearest_stations, dependent: :destroy
+  has_one :property_description_embedding, dependent: :destroy
+  has_many :property_image_embeddings, dependent: :destroy
 
   after_commit :enqueue_transport_refresh,        on: %i[create update], if: :transport_refresh_needed?
   after_commit :enqueue_nearest_stations_refresh, on: %i[create update], if: :nearest_stations_refresh_needed?
   after_commit :enqueue_crime_refresh,            on: %i[create update], if: :crime_refresh_needed?
   after_commit :enqueue_estate_agent_resolution, on: %i[create update], if: :estate_agent_resolution_needed?
+  after_commit :enqueue_description_embedding, on: %i[create update], if: :description_embedding_needed?
+  after_commit :enqueue_image_embedding, on: %i[create update], if: :image_embedding_needed?
 
   STATUSES       = %w[active under_offer sold let].freeze
   PROPERTY_TYPES = %w[flat terraced semi_detached detached bungalow land other].freeze
@@ -106,5 +110,26 @@ class Property < ApplicationRecord
 
   def enqueue_estate_agent_resolution
     EstateAgentLinkJob.perform_later(id)
+  end
+
+  def description_embedding_needed?
+    return false if description.blank?
+
+    property_description_embedding.nil? || previous_changes.key?("description")
+  end
+
+  def enqueue_description_embedding
+    PropertyDescriptionEmbedJob.perform_later(id)
+  end
+
+  def image_embedding_needed?
+    urls = Array(photo_urls).map(&:to_s).map(&:strip).reject(&:blank?)
+    return false if urls.empty?
+
+    property_image_embeddings.empty? || previous_changes.key?("photo_urls")
+  end
+
+  def enqueue_image_embedding
+    PropertyImageEmbedJob.perform_later(id)
   end
 end

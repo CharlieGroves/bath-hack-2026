@@ -1,0 +1,5 @@
+# For scripts/embed_dinov2_images.py (DINOv2 via torch.hub) — optional: embed_openclip_images.py needs open-clip-torch
+torch
+torchvision
+pillow
+requests
