@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_29_153000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_29_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
   enable_extension "vector"
@@ -198,6 +198,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_153000) do
     t.index ["property_id"], name: "index_property_images_on_property_id"
   end
 
+  create_table "property_monthly_bill_estimates", force: :cascade do |t|
+    t.bigint "property_id", null: false
+    t.string "provider", default: "openai", null: false
+    t.string "model_name", default: "gpt-4o-mini", null: false
+    t.string "status", default: "pending", null: false
+    t.bigint "estimated_total_monthly_pence"
+    t.string "confidence"
+    t.text "assumptions"
+    t.jsonb "breakdown", default: {}, null: false
+    t.jsonb "raw_payload", default: {}, null: false
+    t.datetime "fetched_at"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["property_id"], name: "index_property_monthly_bill_estimates_on_property_id", unique: true
+    t.index ["status"], name: "index_property_monthly_bill_estimates_on_status"
+  end
+
   create_table "property_nearest_stations", force: :cascade do |t|
     t.bigint "property_id", null: false
     t.string "name", null: false
@@ -255,6 +273,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_153000) do
   add_foreign_key "property_description_embeddings", "properties"
   add_foreign_key "property_image_embeddings", "properties"
   add_foreign_key "property_images", "properties"
+  add_foreign_key "property_monthly_bill_estimates", "properties"
   add_foreign_key "property_nearest_stations", "properties"
   add_foreign_key "property_transport_snapshots", "properties"
 end
