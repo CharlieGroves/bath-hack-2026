@@ -2,15 +2,18 @@ require "digest"
 require "json"
 require "open3"
 
-# Runs +scripts/embed_openclip_images.py+ (OpenCLIP) for ViT-L/14 image embeddings (768-d).
+# Runs +scripts/embed_dinov2_images.py+ (Meta DINOv2 via torch.hub). Default: +dinov2_vitb14+ (768-d CLS, L2-normalized).
+# To use OpenCLIP again, point +SCRIPT_BASENAME+ at +embed_openclip_images.py+ and restore MODEL_* / payload keys.
 #
 # Requires: pip install -r requirements-image-embed.txt
 # Optional: ENV["PYTHON_BIN"] (default +python3+).
 class PropertyImageEmbedder
-  MODEL_NAME = "ViT-L-14".freeze
-  PRETRAINED = "laion2b_s32b_b82k".freeze
-  MODEL_ID = "open_clip:#{MODEL_NAME}:#{PRETRAINED}".freeze
+  # DINOv2 hub names: dinov2_vits14 (384), dinov2_vitb14 (768), dinov2_vitl14 (1024), dinov2_vitg14 (1536).
+  # If you change HUB_MODEL, set EXPECTED_DIM and PropertyImageEmbedding::EXPECTED_DIMENSIONS (+ optional migration).
+  HUB_MODEL = "dinov2_vitb14".freeze
+  MODEL_ID = "dinov2:#{HUB_MODEL}".freeze
   EXPECTED_DIM = 768
+  SCRIPT_BASENAME = "embed_dinov2_images.py".freeze
 
   class Error < StandardError; end
 
@@ -28,19 +31,18 @@ class PropertyImageEmbedder
     list = Array(urls).map(&:to_s).map(&:strip).reject(&:blank?)
     return [] if list.empty?
 
-    script = Rails.root.join("scripts", "embed_openclip_images.py")
+    script = Rails.root.join("scripts", SCRIPT_BASENAME)
     raise Error, "Missing #{script}" unless script.file?
 
     python = ENV.fetch("PYTHON_BIN", "python3")
     payload = {
       urls: list,
-      model: MODEL_NAME,
-      pretrained: PRETRAINED
+      hub_model: HUB_MODEL
     }.to_json
 
     stdout, stderr, status = Open3.capture3(python, script.to_s, stdin_data: payload)
     unless status.success?
-      raise Error, "embed_openclip_images failed (#{status.exitstatus}): #{stderr.presence || stdout}"
+      raise Error, "embed_dinov2_images failed (#{status.exitstatus}): #{stderr.presence || stdout}"
     end
 
     data = JSON.parse(stdout)

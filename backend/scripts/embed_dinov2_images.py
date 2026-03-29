@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-Batch-embed image URLs with OpenCLIP ViT-L/14 (LAION weights by default).
+Batch-embed image URLs with Meta DINOv2 (torch.hub).
 
-Not used by PropertyImageEmbedder by default (see embed_dinov2_images.py). Install open-clip-torch to run this script.
-
-Input:  JSON stdin: {"urls": ["https://...", ...], "model": "ViT-L-14", "pretrained": "laion2b_s32b_b82k"}
-Output: JSON stdout: {"embeddings": [[float]|null, ...], "dimensions": 768}
+Input:  JSON stdin: {"urls": ["https://...", ...], "hub_model": "dinov2_vitb14"}
+        hub_model: dinov2_vits14 | dinov2_vitb14 | dinov2_vitl14 | dinov2_vitg14
+Output: JSON stdout: {"embeddings": [[float]|null, ...], "dimensions": N}
   null entries mean download/decode/encode failed for that URL (same order as input).
+
+Default dinov2_vitb14 → 768-d L2-normalized CLS embeddings (matches property_image_embeddings).
 
 Install: pip install -r requirements-image-embed.txt
 
 Device: CUDA if available, else Apple Silicon MPS (Metal), else CPU.
+First run downloads weights via torch.hub (needs network).
 """
 from __future__ import annotations
 
@@ -21,6 +23,7 @@ from io import BytesIO
 import requests
 import torch
 from PIL import Image
+from torchvision import transforms
 
 
 def pick_device() -> str:
@@ -44,11 +47,22 @@ def fetch_image(url: str, timeout: int = 45) -> Image.Image | None:
         return None
 
 
+def build_preprocess() -> transforms.Compose:
+    # DINOv2 ImageNet-style preprocessing (224)
+    return transforms.Compose(
+        [
+            transforms.Resize(256, interpolation=transforms.InterpolationMode.BICUBIC),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ]
+    )
+
+
 def main() -> None:
     req = json.load(sys.stdin)
     urls = req.get("urls") or []
-    model_name = req.get("model") or "ViT-L-14"
-    pretrained = req.get("pretrained") or "laion2b_s32b_b82k"
+    hub_model = req.get("hub_model") or "dinov2_vitb14"
     batch_size = int(req.get("batch_size") or 8)
 
     if not urls:
@@ -56,15 +70,12 @@ def main() -> None:
         sys.stdout.write("\n")
         return
 
-    import open_clip
-
     device = pick_device()
-    model, _, preprocess = open_clip.create_model_and_transforms(
-        model_name, pretrained=pretrained, device=device
-    )
+    model = torch.hub.load("facebookresearch/dinov2", hub_model, pretrained=True)
+    model = model.to(device)
     model.eval()
+    preprocess = build_preprocess()
 
-    # Map original index -> tensor (only successful loads)
     tensors: list[torch.Tensor] = []
     index_map: list[int] = []
     for i, url in enumerate(urls):
@@ -85,8 +96,9 @@ def main() -> None:
             chunk = tensors[start : start + batch_size]
             batch = torch.stack(chunk).to(device)
             with torch.no_grad():
-                emb = model.encode_image(batch)
-                emb = emb / emb.norm(dim=-1, keepdim=True)
+                feats = model.forward_features(batch)
+                emb = feats["x_norm_clstoken"]
+                emb = torch.nn.functional.normalize(emb, dim=-1, p=2, eps=1e-6)
             emb_cpu = emb.cpu()
             dim = emb_cpu.shape[-1]
             for j in range(emb_cpu.shape[0]):

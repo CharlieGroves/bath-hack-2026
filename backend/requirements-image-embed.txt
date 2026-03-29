@@ -1,5 +1,4 @@
-# For scripts/embed_openclip_images.py (OpenCLIP ViT-L/14 image embeddings)
-open-clip-torch
+# For scripts/embed_dinov2_images.py (DINOv2 via torch.hub) — optional: embed_openclip_images.py needs open-clip-torch
 torch
 torchvision
 pillow
