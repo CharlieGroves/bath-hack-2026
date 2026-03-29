@@ -14,6 +14,8 @@ class Property < ApplicationRecord
   has_one :property_description_embedding, dependent: :destroy
   has_many :property_image_embeddings, dependent: :destroy
 
+  has_neighbors :image_embeddings_maxpool_vector, dimensions: 768
+
   after_commit :enqueue_transport_refresh,        on: %i[create update], if: :transport_refresh_needed?
   after_commit :enqueue_nearest_stations_refresh, on: %i[create update], if: :nearest_stations_refresh_needed?
   after_commit :enqueue_crime_refresh,            on: %i[create update], if: :crime_refresh_needed?
@@ -56,6 +58,28 @@ class Property < ApplicationRecord
   scope :max_road_noise_lden,    ->(n) { joins(:property_transport_snapshot).where("property_transport_snapshots.status = 'ready'").where("CAST(property_transport_snapshots.road_data -> 'metrics' ->> 'lden' AS NUMERIC) <= ?", n) }
   scope :max_rail_noise_lden,    ->(n) { joins(:property_transport_snapshot).where("property_transport_snapshots.status = 'ready'").where("CAST(property_transport_snapshots.rail_data -> 'metrics' ->> 'lden' AS NUMERIC) <= ?", n) }
   scope :max_flight_noise_lden,  ->(n) { joins(:property_transport_snapshot).where("property_transport_snapshots.status = 'ready'").where("CAST(property_transport_snapshots.flight_data -> 'metrics' ->> 'lden' AS NUMERIC) <= ?", n) }
+
+  # Recomputes element-wise max of all +embedding_vector+ rows for this listing (see +PropertyImageEmbedding+).
+  def self.refresh_image_embeddings_maxpool!(property_id)
+    property = find_by(id: property_id)
+    return unless property
+
+    pooled = PropertyImageEmbedding.maxpool_vector_array_for_property(property_id)
+    property.update_columns(
+      image_embeddings_maxpool_vector: pooled,
+      updated_at: Time.current
+    )
+  end
+
+  # @param query_vector [Array<Numeric>] 768 floats (max-pool space; same dim as image embeddings)
+  def self.nearest_by_maxpool_vector(query_vector, limit: 20, distance: "cosine")
+    dim = PropertyImageEmbedding::EXPECTED_DIMENSIONS
+    unless query_vector.is_a?(Array) && query_vector.size == dim
+      raise ArgumentError, "expected Array of #{dim} floats"
+    end
+
+    nearest_neighbors(:image_embeddings_maxpool_vector, query_vector.map(&:to_f), distance: distance).limit(limit)
+  end
 
   # Returns a human-readable price string, e.g. "£450,000"
   def formatted_price

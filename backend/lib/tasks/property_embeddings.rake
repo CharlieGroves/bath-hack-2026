@@ -47,6 +47,13 @@ namespace :property_image_embeddings do
     end
     puts "Enqueued #{enqueued} image embedding job(s)."
   end
+
+  desc "Recompute properties.image_embeddings_maxpool_vector from image embedding rows (no Sidekiq)"
+  task backfill_maxpool: :environment do
+    pids = PropertyImageEmbedding.where.not(embedding_vector: nil).distinct.pluck(:property_id)
+    pids.each { |id| Property.refresh_image_embeddings_maxpool!(id) }
+    puts "Updated maxpool vector for #{pids.size} propert#{pids.size == 1 ? 'y' : 'ies'}."
+  end
 end
 
 namespace :property_embeddings do

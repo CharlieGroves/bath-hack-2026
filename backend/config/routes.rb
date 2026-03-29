@@ -24,6 +24,7 @@ Rails.application.routes.draw do
           get :search
           get :heatmap
           get :similar_by_image
+          get :similar_by_image_maxpool
         end
         member do
           get :xray
