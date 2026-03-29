@@ -13,6 +13,7 @@ class Property < ApplicationRecord
   has_many :property_nearest_stations, dependent: :destroy
   has_one :property_description_embedding, dependent: :destroy
   has_many :property_image_embeddings, dependent: :destroy
+  has_one :property_monthly_bill_estimate, dependent: :destroy
 
   has_neighbors :image_embeddings_maxpool_vector, dimensions: 768
 
@@ -22,6 +23,7 @@ class Property < ApplicationRecord
   after_commit :enqueue_estate_agent_resolution, on: %i[create update], if: :estate_agent_resolution_needed?
   after_commit :enqueue_description_embedding, on: %i[create update], if: :description_embedding_needed?
   after_commit :enqueue_image_embedding, on: %i[create update], if: :image_embedding_needed?
+  after_commit :enqueue_monthly_bill_estimate_refresh, on: %i[create update], if: :monthly_bill_estimate_refresh_needed?
 
   STATUSES       = %w[active under_offer sold let].freeze
   PROPERTY_TYPES = %w[flat terraced semi_detached detached bungalow land other].freeze
@@ -33,6 +35,25 @@ class Property < ApplicationRecord
     /\bpart[-\s]*buy[-\s]*part[-\s]*rent\b/i,
     /\b(?:share|ownership)\s*(?:purchase|available|to\s+buy|being\s+sold)?\s*:?\s*([1-9]\d?(?:\.\d+)?)\s*%\b/i,
     /\b([1-9]\d?(?:\.\d+)?)\s*%\s*(?:share|shared|ownership|of(?:\s+the)?\s+property)\b/i
+  ].freeze
+  MONTHLY_BILL_RELEVANT_FIELDS = %w[
+    description
+    price_pence
+    property_type
+    bedrooms
+    bathrooms
+    size_sqft
+    tenure
+    lease_years_remaining
+    epc_rating
+    council_tax_band
+    service_charge_annual_pence
+    utilities_text
+    parking_text
+    key_features
+    postcode
+    town
+    raw_data
   ].freeze
 
   validates :rightmove_id, presence: true, uniqueness: true
@@ -171,6 +192,27 @@ class Property < ApplicationRecord
 
   def enqueue_image_embedding
     PropertyImageEmbedJob.perform_later(id)
+  end
+
+  def monthly_bill_estimate_refresh_needed?
+    has_inputs = [
+      description,
+      price_pence,
+      size_sqft,
+      council_tax_band,
+      service_charge_annual_pence
+    ].any?(&:present?)
+    return false unless has_inputs
+    return true if property_monthly_bill_estimate.nil?
+
+    (previous_changes.keys & MONTHLY_BILL_RELEVANT_FIELDS).any? ||
+      property_monthly_bill_estimate.status != "ready" ||
+      property_monthly_bill_estimate.fetched_at.nil? ||
+      property_monthly_bill_estimate.fetched_at < 30.days.ago
+  end
+
+  def enqueue_monthly_bill_estimate_refresh
+    PropertyMonthlyBillEstimateJob.perform_later(id)
   end
 
   def derive_shared_ownership_flag

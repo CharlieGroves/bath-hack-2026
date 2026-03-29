@@ -136,7 +136,7 @@ module Api
 
       def set_property
         @property = Property
-          .includes(:property_nearest_stations, :area_price_growth, :property_transport_snapshot, :air_quality_station, :estate_agent)
+          .includes(:property_nearest_stations, :area_price_growth, :property_transport_snapshot, :air_quality_station, :estate_agent, :property_monthly_bill_estimate)
           .friendly.find(params[:id])
       end
 
@@ -272,6 +272,7 @@ module Api
           area_price_growth: area_price_growth_payload(property.area_price_growth),
           air_quality:       air_quality_payload(property.air_quality_station),
           is_shared_ownership: property.is_shared_ownership,
+          monthly_bills_estimate: monthly_bills_estimate_payload(property.property_monthly_bill_estimate),
           ml_forecast:       Ml::HousePriceForecastService.new(property).call,
           ml_valuation:      Ml::HousePriceValuationService.new(property).call
         }
@@ -328,6 +329,22 @@ module Api
       def flood_risk_payload(datapoint)
         return nil unless datapoint
         { risk_level: datapoint.risk_level, risk_band: datapoint.risk_band }
+      end
+
+      def monthly_bills_estimate_payload(estimate)
+        return nil unless estimate
+
+        {
+          status: estimate.status,
+          provider: estimate.provider,
+          model_name: estimate.model_name,
+          estimated_total_monthly_pence: estimate.estimated_total_monthly_pence,
+          confidence: estimate.confidence,
+          assumptions: estimate.assumptions,
+          breakdown: estimate.breakdown,
+          fetched_at: estimate.fetched_at,
+          error_message: estimate.error_message
+        }
       end
     end
   end

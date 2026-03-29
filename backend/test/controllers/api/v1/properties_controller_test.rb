@@ -5,6 +5,7 @@ module Api
     class PropertiesControllerTest < ActionDispatch::IntegrationTest
       setup do
         PropertyTransportSnapshot.delete_all
+        PropertyMonthlyBillEstimate.delete_all
         Property.delete_all
         @active      = create(:property)
         @under_offer = create(:property, :under_offer)
@@ -217,6 +218,26 @@ module Api
         assert_equal "overpriced", response.parsed_body["ml_valuation"]["pricing_signal"]
         assert_equal 34_500_000, response.parsed_body["ml_valuation"]["predicted_current_price_pence"]
         assert_equal 0.33, response.parsed_body["ml_valuation"]["feature_weights"].first["normalized_weight"]
+      end
+
+      test "GET /api/v1/properties/:id includes monthly bills estimate when available" do
+        @active.create_property_monthly_bill_estimate!(
+          provider: "openai",
+          model_name: "gpt-4o-mini",
+          status: "ready",
+          estimated_total_monthly_pence: 214_000,
+          confidence: "medium",
+          assumptions: "Default assumptions",
+          breakdown: { "council_tax_monthly_pence" => 19_000, "energy_monthly_pence" => 11_000 },
+          raw_payload: { "source" => "test" },
+          fetched_at: Time.current
+        )
+
+        get api_v1_property_path(@active), as: :json
+
+        assert_response :success
+        assert_equal 214_000, response.parsed_body["monthly_bills_estimate"]["estimated_total_monthly_pence"]
+        assert_equal "openai", response.parsed_body["monthly_bills_estimate"]["provider"]
       end
 
       test "GET /api/v1/properties/:id excludes raw_data" do
