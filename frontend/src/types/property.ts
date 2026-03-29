@@ -59,6 +59,31 @@ export interface MlForecast {
   forecasts: MlForecastResult[]
 }
 
+export interface MlValuationInterval {
+  lower_pence: number
+  upper_pence: number
+}
+
+export interface MlValuationFeatureWeight {
+  feature_key: string
+  label: string
+  display_value: string
+  normalized_weight: number
+  absolute_weight: number
+  direction: 'positive' | 'negative'
+}
+
+export interface MlValuation {
+  predicted_current_price_pence: number
+  pricing_signal: 'overpriced' | 'fairly_priced' | 'underpriced' | null
+  price_gap_pence: number | null
+  price_gap_pct: number | null
+  prediction_interval_80: MlValuationInterval | null
+  prediction_interval_95: MlValuationInterval | null
+  model_source: 'out_of_fold' | 'full_model'
+  feature_weights: MlValuationFeatureWeight[]
+}
+
 export interface BoundingBox {
   north: number
   south: number
@@ -113,6 +138,7 @@ export interface PropertyDetail {
   area_price_growth: AreaPriceGrowth | null
   air_quality: AirQuality | null
   ml_forecast: MlForecast | null
+  ml_valuation: MlValuation | null
 }
 
 // Matches the shape returned by API::V1::PropertiesController#property_summary

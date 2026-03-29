@@ -1,6 +1,9 @@
 # ML Training
 
-This folder contains the local training and inference pipeline for the 1-year, 2-year, and 3-year price forecasts shown on the property detail page.
+This folder contains the local training and inference pipelines for:
+
+- the 1-year, 2-year, and 3-year future price forecasts shown on the property detail page
+- a separate current-price valuation model that estimates fair value from structured house features and returns Integrated Gradients feature weights
 
 ## Training basis
 
@@ -24,22 +27,45 @@ python3 ml-training/collect_dataset.py
 Train and refresh artifacts:
 
 ```bash
-python3 ml-training/train_model.py --collect
+/opt/anaconda3/bin/python3 ml-training/train_model.py --collect
+```
+
+Train and refresh the current-price valuation model:
+
+```bash
+/opt/anaconda3/bin/python3 ml-training/train_valuation_model.py --collect
 ```
 
 Run inference for one property payload:
 
 ```bash
-python3 ml-training/infer_property.py --input path/to/property.json
+/opt/anaconda3/bin/python3 ml-training/infer_property.py --input path/to/property.json
+```
+
+Run current-price valuation inference for one property payload:
+
+```bash
+/opt/anaconda3/bin/python3 ml-training/infer_valuation.py --input path/to/property.json
 ```
 
 Runtime artifacts used by the app are stored in [ml-training/artifacts/latest](/Users/aonghus/Documents/bath-hack-2026/ml-training/artifacts/latest).
+The valuation artifacts are stored in `ml-training/artifacts/valuation/latest`.
+
+## Runtime dependency
+
+The ML runtime is pinned to `scikit-learn==1.7.2` in `ml-training/requirements.txt`. The current Rails services use the local Anaconda Python by default:
+
+```bash
+/opt/anaconda3/bin/python3
+```
 
 Downloaded historical caches are written under `ml-training/data/historical/` and are ignored by git.
 
 ## Current limitation
 
 The historical sales data does not carry the same house-level detail we have on current listings, such as bedrooms, bathrooms, listing photos, and most Rightmove-only metadata. So the current historical model is strongest on market context, price level, property type, and postcode/borough context, and weaker on rich house-specific attributes.
+
+The valuation model has the opposite trade-off: it uses richer current-listing features, but it is currently trained on a very small in-database sample, so its fair-value and overpriced signals should be treated as exploratory until the dataset is much larger.
 
 ## Best next data to add
 

@@ -7,7 +7,7 @@ import {
   Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { useProperty } from '../hooks/useProperty'
-import type { PropertyDetail, AirQuality, YearlyGrowthEntry } from '../types/property'
+import type { PropertyDetail, AirQuality, YearlyGrowthEntry, MlValuation } from '../types/property'
 import './PropertyPage.css'
 
 // Fix default marker icons broken by Vite's asset pipeline
@@ -33,6 +33,24 @@ function fmtLabel(s: string) {
 function fmtDate(iso: string | null) {
   if (!iso) return null
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function fmtPct(value: number | null, digits = 1) {
+  if (value == null || Number.isNaN(value)) return '—'
+  return `${value > 0 ? '+' : ''}${value.toFixed(digits)}%`
+}
+
+function pricingSignalCopy(signal: MlValuation['pricing_signal']) {
+  switch (signal) {
+    case 'overpriced':
+      return 'Model sees this listing as overpriced'
+    case 'underpriced':
+      return 'Model sees this listing as underpriced'
+    case 'fairly_priced':
+      return 'Model sees this listing as fairly priced'
+    default:
+      return 'Model value estimate'
+  }
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -365,6 +383,90 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
   )
 }
 
+function ValuationSection({ property }: { property: PropertyDetail }) {
+  const valuation = property.ml_valuation
+  if (!valuation) return null
+
+  const signalClass = valuation.pricing_signal === 'overpriced'
+    ? 'pp-valuation-overpriced'
+    : valuation.pricing_signal === 'underpriced'
+      ? 'pp-valuation-underpriced'
+      : 'pp-valuation-fair'
+
+  return (
+    <section className="pp-section">
+      <h2 className="pp-section-heading">Model valuation</h2>
+      <p className="pp-section-sub">
+        Current fair-value estimate from the structured house model, plus normalized Integrated Gradients feature weights.
+      </p>
+
+      <div className="pp-valuation-card">
+        <div className="pp-valuation-summary">
+          <div>
+            <div className="pp-forecast-label">Model value</div>
+            <div className="pp-forecast-value pp-forecast-value-strong">
+              {fmtPrice(valuation.predicted_current_price_pence)}
+            </div>
+            {valuation.prediction_interval_80 && (
+              <div className="pp-forecast-range">
+                80% fair-value band {fmtPrice(valuation.prediction_interval_80.lower_pence)} to {fmtPrice(valuation.prediction_interval_80.upper_pence)}
+              </div>
+            )}
+          </div>
+
+          <div className="pp-valuation-meta">
+            <div className={`pp-valuation-badge ${signalClass}`}>
+              {pricingSignalCopy(valuation.pricing_signal)}
+            </div>
+            {property.price_pence != null && (
+              <div className="pp-valuation-stat">
+                <span>Listed price</span>
+                <strong>{fmtPrice(property.price_pence)}</strong>
+              </div>
+            )}
+            {valuation.price_gap_pence != null && (
+              <div className="pp-valuation-stat">
+                <span>Gap vs model</span>
+                <strong className={valuation.price_gap_pence >= 0 ? 'pp-forecast-down' : 'pp-forecast-up'}>
+                  {fmtPrice(valuation.price_gap_pence)} · {fmtPct(valuation.price_gap_pct)}
+                </strong>
+              </div>
+            )}
+            <div className="pp-valuation-stat">
+              <span>Inference basis</span>
+              <strong>{valuation.model_source === 'out_of_fold' ? 'Out-of-fold' : 'Full model'}</strong>
+            </div>
+          </div>
+        </div>
+
+        {!!valuation.feature_weights.length && (
+          <div className="pp-valuation-weights">
+            {valuation.feature_weights.map((weight) => (
+              <div key={`${weight.feature_key}-${weight.label}`} className="pp-weight-row">
+                <div className="pp-weight-head">
+                  <div>
+                    <div className="pp-weight-label">{weight.label}</div>
+                    <div className="pp-weight-value">{weight.display_value}</div>
+                  </div>
+                  <div className={`pp-weight-score ${weight.direction === 'positive' ? 'pp-forecast-up' : 'pp-forecast-down'}`}>
+                    {fmtPct(weight.normalized_weight * 100, 1)}
+                  </div>
+                </div>
+                <div className="pp-weight-track">
+                  <div
+                    className={`pp-weight-fill ${weight.direction === 'positive' ? 'pp-weight-fill-positive' : 'pp-weight-fill-negative'}`}
+                    style={{ width: `${Math.max(weight.absolute_weight * 100, 6)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 const DAQI_COLORS: Record<string, string> = {
   Low:        '#22c55e',
   Moderate:   '#f59e0b',
@@ -509,6 +611,7 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
         <div className="pp-body">
           <div className="pp-main">
             <CoreDetails property={property} />
+            <ValuationSection property={property} />
             <ForecastSection property={property} />
             <KeyFeatures property={property} />
             <Description property={property} />

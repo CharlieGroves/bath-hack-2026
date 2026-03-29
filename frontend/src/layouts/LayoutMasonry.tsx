@@ -32,6 +32,11 @@ const INIT: Filters = {
   minPricePerSqft: '',
   maxPricePerSqft: '',
   maxDaqi: 0,
+  minFloodRisk: 0,
+  maxFloodRisk: 0,
+  maxRoadNoiseLden: '',
+  maxRailNoiseLden: '',
+  maxFlightNoiseLden: '',
 }
 const TYPES = ['flat', 'terraced', 'semi_detached', 'detached', 'bungalow']
 
