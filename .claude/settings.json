@@ -28,7 +28,11 @@
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(f\"\"{f[''''years_ahead'''']}yr: £{f[''''predicted_future_price_pence'''']//100:,}\"\"\\) for f in d[''''forecasts'''']]\")",
       "Bash(python3 -c \":*)",
       "Bash(/Users/charliegroves/dev/bath-hack-2026/backend/venv-embed/bin/python3 -:*)",
-      "Bash(python3 -:*)"
+      "Bash(python3 -:*)",
+      "Bash(bin/rails schools:import)",
+      "Bash(bin/rails schools:geocode)",
+      "Bash(psql -d bath_hack_2026_development -c \"SELECT MIN\\(avg_monthly_crimes\\), MAX\\(avg_monthly_crimes\\), PERCENTILE_CONT\\(0.5\\) WITHIN GROUP \\(ORDER BY avg_monthly_crimes\\) as median, PERCENTILE_CONT\\(0.9\\) WITHIN GROUP \\(ORDER BY avg_monthly_crimes\\) as p90, PERCENTILE_CONT\\(0.95\\) WITHIN GROUP \\(ORDER BY avg_monthly_crimes\\) as p95 FROM property_crimes WHERE avg_monthly_crimes IS NOT NULL;\")",
+      "Bash(psql -U postgres -d bath_hack_development -c \"SELECT MIN\\(avg_monthly_crimes\\), MAX\\(avg_monthly_crimes\\), PERCENTILE_CONT\\(0.5\\) WITHIN GROUP \\(ORDER BY avg_monthly_crimes\\) as median, PERCENTILE_CONT\\(0.9\\) WITHIN GROUP \\(ORDER BY avg_monthly_crimes\\) as p90, PERCENTILE_CONT\\(0.95\\) WITHIN GROUP \\(ORDER BY avg_monthly_crimes\\) as p95 FROM property_crimes WHERE avg_monthly_crimes IS NOT NULL;\")"
     ]
   }
 }

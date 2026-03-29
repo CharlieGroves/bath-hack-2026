@@ -129,6 +129,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_180000) do
     t.bigint "flood_risk_datapoint_id"
     t.bigint "estate_agent_id"
     t.bigint "borough_id"
+    t.vector "image_embeddings_maxpool_vector", limit: 768
     t.boolean "is_shared_ownership", default: false, null: false
     t.index ["air_quality_station_id"], name: "index_properties_on_air_quality_station_id"
     t.index ["area_price_growth_id"], name: "index_properties_on_area_price_growth_id"
@@ -136,6 +137,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_180000) do
     t.index ["borough_id"], name: "index_properties_on_borough_id"
     t.index ["estate_agent_id"], name: "index_properties_on_estate_agent_id"
     t.index ["flood_risk_datapoint_id"], name: "index_properties_on_flood_risk_datapoint_id"
+    t.index ["image_embeddings_maxpool_vector"], name: "idx_properties_image_maxpool_vector_hnsw", opclass: :vector_cosine_ops, using: :hnsw
+    t.index ["is_shared_ownership"], name: "index_properties_on_is_shared_ownership"
     t.index ["latitude", "longitude", "price_per_sqft_pence"], name: "idx_on_latitude_longitude_price_per_sqft_pence_636bf349eb", where: "((latitude IS NOT NULL) AND (longitude IS NOT NULL) AND (price_per_sqft_pence IS NOT NULL))"
     t.index ["latitude", "longitude"], name: "index_properties_on_latitude_and_longitude"
     t.index ["listed_at"], name: "index_properties_on_listed_at"
@@ -143,7 +146,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_180000) do
     t.index ["price_pence"], name: "index_properties_on_price_pence"
     t.index ["property_type"], name: "index_properties_on_property_type"
     t.index ["rightmove_id"], name: "index_properties_on_rightmove_id", unique: true
-    t.index ["is_shared_ownership"], name: "index_properties_on_is_shared_ownership"
     t.index ["slug"], name: "index_properties_on_slug", unique: true
     t.index ["status", "property_type", "price_pence"], name: "index_properties_on_status_and_property_type_and_price_pence"
     t.index ["status"], name: "index_properties_on_status"

@@ -299,6 +299,10 @@ function SearchPage({
         onSelectProperty={id => navigate(`/properties/${id}`)}
         viewportError={viewportError}
         activeLocationSearch={activeLocationSearch}
+        locationSearchDraft={locationSearchDraft}
+        onLocationSearchFieldChange={onLocationSearchFieldChange}
+        onApplyLocationSearch={onApplyLocationSearch}
+        onClearLocationSearch={onClearLocationSearch}
       />
       </div>
     </div>
@@ -326,6 +330,9 @@ export default function App() {
 
   function setLocationSearchField<K extends keyof LocationSearchParams>(key: K, value: LocationSearchParams[K]) {
     setLocationSearchDraft(current => ({ ...current, [key]: value }))
+    if (key !== 'query') {
+      setAppliedLocationSearch(current => current === null ? null : { ...current, [key]: value })
+    }
   }
 
   function applyLocationSearch(queryOverride?: string) {
