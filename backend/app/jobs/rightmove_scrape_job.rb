@@ -24,7 +24,7 @@ class RightmoveScrapeJob < ApplicationJob
     PropertyAirQualityMatchJob.perform_later(property.id) if is_new
     PropertyFloodRiskMatchJob.perform_later(property.id) if is_new
     PropertyBoroughMatchJob.perform_later(property.id) if is_new
-
+    CrimeAreaSnapshotJob.perform_later([property.id]) if is_new
     update_scrape_run(scrape_run_id, is_new)
 
   rescue RightmoveScraper::ScrapingError => e

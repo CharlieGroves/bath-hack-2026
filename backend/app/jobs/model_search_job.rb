@@ -31,7 +31,7 @@ class ModelSearchJob < ApplicationJob
     - max_road_noise_lden  (Float) maximum road noise in dB(A) Lden
     - max_rail_noise_lden  (Float) maximum rail noise in dB(A) Lden
     - max_flight_noise_lden (Float) maximum flight noise in dB(A) Lden
-    - sort              (String) one of: price_asc, price_desc, newest — default newest
+    - sort              (String) one of: price_asc, price_desc, newest - default newest
 
     Rules:
     - Prices must always be in pence (multiply £ amount by 100)
@@ -50,7 +50,7 @@ class ModelSearchJob < ApplicationJob
     return unless search&.pending?
 
     # 1. Call OpenAI
-    raw = OpenAiGateway.new.chat(
+    raw = Gateways::OpenAiGateway.new.chat(
       system: SYSTEM_PROMPT,
       user:   search.prompt,
       format: :json
@@ -71,10 +71,10 @@ class ModelSearchJob < ApplicationJob
 
     Rails.logger.info("[ModelSearchJob] search=#{model_search_id} → #{ids.size} results, filters=#{filters.inspect}")
 
-  rescue OpenAiGateway::ConfigError => e
+  rescue Gateways::OpenAiGateway::ConfigError => e
     Rails.logger.error("[ModelSearchJob] Config error: #{e.message}")
     search&.mark_failed!("Service not configured: #{e.message}")
-  rescue OpenAiGateway::Error => e
+  rescue Gateways::OpenAiGateway::Error => e
     Rails.logger.error("[ModelSearchJob] OpenAI error: #{e.message}")
     search&.mark_failed!(e.message)
     raise
