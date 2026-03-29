@@ -160,6 +160,7 @@ module Api
             ]
           }
         )
+        Ml::HousePriceValuationService.any_instance.stubs(:call).returns(nil)
 
         get api_v1_property_path(@active), as: :json
 
@@ -167,6 +168,44 @@ module Api
         assert_equal ["forecasts"], response.parsed_body["ml_forecast"].keys
         assert_equal 37_800_000, response.parsed_body["ml_forecast"]["forecasts"].first["predicted_future_price_pence"]
         assert_equal 44_200_000, response.parsed_body["ml_forecast"]["forecasts"].second["prediction_interval_95"]["upper_pence"]
+      end
+
+      test "GET /api/v1/properties/:id includes ml valuation when inference is available" do
+        Ml::HousePriceForecastService.any_instance.stubs(:call).returns(nil)
+        Ml::HousePriceValuationService.any_instance.stubs(:call).returns(
+          {
+            "predicted_current_price_pence" => 34_500_000,
+            "pricing_signal" => "overpriced",
+            "price_gap_pence" => 500_000,
+            "price_gap_pct" => 1.45,
+            "prediction_interval_80" => {
+              "lower_pence" => 31_000_000,
+              "upper_pence" => 36_800_000
+            },
+            "prediction_interval_95" => {
+              "lower_pence" => 29_400_000,
+              "upper_pence" => 38_200_000
+            },
+            "model_source" => "out_of_fold",
+            "feature_weights" => [
+              {
+                "feature_key" => "size_sqft",
+                "label" => "Size (sq ft)",
+                "display_value" => "1,400",
+                "normalized_weight" => 0.33,
+                "absolute_weight" => 0.33,
+                "direction" => "positive"
+              }
+            ]
+          }
+        )
+
+        get api_v1_property_path(@active), as: :json
+
+        assert_response :success
+        assert_equal "overpriced", response.parsed_body["ml_valuation"]["pricing_signal"]
+        assert_equal 34_500_000, response.parsed_body["ml_valuation"]["predicted_current_price_pence"]
+        assert_equal 0.33, response.parsed_body["ml_valuation"]["feature_weights"].first["normalized_weight"]
       end
 
       test "GET /api/v1/properties/:id excludes raw_data" do
