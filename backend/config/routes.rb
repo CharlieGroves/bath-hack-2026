@@ -23,6 +23,7 @@ Rails.application.routes.draw do
         collection do
           get :search
           get :heatmap
+          get :similar_by_image
         end
         member do
           get :xray

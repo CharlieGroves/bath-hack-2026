@@ -58,6 +58,7 @@ gem "ruby-openai"
 gem "stripe"
 
 gem "pg"
+gem "neighbor"
 gem "faraday"
 gem "csv"
 

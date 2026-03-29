@@ -1,5 +1,7 @@
 class CreatePropertyImageEmbeddings < ActiveRecord::Migration[7.2]
   def change
+    return if table_exists?(:property_image_embeddings)
+
     create_table :property_image_embeddings do |t|
       t.references :property, null: false, foreign_key: true
       t.integer :position, null: false

@@ -1,5 +1,7 @@
 class CreateSchools < ActiveRecord::Migration[7.2]
   def change
+    return if table_exists?(:schools)
+
     create_table :schools do |t|
       # DfE unique reference number — stable identifier across datasets
       t.string  :urn,       null: false
