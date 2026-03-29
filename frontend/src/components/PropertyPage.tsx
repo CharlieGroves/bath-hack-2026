@@ -7,7 +7,9 @@ import {
   Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { useProperty } from '../hooks/useProperty'
+import { useXray } from '../hooks/useXray'
 import type { PropertyDetail, AirQuality, YearlyGrowthEntry } from '../types/property'
+import XrayMap from './XrayMap'
 import './PropertyPage.css'
 
 // Fix default marker icons broken by Vite's asset pipeline
@@ -160,7 +162,7 @@ function CoreDetails({ property }: { property: PropertyDetail }) {
   if (property.listed_at)        items.push({ label: 'Listed',          value: fmtDate(property.listed_at) ?? '' })
   if (property.service_charge_annual_pence && property.service_charge_annual_pence > 0)
     items.push({ label: 'Service charge', value: `${fmtPrice(property.service_charge_annual_pence)} p.a.` })
-  if (property.lease_years_remaining != null && property.tenure !== 'freehold')
+  if (property.lease_years_remaining != null && property.lease_years_remaining > 0 && property.tenure !== 'freehold')
     items.push({ label: 'Lease remaining', value: `${property.lease_years_remaining} years` })
 
   if (!items.length) return null
@@ -226,6 +228,11 @@ function TransportSection({ property }: { property: PropertyDetail }) {
                 <span className="pp-station-badge">{fmtLabel(s.transport_type)}</span>
                 <span className="pp-station-dist">{Number(s.distance_miles).toFixed(1)} mi walk</span>
               </div>
+              {s.termini?.length > 0 && (
+                <div className="pp-station-termini">
+                  {s.termini.join(", ")}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -424,6 +431,7 @@ interface Props {
 
 export default function PropertyPage({ propertyId, onBack }: Props) {
   const { property, loading, error } = useProperty(propertyId)
+  const { xray, loading: xrayLoading } = useXray(property ? property.id : null)
   const [activePhoto, setActivePhoto] = useState(0)
 
   if (loading) {
@@ -468,7 +476,7 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
           <div className="pp-sidebar">
             <div className="pp-sidebar-sticky">
               <AgentCard property={property} />
-              <LocationMap property={property} />
+              <XrayMap property={property} xray={xray} loading={xrayLoading} />
             </div>
           </div>
         </div>

@@ -73,9 +73,11 @@ export interface Filters {
   minPricePerSqft:   number | ''
   maxPricePerSqft:   number | ''
   maxDaqi:           number
+  minFloodRisk:      number
+  maxFloodRisk:      number
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0 }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0 }
 const DEFAULT_LOCATION_SEARCH: LocationSearchParams = {
   query: '',
   transportationType: 'driving',
@@ -133,6 +135,14 @@ function SearchPage({
       if (filters.maxDaqi > 0) {
         const idx = p.air_quality?.daqi_index
         if (idx == null || idx > filters.maxDaqi) return false
+      }
+      if (filters.minFloodRisk > 0) {
+        const band = p.flood_risk?.risk_band
+        if (band == null || band < filters.minFloodRisk) return false
+      }
+      if (filters.maxFloodRisk > 0) {
+        const band = p.flood_risk?.risk_band
+        if (band == null || band > filters.maxFloodRisk) return false
       }
       return true
     })

@@ -3,6 +3,7 @@ export interface NearestStation {
   distance_miles: number
   walking_minutes: number
   transport_type: string
+  termini: string[]
 }
 
 export interface NoiseSection {
@@ -31,6 +32,11 @@ export interface AirQuality {
   daqi_index: number
   daqi_band: string
   station_name: string
+}
+
+export interface FloodRisk {
+  risk_level: string
+  risk_band: number
 }
 
 export interface YearlyGrowthEntry {
@@ -118,5 +124,6 @@ export interface Property {
   noise: PropertyNoise | null
   crime: PropertyCrime | null
   air_quality: AirQuality | null
+  flood_risk: FloodRisk | null
   nearest_stations: NearestStation[]
 }

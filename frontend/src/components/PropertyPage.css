@@ -477,6 +477,13 @@
   color: var(--t3);
 }
 
+.pp-station-termini {
+  font-family: var(--ff-body);
+  font-size: 0.75rem;
+  color: var(--t3);
+  margin-top: 3px;
+}
+
 /* ── Area growth chart ───────────────────────────────────────────────────── */
 .pp-chart-wrap {
   height: 256px;
@@ -595,4 +602,120 @@
   .pp-gallery-overlay {
     padding: 12px 16px 20px;
   }
+}
+
+/* ── Xray map ────────────────────────────────────────────────────────────── */
+.xray-map-wrap {
+  margin-top: 16px;
+}
+
+.xray-map-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  min-height: 24px;
+}
+
+.xray-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--ink-2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.xray-toggle input {
+  cursor: pointer;
+}
+
+.xray-loading-label {
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+.xray-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.xray-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.xray-legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: #E76814;
+}
+
+/* ── Xray POI list ───────────────────────────────────────────────────────── */
+.xray-poi-list {
+  margin-top: 16px;
+}
+
+.xray-poi-heading {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-1);
+  margin: 0 0 8px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.xray-poi-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.xray-poi-row:last-child {
+  border-bottom: none;
+}
+
+.xray-poi-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.xray-poi-name {
+  flex: 1;
+  color: var(--ink-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.xray-poi-type {
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.xray-poi-time {
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  min-width: 40px;
+  text-align: right;
+}
+
+.xray-poi-popup {
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
