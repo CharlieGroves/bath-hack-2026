@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MapContainer, TileLayer, Marker, Polygon, CircleMarker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { PropertyDetail } from '../types/property'
-import type { XrayData, Isochrone, IsochroneCoord } from '../types/xray'
+import type { XrayData, Isochrone, IsochroneCoord, NearbySchool } from '../types/xray'
 
 // Isochrone bands: 5 min most opaque, 15 min most transparent
 const ISOCHRONE_STYLES: Record<number, { fillOpacity: number; opacity: number }> = {
@@ -12,13 +12,18 @@ const ISOCHRONE_STYLES: Record<number, { fillOpacity: number; opacity: number }>
 }
 
 const AMENITY_COLOURS: Record<string, string> = {
-  school:       '#3b82f6',  // blue
-  supermarket:  '#16a34a',  // green
-  convenience:  '#65a30d',  // lime
-  pharmacy:     '#dc2626',  // red
-  cafe:         '#78716c',  // stone
-  station:      '#7c3aed',  // purple
-  halt:         '#7c3aed',  // purple
+  school:           '#3b82f6',  // blue
+  supermarket:      '#16a34a',  // green
+  convenience:      '#65a30d',  // lime
+  bakery:           '#d97706',  // amber
+  butcher:          '#b45309',  // brown
+  greengrocer:      '#15803d',  // dark green
+  newsagent:        '#9ca3af',  // grey
+  department_store: '#16a34a',  // green
+  pharmacy:         '#dc2626',  // red
+  cafe:             '#78716c',  // stone
+  station:          '#7c3aed',  // purple
+  halt:             '#7c3aed',  // purple
 }
 
 function amenityColour(amenity: string): string {
@@ -39,8 +44,22 @@ interface Props {
   loading: boolean
 }
 
+function fmtP8mea(p8mea: number | null): string {
+  if (p8mea == null) return 'No data'
+  return (p8mea >= 0 ? '+' : '') + p8mea.toFixed(2)
+}
+
+function p8meaColour(p8mea: number | null): string {
+  if (p8mea == null) return '#6b7280'
+  if (p8mea >= 0.5) return '#16a34a'
+  if (p8mea >= 0)   return '#65a30d'
+  if (p8mea >= -0.5) return '#f59e0b'
+  return '#dc2626'
+}
+
 export default function XrayMap({ property, xray, loading }: Props) {
   const [showRailLines, setShowRailLines] = useState(false)
+  const [showSchools, setShowSchools] = useState(true)
 
   if (property.latitude == null || property.longitude == null) return null
 
@@ -56,6 +75,14 @@ export default function XrayMap({ property, xray, loading }: Props) {
             onChange={e => setShowRailLines(e.target.checked)}
           />
           Show train lines
+        </label>
+        <label className="xray-toggle">
+          <input
+            type="checkbox"
+            checked={showSchools}
+            onChange={e => setShowSchools(e.target.checked)}
+          />
+          Show schools
         </label>
         {loading && <span className="xray-loading-label">Loading neighbourhood data...</span>}
       </div>
@@ -115,6 +142,28 @@ export default function XrayMap({ property, xray, loading }: Props) {
                 <strong>{poi.name}</strong>
                 <div>{fmtAmenity(poi.amenity)}</div>
                 <div>{poi.walk_minutes} min walk</div>
+              </div>
+            </Popup>
+          </CircleMarker>
+        ))}
+
+        {showSchools && xray?.schools.map((school: NearbySchool) => (
+          <CircleMarker
+            key={school.id}
+            center={[school.latitude, school.longitude]}
+            radius={8}
+            pathOptions={{
+              color: p8meaColour(school.p8mea),
+              fillColor: p8meaColour(school.p8mea),
+              fillOpacity: 0.85,
+              weight: 2,
+            }}
+          >
+            <Popup>
+              <div className="xray-poi-popup">
+                <strong>{school.name}</strong>
+                <div>Progress 8: {fmtP8mea(school.p8mea)}</div>
+                <div>{(school.distance_km * 1000).toFixed(0)}m away</div>
               </div>
             </Popup>
           </CircleMarker>

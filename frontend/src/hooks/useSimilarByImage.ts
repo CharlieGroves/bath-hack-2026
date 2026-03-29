@@ -14,8 +14,8 @@ interface UseSimilarByImageResult {
   loading: boolean
   error: string | null
   activeMode: SimilarMode | null
-  fetchSimilar: (propertyId: number, position: number) => void
-  fetchSimilarMaxpool: (propertyId: number) => void
+  fetchSimilar: (propertyId: number, position: number, textQuery?: string) => void
+  fetchSimilarMaxpool: (propertyId: number, textQuery?: string) => void
   clear: () => void
 }
 
@@ -46,11 +46,20 @@ export function useSimilarByImage(): UseSimilarByImageResult {
     }
   }
 
-  function fetchSimilar(propertyId: number, position: number) {
+  function fetchSimilar(propertyId: number, position: number, textQuery?: string) {
     startFetch()
     setActiveMode('per_photo')
+    const params = new URLSearchParams({
+      property_id: String(propertyId),
+      position: String(position),
+      k: '6',
+    })
+    if (textQuery) {
+      params.set('text_query', textQuery)
+      params.set('text_weight', '0.1')
+    }
     fetch(
-      `/api/v1/properties/similar_by_image?property_id=${propertyId}&position=${position}&k=6`,
+      `/api/v1/properties/similar_by_image?${params}`,
       { signal: abortRef.current!.signal },
     )
       .then(r => {
@@ -61,11 +70,19 @@ export function useSimilarByImage(): UseSimilarByImageResult {
       .catch(onError)
   }
 
-  function fetchSimilarMaxpool(propertyId: number) {
+  function fetchSimilarMaxpool(propertyId: number, textQuery?: string) {
     startFetch()
     setActiveMode('maxpool')
+    const params = new URLSearchParams({
+      property_id: String(propertyId),
+      k: '6',
+    })
+    if (textQuery) {
+      params.set('text_query', textQuery)
+      params.set('text_weight', '0.1')
+    }
     fetch(
-      `/api/v1/properties/similar_by_image_maxpool?property_id=${propertyId}&k=6`,
+      `/api/v1/properties/similar_by_image_maxpool?${params}`,
       { signal: abortRef.current!.signal },
     )
       .then(r => {

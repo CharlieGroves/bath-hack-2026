@@ -297,7 +297,7 @@ function IntelligenceStrip({ property }: { property: PropertyDetail }) {
   })
 
   if (aq) cells.push({
-    label: 'Air quality',
+    label: 'Air pollution',
     value: aq.daqi_band,
     sub: `DAQI ${aq.daqi_index} / 10`,
     cls: aqCls(aq.daqi_band),
@@ -866,7 +866,7 @@ function EnvironmentalSection({ property }: { property: PropertyDetail }) {
           return (
             <div className={`pp-env-card ${cls}`}>
               <div className="pp-env-card-indicator" />
-              <div className="pp-env-card-label">Air quality</div>
+              <div className="pp-env-card-label">Air pollution</div>
               <div className="pp-env-card-value">{aq.daqi_index}<span className="pp-env-card-unit"> / 10</span></div>
               <div className={`pp-env-card-band ${cls}`}>{aq.daqi_band}</div>
               <div className="pp-env-card-meta">DAQI scale · {aq.station_name}</div>
@@ -979,12 +979,12 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
 
   function handleFindSimilar() {
     if (!property) return
-    fetchSimilar(property.id, 0)
+    fetchSimilar(property.id, 0, property.description ?? undefined)
   }
 
   function handleFindSimilarMaxpool() {
     if (!property) return
-    fetchSimilarMaxpool(property.id)
+    fetchSimilarMaxpool(property.id, property.description ?? undefined)
   }
 
   function handleCloseSimilar() {

@@ -8,7 +8,7 @@ namespace :properties do
   task refresh_shared_ownership_flags: :environment do
     batch_size = [ENV.fetch("BATCH_SIZE", "1000").to_i, 1].max
     scope = Property.select(:id, :description, :is_shared_ownership).order(:id)
-    total = scope.count
+    total = Property.count
 
     if total.zero?
       puts "No properties found."

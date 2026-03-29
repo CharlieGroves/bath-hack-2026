@@ -16,7 +16,18 @@ export interface Poi {
   walk_minutes: number
 }
 
+export interface NearbySchool {
+  id: number
+  name: string
+  urn: string
+  p8mea: number | null
+  latitude: number
+  longitude: number
+  distance_km: number
+}
+
 export interface XrayData {
   isochrones: Isochrone[]
   pois: Poi[]
+  schools: NearbySchool[]
 }
