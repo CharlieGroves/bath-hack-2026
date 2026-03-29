@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_29_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_29_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+  enable_extension "vector"
 
   create_table "air_quality_stations", force: :cascade do |t|
     t.integer "external_id", null: false
@@ -128,14 +129,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_120000) do
     t.bigint "flood_risk_datapoint_id"
     t.bigint "estate_agent_id"
     t.bigint "borough_id"
-    t.vector "image_embeddings_maxpool_vector", limit: 768
     t.index ["air_quality_station_id"], name: "index_properties_on_air_quality_station_id"
     t.index ["area_price_growth_id"], name: "index_properties_on_area_price_growth_id"
     t.index ["bedrooms"], name: "index_properties_on_bedrooms"
     t.index ["borough_id"], name: "index_properties_on_borough_id"
     t.index ["estate_agent_id"], name: "index_properties_on_estate_agent_id"
     t.index ["flood_risk_datapoint_id"], name: "index_properties_on_flood_risk_datapoint_id"
-    t.index ["image_embeddings_maxpool_vector"], name: "idx_properties_image_maxpool_vector_hnsw", opclass: :vector_cosine_ops, using: :hnsw
     t.index ["latitude", "longitude", "price_per_sqft_pence"], name: "idx_on_latitude_longitude_price_per_sqft_pence_636bf349eb", where: "((latitude IS NOT NULL) AND (longitude IS NOT NULL) AND (price_per_sqft_pence IS NOT NULL))"
     t.index ["latitude", "longitude"], name: "index_properties_on_latitude_and_longitude"
     t.index ["listed_at"], name: "index_properties_on_listed_at"
@@ -182,6 +181,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_120000) do
     t.string "fingerprint", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.vector "embedding_vector", limit: 768
+    t.index ["embedding_vector"], name: "idx_pie_embedding_vector_hnsw", opclass: :vector_cosine_ops, using: :hnsw
     t.index ["property_id", "position"], name: "index_property_image_embeddings_on_property_and_position", unique: true
     t.index ["property_id"], name: "index_property_image_embeddings_on_property_id"
   end
