@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { MapContainer, TileLayer, Marker } from 'react-leaflet'
+import { useNavigate } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area, ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { useProperty } from '../hooks/useProperty'
 import { useXray } from '../hooks/useXray'
+import { useSimilarByImage } from '../hooks/useSimilarByImage'
+import type { SimilarMatch } from '../hooks/useSimilarByImage'
 import type { PropertyDetail, AirQuality, YearlyGrowthEntry } from '../types/property'
 import XrayMap from './XrayMap'
 import './PropertyPage.css'
@@ -57,10 +60,14 @@ function HeroGallery({
   property,
   activePhoto,
   setActivePhoto,
+  onFindSimilar,
+  similarLoading,
 }: {
   property: PropertyDetail
   activePhoto: number
   setActivePhoto: (i: number) => void
+  onFindSimilar: () => void
+  similarLoading: boolean
 }) {
   const photos = property.photo_urls
 
@@ -96,6 +103,24 @@ function HeroGallery({
             </button>
           </>
         )}
+
+        <button
+          className={`pp-similar-btn${similarLoading ? ' pp-similar-btn-loading' : ''}`}
+          onClick={onFindSimilar}
+          disabled={similarLoading}
+          aria-label="Find visually similar properties"
+        >
+          {similarLoading ? (
+            <span className="pp-similar-btn-spinner" />
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M8.5 8.5L13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M3.5 5.5h4M5.5 3.5v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+          )}
+          Find similar
+        </button>
 
         <div className="pp-gallery-overlay">
           {photos.length > 1 && (
@@ -328,12 +353,111 @@ function ForecastSection({ property }: { property: PropertyDetail }) {
   const currentPrice = property.price_pence
   const horizons = [...forecast.forecasts].sort((a, b) => a.years_ahead - b.years_ahead)
 
+  // Chart data: "Now" as anchor point, then each forecast horizon
+  const chartData = [
+    {
+      label: 'Now',
+      predicted: currentPrice != null ? Math.round(currentPrice / 100) : null,
+      lower: currentPrice != null ? Math.round(currentPrice / 100) : null,
+      range: 0,
+    },
+    ...horizons.map((item) => {
+      const predicted = Math.round(item.predicted_future_price_pence / 100)
+      const lower = item.prediction_interval_95
+        ? Math.round(item.prediction_interval_95.lower_pence / 100)
+        : predicted
+      const upper = item.prediction_interval_95
+        ? Math.round(item.prediction_interval_95.upper_pence / 100)
+        : predicted
+      return {
+        label: `${item.years_ahead} yr`,
+        predicted,
+        lower,
+        range: upper - lower,
+      }
+    }),
+  ]
+
   return (
     <section className="pp-section">
       <h2 className="pp-section-heading">ML forecasts</h2>
       <p className="pp-section-sub">
         Predicted prices for 1, 2, and 3 years ahead with an approximate 95% range.
       </p>
+
+      <div className="pp-chart-wrap">
+        <ResponsiveContainer width="100%" height={224}>
+          <ComposedChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id="forecastBand" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor="var(--ember)" stopOpacity={0.18} />
+                <stop offset="100%" stopColor="var(--ember)" stopOpacity={0.06} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--hr)" vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 11, fill: 'var(--t3)', fontFamily: 'var(--ff-body)' }}
+              tickLine={false}
+              axisLine={{ stroke: 'var(--border)' }}
+            />
+            <YAxis
+              tickFormatter={(v: number) => `£${Math.round(v / 1000)}k`}
+              tick={{ fontSize: 11, fill: 'var(--t3)', fontFamily: 'var(--ff-body)' }}
+              tickLine={false}
+              axisLine={false}
+              width={52}
+            />
+            <Tooltip
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null
+                const item = payload.find(p => p.dataKey === 'predicted')
+                if (!item) return null
+                return (
+                  <div style={{
+                    background: 'var(--card-bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontFamily: 'var(--ff-body)',
+                    fontSize: '12px',
+                    boxShadow: 'var(--shadow)',
+                  }}>
+                    <div style={{ color: 'var(--t2)', fontWeight: 600, marginBottom: 4 }}>{label}</div>
+                    <div style={{ color: 'var(--t1)' }}>
+                      {`£${Math.round(Number(item.value)).toLocaleString('en-GB')}`}
+                    </div>
+                  </div>
+                )
+              }}
+            />
+            {/* Confidence band: lower as invisible baseline, range fills from lower to upper */}
+            <Area
+              type="monotone"
+              dataKey="lower"
+              stackId="band"
+              fill="transparent"
+              stroke="none"
+            />
+            <Area
+              type="monotone"
+              dataKey="range"
+              stackId="band"
+              fill="url(#forecastBand)"
+              stroke="none"
+            />
+            {/* Point estimate line */}
+            <Line
+              type="monotone"
+              dataKey="predicted"
+              stroke="var(--ember)"
+              strokeWidth={2.5}
+              dot={{ fill: 'var(--ember)', r: 4, strokeWidth: 0 }}
+              activeDot={{ fill: 'var(--coal)', r: 5, strokeWidth: 0 }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
 
       <div className="pp-forecast-card">
         <div className="pp-forecast-horizon-grid">
@@ -473,6 +597,76 @@ function LocationMap({ property }: { property: PropertyDetail }) {
   )
 }
 
+// ── Similar properties ──────────────────────────────────────────────────────────
+
+function SimilarPropertiesSection({
+  matches,
+  loading,
+  error,
+  onSelect,
+  onClose,
+}: {
+  matches: SimilarMatch[]
+  loading: boolean
+  error: string | null
+  onSelect: (id: number) => void
+  onClose: () => void
+}) {
+  if (!loading && !error && matches.length === 0) return null
+
+  return (
+    <section className="pp-similar-section">
+      <div className="pp-similar-header">
+        <h2 className="pp-section-heading" style={{ margin: 0 }}>Visually similar properties</h2>
+        <button className="pp-similar-close" onClick={onClose} aria-label="Close similar properties">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      {loading && (
+        <div className="pp-similar-state">
+          <span className="pp-similar-spinner" />
+          <span className="pp-similar-state-text">Searching for similar properties</span>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="pp-similar-state">
+          <span className="pp-similar-state-text pp-similar-error">
+            Could not find similar properties.
+          </span>
+        </div>
+      )}
+
+      {!loading && !error && matches.length > 0 && (
+        <div className="pp-similar-scroll">
+          {matches.map(m => (
+            <button key={m.id} className="pp-similar-card" onClick={() => onSelect(m.id)}>
+              <div className="pp-similar-card-img">
+                {m.photo_url
+                  ? <img src={m.photo_url} alt="" loading="lazy" />
+                  : <div className="pp-similar-card-img-empty" />
+                }
+              </div>
+              <div className="pp-similar-card-body">
+                <div className="pp-similar-card-price">
+                  {m.price != null ? '£' + Math.round(m.price / 100).toLocaleString('en-GB') : '—'}
+                </div>
+                <div className="pp-similar-card-address">{m.address}</div>
+                {m.bedrooms != null && (
+                  <div className="pp-similar-card-meta">{m.bedrooms} bed</div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface Props {
@@ -484,6 +678,20 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
   const { property, loading, error } = useProperty(propertyId)
   const { xray, loading: xrayLoading } = useXray(property ? property.id : null)
   const [activePhoto, setActivePhoto] = useState(0)
+  const { matches: similarMatches, loading: similarLoading, error: similarError, fetchSimilar, clear: clearSimilar } = useSimilarByImage()
+  const [similarVisible, setSimilarVisible] = useState(false)
+  const navigate = useNavigate()
+
+  function handleFindSimilar() {
+    if (!property) return
+    setSimilarVisible(true)
+    fetchSimilar(property.id, activePhoto)
+  }
+
+  function handleCloseSimilar() {
+    setSimilarVisible(false)
+    clearSimilar()
+  }
 
   if (loading) {
     return (
@@ -512,8 +720,19 @@ export default function PropertyPage({ propertyId, onBack }: Props) {
         <HeroGallery
           property={property}
           activePhoto={activePhoto}
-          setActivePhoto={setActivePhoto}
+          setActivePhoto={i => { setActivePhoto(i); handleCloseSimilar() }}
+          onFindSimilar={handleFindSimilar}
+          similarLoading={similarLoading}
         />
+        {similarVisible && (
+          <SimilarPropertiesSection
+            matches={similarMatches}
+            loading={similarLoading}
+            error={similarError}
+            onSelect={id => navigate(`/properties/${id}`)}
+            onClose={handleCloseSimilar}
+          />
+        )}
         <div className="pp-body">
           <div className="pp-main">
             <CoreDetails property={property} />

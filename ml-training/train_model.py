@@ -67,6 +67,12 @@ def run_dataset_export(output_path: Path) -> None:
     )
 
 
+def init_output_bias(model: PriceForecastNet, targets: np.ndarray) -> None:
+    """Set the output layer bias to the target mean so training starts near the right scale."""
+    with torch.no_grad():
+        model.layers[-1].bias.fill_(float(targets.mean()))
+
+
 def train_with_validation(
     train_matrix: np.ndarray,
     train_targets: np.ndarray,
@@ -77,6 +83,7 @@ def train_with_validation(
 ) -> tuple[PriceForecastNet, int]:
     set_seed(seed)
     model = PriceForecastNet(train_matrix.shape[1])
+    init_output_bias(model, train_targets)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
     criterion = nn.SmoothL1Loss()
 
@@ -129,6 +136,7 @@ def train_with_validation(
 def train_fixed_epochs(matrix: np.ndarray, targets: np.ndarray, input_dim: int, epochs: int, seed: int) -> PriceForecastNet:
     set_seed(seed)
     model = PriceForecastNet(input_dim)
+    init_output_bias(model, targets)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
     criterion = nn.SmoothL1Loss()
     dataset = TensorDataset(
