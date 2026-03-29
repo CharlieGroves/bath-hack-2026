@@ -50,6 +50,21 @@ export interface AreaPriceGrowth {
   yearly_growth_data: Record<string, YearlyGrowthEntry>
 }
 
+export interface MlPredictionInterval {
+  lower_pence: number
+  upper_pence: number
+}
+
+export interface MlForecastResult {
+  years_ahead: number
+  predicted_future_price_pence: number
+  prediction_interval_95: MlPredictionInterval | null
+}
+
+export interface MlForecast {
+  forecasts: MlForecastResult[]
+}
+
 export interface BoundingBox {
   north: number
   south: number
@@ -103,6 +118,7 @@ export interface PropertyDetail {
   nearest_stations: NearestStation[]
   area_price_growth: AreaPriceGrowth | null
   air_quality: AirQuality | null
+  ml_forecast: MlForecast | null
 }
 
 // Matches the shape returned by API::V1::PropertiesController#property_summary

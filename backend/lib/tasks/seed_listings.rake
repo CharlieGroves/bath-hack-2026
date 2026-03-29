@@ -18,7 +18,7 @@ namespace :seed do
         BAND_SIZE=25000
   DESC
   task listings: :environment do
-    default_url = "https://www.rightmove.co.uk/property-for-sale/find.html?channel=BUY&index=0&newHome=false&retirement=false&auction=false&partBuyPartRent=false&sortType=2&areaSizeUnit=sqft&locationIdentifier=REGION%5E87490&transactionType=BUY&displayLocationIdentifier=London-87490.html"
+    default_url = "https://www.rightmove.co.uk/property-for-sale/find.html?dontShow=newHome%2Cretirement%2CsharedOwnership%2Cauction&channel=BUY&newHome=false&retirement=false&auction=false&partBuyPartRent=false&sortType=6&areaSizeUnit=sqft&locationIdentifier=REGION%5E87490&transactionType=BUY&displayLocationIdentifier=London-87490.html"
     url        = ENV.fetch("URL", default_url)
     delay      = ENV.fetch("DELAY", "1").to_f
     band_size  = ENV.fetch("BAND_SIZE", "50000").to_i

@@ -63,21 +63,24 @@ function AppHeader({ locationSearch, onLocationQueryChange, onApplyLocationSearc
 
 // ─── Filter state ────────────────────────────────────────────────────────────
 export interface Filters {
-  minPrice:          number | ''
-  maxPrice:          number | ''
-  minBeds:           number
-  maxBeds:           number
-  types:             string[]
-  maxStationMinutes: number
-  maxCrimeRate:      number | ''
-  minPricePerSqft:   number | ''
-  maxPricePerSqft:   number | ''
-  maxDaqi:           number
-  minFloodRisk:      number
-  maxFloodRisk:      number
+  minPrice:           number | ''
+  maxPrice:           number | ''
+  minBeds:            number
+  maxBeds:            number
+  types:              string[]
+  maxStationMinutes:  number
+  maxCrimeRate:       number | ''
+  minPricePerSqft:    number | ''
+  maxPricePerSqft:    number | ''
+  maxDaqi:            number
+  minFloodRisk:       number
+  maxFloodRisk:       number
+  maxRoadNoiseLden:   number | ''
+  maxRailNoiseLden:   number | ''
+  maxFlightNoiseLden: number | ''
 }
 
-const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0 }
+const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '' }
 const DEFAULT_LOCATION_SEARCH: LocationSearchParams = {
   query: '',
   transportationType: 'driving',
@@ -143,6 +146,18 @@ function SearchPage({
       if (filters.maxFloodRisk > 0) {
         const band = p.flood_risk?.risk_band
         if (band == null || band > filters.maxFloodRisk) return false
+      }
+      if (filters.maxRoadNoiseLden !== '') {
+        const lden = p.noise?.road_data?.metrics?.lden
+        if (lden != null && lden > (filters.maxRoadNoiseLden as number)) return false
+      }
+      if (filters.maxRailNoiseLden !== '') {
+        const lden = p.noise?.rail_data?.metrics?.lden
+        if (lden != null && lden > (filters.maxRailNoiseLden as number)) return false
+      }
+      if (filters.maxFlightNoiseLden !== '') {
+        const lden = p.noise?.flight_data?.metrics?.lden
+        if (lden != null && lden > (filters.maxFlightNoiseLden as number)) return false
       }
       return true
     })

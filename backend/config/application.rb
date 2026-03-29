@@ -16,6 +16,12 @@ module Backend
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
 
+    # The gateways/ subdirectory contains top-level classes (no Gateways:: namespace),
+    # so collapse it so Zeitwerk doesn't infer a namespace from the folder name.
+    config.to_prepare do
+      Rails.autoloaders.main.collapse("#{Rails.root}/app/services/gateways")
+    end
+
     # Configuration for the application, engines, and railties goes here.
     #
     # These settings can be overridden in specific environments using the files
