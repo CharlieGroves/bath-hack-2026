@@ -224,7 +224,6 @@ export default function LayoutSplit({
   filters,
   sort,
   setF,
-  toggleType,
   setFilters,
   setSort,
   properties,
@@ -258,58 +257,6 @@ export default function LayoutSplit({
             <path d={filtersOpen ? 'M2 7l3-3 3 3' : 'M2 3l3 3 3-3'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-
-        {filtersOpen && <>
-          <div className="l2-fb-sep" />
-          <span className="l2-fb-label">Price</span>
-          <input className="l2-fb-input" type="number" placeholder="Min £" value={filters.minPrice} onChange={e => setF('minPrice', e.target.value === '' ? '' : +e.target.value)} />
-          <span className="l2-fb-dash">—</span>
-          <input className="l2-fb-input" type="number" placeholder="Max £" value={filters.maxPrice} onChange={e => setF('maxPrice', e.target.value === '' ? '' : +e.target.value)} />
-
-          <div className="l2-fb-sep" />
-          <span className="l2-fb-label">Beds</span>
-          <div className="l2-fb-pills">
-            {[0,1,2,3,4,5].map(n => (
-              <button key={n} type="button" className={`l2-fb-pill${filters.minBeds === n ? ' on' : ''}`} onClick={() => setF('minBeds', n)}>
-                {n === 0 ? 'Any' : `${n}+`}
-              </button>
-            ))}
-          </div>
-
-          <div className="l2-fb-sep" />
-          <span className="l2-fb-label">Type</span>
-          <div className="l2-fb-pills">
-            {PROPERTY_TYPES.map(t => (
-              <button key={t.id} type="button" className={`l2-fb-pill${filters.types.includes(t.id) ? ' on' : ''}`} onClick={() => toggleType(t.id)}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="l2-fb-sep" />
-          <span className="l2-fb-label">Station</span>
-          <div className="l2-fb-pills">
-            {STATION_MINUTE_OPTIONS.map(opt => (
-              <button key={opt.value} type="button" className={`l2-fb-pill${filters.maxStationMinutes === opt.value ? ' on' : ''}`} onClick={() => setF('maxStationMinutes', opt.value)}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="l2-fb-sep" />
-          <span className="l2-fb-label">Agent</span>
-          <div className="l2-fb-pills">
-            {(['', 3, 3.5, 4, 4.5] as (number | '')[]).map(v => (
-              <button key={String(v)} type="button" className={`l2-fb-pill${filters.minAgentRating === v ? ' on' : ''}`} onClick={() => setF('minAgentRating', filters.minAgentRating === v ? '' : v)}>
-                {v === '' ? 'Any' : `${v}+`}
-              </button>
-            ))}
-          </div>
-
-          <div className="l2-fb-sep" />
-          <button type="button" className="l2-fb-reset" onClick={() => setFilters(INIT)}>Reset</button>
-        </>}
-
         <div className="l2-fb-right">
           <span className="l2-fb-count">{filtered.length.toLocaleString()} of {total.toLocaleString()}</span>
           <select className="l2-fb-sort" value={sort} onChange={e => setSort(e.target.value)}>
@@ -321,6 +268,134 @@ export default function LayoutSplit({
           </select>
         </div>
       </div>
+
+      {filtersOpen && (
+        <div className="l2-fb-panel">
+          <div className="l2-fb-row">
+            <span className="l2-fb-label">Price</span>
+            <input className="l2-fb-input" type="number" placeholder="Min £" value={filters.minPrice} onChange={e => setF('minPrice', e.target.value === '' ? '' : +e.target.value)} />
+            <span className="l2-fb-dash">—</span>
+            <input className="l2-fb-input" type="number" placeholder="Max £" value={filters.maxPrice} onChange={e => setF('maxPrice', e.target.value === '' ? '' : +e.target.value)} />
+          </div>
+
+          <div className="l2-fb-row">
+            <span className="l2-fb-label">Beds</span>
+            <select className="l2-fb-select"
+              value={filters.minBeds}
+              onChange={e => setF('minBeds', +e.target.value)}
+            >
+              <option value={0}>Any</option>
+              {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}+</option>)}
+            </select>
+          </div>
+
+          <div className="l2-fb-row">
+            <span className="l2-fb-label">Type</span>
+            <select className="l2-fb-select"
+              value={filters.types[0] ?? ''}
+              onChange={e => setF('types', e.target.value === '' ? [] : [e.target.value])}
+            >
+              <option value="">Any</option>
+              {PROPERTY_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </select>
+          </div>
+
+          <div className="l2-fb-row">
+            <span className="l2-fb-label">Station</span>
+            <select className="l2-fb-select"
+              value={filters.maxStationMinutes}
+              onChange={e => setF('maxStationMinutes', +e.target.value)}
+            >
+              {STATION_MINUTE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
+          </div>
+
+          <div className="l2-fb-row">
+            <span className="l2-fb-label">Agent</span>
+            <select className="l2-fb-select"
+              value={filters.minAgentRating}
+              onChange={e => setF('minAgentRating', e.target.value === '' ? '' : +e.target.value)}
+            >
+              <option value="">Any</option>
+              {[3, 3.5, 4, 4.5].map(v => <option key={v} value={v}>{v}+</option>)}
+            </select>
+          </div>
+
+          <div className="l2-fb-row">
+            <span className="l2-fb-label">Air quality</span>
+            <div className="l2-fb-slider-row">
+              <input type="range" min={1} max={11} step={1}
+                value={filters.maxDaqi === 0 ? 11 : filters.maxDaqi}
+                onChange={e => { const v = +e.target.value; setF('maxDaqi', v === 11 ? 0 : v) }}
+              />
+              <span className="l2-fb-slider-val">
+                {filters.maxDaqi === 0 ? 'Any' : `DAQI ${filters.maxDaqi}`}
+              </span>
+              <span className="l2-fb-slider-dir">lower = better</span>
+            </div>
+          </div>
+
+          <div className="l2-fb-row">
+            <span className="l2-fb-label">Road noise</span>
+            <div className="l2-fb-slider-row">
+              <input type="range" min={40} max={80} step={5}
+                value={filters.maxRoadNoiseLden === '' ? 80 : (filters.maxRoadNoiseLden as number)}
+                onChange={e => { const v = +e.target.value; setF('maxRoadNoiseLden', v === 80 ? '' : v) }}
+              />
+              <span className="l2-fb-slider-val">
+                {filters.maxRoadNoiseLden === '' ? 'Any' : `${filters.maxRoadNoiseLden} dB`}
+              </span>
+              <span className="l2-fb-slider-dir">lower = better</span>
+            </div>
+          </div>
+
+          <div className="l2-fb-row">
+            <span className="l2-fb-label">Rail noise</span>
+            <div className="l2-fb-slider-row">
+              <input type="range" min={40} max={80} step={5}
+                value={filters.maxRailNoiseLden === '' ? 80 : (filters.maxRailNoiseLden as number)}
+                onChange={e => { const v = +e.target.value; setF('maxRailNoiseLden', v === 80 ? '' : v) }}
+              />
+              <span className="l2-fb-slider-val">
+                {filters.maxRailNoiseLden === '' ? 'Any' : `${filters.maxRailNoiseLden} dB`}
+              </span>
+              <span className="l2-fb-slider-dir">lower = better</span>
+            </div>
+          </div>
+
+          <div className="l2-fb-row">
+            <span className="l2-fb-label">Flight noise</span>
+            <div className="l2-fb-slider-row">
+              <input type="range" min={40} max={80} step={5}
+                value={filters.maxFlightNoiseLden === '' ? 80 : (filters.maxFlightNoiseLden as number)}
+                onChange={e => { const v = +e.target.value; setF('maxFlightNoiseLden', v === 80 ? '' : v) }}
+              />
+              <span className="l2-fb-slider-val">
+                {filters.maxFlightNoiseLden === '' ? 'Any' : `${filters.maxFlightNoiseLden} dB`}
+              </span>
+              <span className="l2-fb-slider-dir">lower = better</span>
+            </div>
+          </div>
+
+          <div className="l2-fb-row">
+            <span className="l2-fb-label">Flood risk</span>
+            <div className="l2-fb-slider-row">
+              <input type="range" min={1} max={5} step={1}
+                value={filters.maxFloodRisk === 0 ? 5 : filters.maxFloodRisk}
+                onChange={e => { const v = +e.target.value; setF('maxFloodRisk', v === 5 ? 0 : v) }}
+              />
+              <span className="l2-fb-slider-val">
+                {filters.maxFloodRisk === 0 ? 'Any' : ['Very Low', 'Low', 'Medium', 'High'][filters.maxFloodRisk - 1]}
+              </span>
+              <span className="l2-fb-slider-dir">lower = better</span>
+            </div>
+          </div>
+
+          <div className="l2-fb-row l2-fb-row--full">
+            <button type="button" className="l2-fb-reset" onClick={() => setFilters(INIT)}>Reset all</button>
+          </div>
+        </div>
+      )}
 
       <div className="l2-main">
 
@@ -471,7 +546,7 @@ export default function LayoutSplit({
               attribution='&copy; <a href="https://environment.data.gov.uk">Environment Agency</a>'
             />
           )}
-          {mapLayer === 'markers' && mapItems.map(p => (
+          {mapItems.map(p => (
             <Marker
               key={p.id}
               position={[p.latitude, p.longitude]}
