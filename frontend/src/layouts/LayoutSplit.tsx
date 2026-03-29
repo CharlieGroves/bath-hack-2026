@@ -5,7 +5,8 @@ import 'leaflet.heat'
 import L from 'leaflet'
 import type { BoundingBox, IsochronePoint, Property } from '../types/property'
 import type { Filters } from '../App'
-import type { ActiveLocationSearch, MapBounds } from '../hooks/useProperties'
+import type { ActiveLocationSearch, LocationSearchParams, MapBounds, TransportationType } from '../hooks/useProperties'
+import LocationAutocompleteInput from '../components/LocationAutocompleteInput'
 import { useHeatmapData } from '../hooks/useHeatmapData'
 import './layouts.css'
 import '../App.css'
@@ -197,6 +198,10 @@ interface Props {
   onSelectProperty: (id: number) => void
   viewportError: string | null
   activeLocationSearch: ActiveLocationSearch | null
+  locationSearchDraft: LocationSearchParams
+  onLocationSearchFieldChange: <K extends keyof LocationSearchParams>(key: K, value: LocationSearchParams[K]) => void
+  onApplyLocationSearch: (queryOverride?: string) => boolean
+  onClearLocationSearch: () => void
 }
 
 const INIT: Filters = { minPrice: '', maxPrice: '', minBeds: 0, maxBeds: 0, types: [], maxStationMinutes: 0, maxCrimeRate: '', minPricePerSqft: '', maxPricePerSqft: '', maxDaqi: 0, minFloodRisk: 0, maxFloodRisk: 0, maxRoadNoiseLden: '', maxRailNoiseLden: '', maxFlightNoiseLden: '', minAgentRating: '', sharedOwnershipFilter: 'exclude' }
@@ -233,6 +238,10 @@ export default function LayoutSplit({
   onSelectProperty,
   viewportError,
   activeLocationSearch,
+  locationSearchDraft,
+  onLocationSearchFieldChange,
+  onApplyLocationSearch,
+  onClearLocationSearch,
 }: Props) {
   const [hoveredId, setHoveredId]       = useState<number | null>(null)
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
@@ -335,7 +344,21 @@ export default function LayoutSplit({
           </div>
 
           <div className="l2-fb-row">
-            <span className="l2-fb-label">Air quality</span>
+            <span className="l2-fb-label">Crime rate</span>
+            <div className="l2-fb-slider-row">
+              <input type="range" min={250} max={3750} step={250}
+                value={filters.maxCrimeRate === '' ? 3750 : (filters.maxCrimeRate as number)}
+                onChange={e => { const v = +e.target.value; setF('maxCrimeRate', v === 3750 ? '' : v) }}
+              />
+              <span className="l2-fb-slider-val">
+                {filters.maxCrimeRate === '' ? 'Any' : `${(filters.maxCrimeRate as number).toLocaleString()}/mo`}
+              </span>
+              <span className="l2-fb-slider-dir">lower = better</span>
+            </div>
+          </div>
+
+          <div className="l2-fb-row">
+            <span className="l2-fb-label">Air pollution</span>
             <div className="l2-fb-slider-row">
               <input type="range" min={1} max={11} step={1}
                 value={filters.maxDaqi === 0 ? 11 : filters.maxDaqi}
@@ -402,6 +425,41 @@ export default function LayoutSplit({
               </span>
               <span className="l2-fb-slider-dir">lower = better</span>
             </div>
+          </div>
+
+          <div className="l2-fb-row l2-fb-row--full">
+            <span className="l2-fb-label">Distance to</span>
+            <LocationAutocompleteInput
+              value={locationSearchDraft.query}
+              onChange={q => onLocationSearchFieldChange('query', q)}
+              onSelect={suggestion => onApplyLocationSearch(suggestion.label)}
+              onEnter={() => { if (locationSearchDraft.query.trim()) onApplyLocationSearch() }}
+              placeholder="Any location"
+              inputClassName="l2-fb-input"
+              wrapperClassName="l2-fb-location-wrap"
+            />
+            <select
+              className="l2-fb-select"
+              value={locationSearchDraft.transportationType}
+              onChange={e => onLocationSearchFieldChange('transportationType', e.target.value as TransportationType)}
+            >
+              <option value="driving">Drive</option>
+              <option value="walking">Walk</option>
+              <option value="cycling">Cycle</option>
+              <option value="public_transport">Transit</option>
+            </select>
+            <select
+              className="l2-fb-select"
+              value={locationSearchDraft.travelTimeMinutes}
+              onChange={e => onLocationSearchFieldChange('travelTimeMinutes', +e.target.value)}
+            >
+              {[5, 10, 15, 20, 30, 45, 60].map(m => (
+                <option key={m} value={m}>{m} min</option>
+              ))}
+            </select>
+            {activeLocationSearch && (
+              <button type="button" className="l2-fb-reset" onClick={onClearLocationSearch}>Clear</button>
+            )}
           </div>
 
           <div className="l2-fb-row l2-fb-row--full">

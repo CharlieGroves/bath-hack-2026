@@ -651,7 +651,7 @@
   position: relative;
 }
 .l2-fb-slider-row input[type="range"] {
-  width: 120px;
+  width: 90px;
   accent-color: var(--ember);
   cursor: pointer;
   flex-shrink: 0;
@@ -696,6 +696,14 @@
   transition: border-color 0.15s, color 0.15s;
 }
 .l2-fb-reset:hover { border-style: solid; border-color: var(--coal); color: var(--coal) }
+
+.l2-fb-location-wrap {
+  flex: 1;
+  min-width: 0;
+}
+.l2-fb-location-wrap .l2-fb-input {
+  width: 100%;
+}
 
 .l2-fb-right {
   display: flex;
