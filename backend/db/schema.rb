@@ -124,8 +124,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_29_180000) do
     t.jsonb "raw_data"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "area_price_growth_id"
     t.bigint "air_quality_station_id"
+    t.bigint "area_price_growth_id"
     t.bigint "flood_risk_datapoint_id"
     t.bigint "estate_agent_id"
     t.bigint "borough_id"
