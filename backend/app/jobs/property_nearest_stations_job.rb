@@ -14,7 +14,6 @@ class PropertyNearestStationsJob < ApplicationJob
   end
 
   private
-
   def termini_for(station)
     return [] unless station[:transport_type] == "national_rail"
 
