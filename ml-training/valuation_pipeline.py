@@ -68,6 +68,12 @@ TEXT_FLAG_PATTERNS = {
     "has_split_level": (r"\bsplit[- ]level\b",),
 }
 
+GENERIC_LOCATION_TOKENS = {"london", "united kingdom", "england", "uk"}
+STREET_SUFFIX_PATTERN = re.compile(
+    r"\b(street|road|avenue|lane|close|mews|place|gardens|square|court|crescent|way|drive|walk|park|hill|row|terrace)\b",
+    flags=re.IGNORECASE,
+)
+
 NUMERIC_FEATURES = [
     "bedrooms",
     "bathrooms",
@@ -197,7 +203,7 @@ DISPLAY_LABELS = {
     "property_type": "Property type",
     "tenure": "Tenure",
     "postcode_outward": "Postcode area",
-    "town_slug": "Town",
+    "town_slug": "Locality",
     "hpi_area_slug": "Market area",
     "epc_rating": "EPC rating",
     "council_tax_band": "Council tax band",
@@ -331,6 +337,38 @@ def latest_hpi_features(record: dict[str, Any]) -> dict[str, float | str | None]
         "price_vs_hpi_local_ratio": (listing_price / local_avg_price) if listing_price and local_avg_price else None,
         "hpi_local_vs_all_ratio": (local_avg_price / all_avg_price) if local_avg_price and all_avg_price else None,
     }
+
+
+def inferred_locality_slug(record: dict[str, Any]) -> str:
+    direct_values = [record.get("town"), (record.get("raw_address") or {}).get("town")]
+    for value in direct_values:
+        normalized = normalise_text(value)
+        if normalized and normalized not in GENERIC_LOCATION_TOKENS:
+            return normalized.replace(" ", "_")
+
+    address_candidates = [
+        record.get("address_line_1"),
+        (record.get("raw_address") or {}).get("display_address"),
+    ]
+    for value in address_candidates:
+        if not value:
+            continue
+        segments = [normalise_text(segment) for segment in str(value).split(",")]
+        filtered = [
+            segment
+            for segment in segments
+            if segment
+            and segment not in GENERIC_LOCATION_TOKENS
+            and not re.fullmatch(r"[A-Za-z]{1,2}\d[A-Za-z0-9]?", segment)
+            and not STREET_SUFFIX_PATTERN.search(segment)
+        ]
+        if filtered:
+            return filtered[-1].replace(" ", "_")
+
+    area_slug = resolved_hpi_area_slug(record)
+    if area_slug and area_slug != "unknown":
+        return area_slug.lower()
+    return "unknown"
 
 
 def structured_feature_entries(raw_property_data: dict[str, Any], group: str) -> list[dict[str, Any]]:
@@ -532,8 +570,7 @@ def build_valuation_row(record: dict[str, Any], include_target: bool = True) -> 
         "tenure": str(record.get("tenure") or "unknown").strip().lower() or "unknown",
         "postcode_outward": extract_outward_code(record.get("postcode"), (record.get("raw_address") or {}).get("outcode"))
         or "unknown",
-        "town_slug": normalise_text(record.get("town") or (record.get("raw_address") or {}).get("town")).replace(" ", "_")
-        or "unknown",
+        "town_slug": inferred_locality_slug(record),
         "hpi_area_slug": hpi_features["hpi_area_slug"] or "unknown",
         "epc_rating": str(record.get("epc_rating") or "unknown").strip().upper() or "unknown",
         "council_tax_band": str(record.get("council_tax_band") or "unknown").strip().upper() or "unknown",
