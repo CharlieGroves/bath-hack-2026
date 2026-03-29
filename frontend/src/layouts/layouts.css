@@ -537,10 +537,50 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
 }
-.l2-filterbar::-webkit-scrollbar { display: none }
+
+.l2-fb-panel {
+  background: var(--sb-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px 20px;
+  flex-shrink: 0;
+}
+
+.l2-fb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.l2-fb-row--full {
+  grid-column: 1 / -1;
+}
+
+.l2-fb-row .l2-fb-label {
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.l2-fb-row .l2-fb-input {
+  flex: 1;
+  width: auto;
+  min-width: 44px;
+}
+
+.l2-fb-row .l2-fb-slider-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.l2-fb-row .l2-fb-slider-row input[type="range"] {
+  flex: 1;
+  width: auto;
+}
 
 .l2-fb-toggle {
   display: flex;
@@ -586,7 +626,7 @@
 .l2-fb-pills {
   display: flex;
   gap: 4px;
-  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .l2-fb-pill {
@@ -602,6 +642,46 @@
 }
 .l2-fb-pill:hover:not(.on) { border-color: var(--flame); color: var(--ember) }
 .l2-fb-pill.on { background: var(--ember); border-color: var(--ember); color: #fff; font-weight: 600 }
+
+.l2-fb-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  position: relative;
+}
+.l2-fb-slider-row input[type="range"] {
+  width: 120px;
+  accent-color: var(--ember);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.l2-fb-slider-val {
+  font-size: 0.72rem;
+  color: var(--t2);
+  white-space: nowrap;
+  min-width: 52px;
+}
+.l2-fb-slider-dir {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  color: var(--t2);
+  background: var(--coal, #1a1a1a);
+  color: #fff;
+  white-space: nowrap;
+  padding: 3px 7px;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+}
+.l2-fb-slider-row:hover .l2-fb-slider-dir {
+  opacity: 1;
+}
 
 .l2-fb-reset {
   padding: 4px 10px;
@@ -630,6 +710,21 @@
   color: var(--t3);
   white-space: nowrap;
 }
+
+.l2-fb-select {
+  height: 30px;
+  padding: 0 9px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-family: var(--ff-body);
+  color: var(--t2);
+  outline: none;
+  cursor: pointer;
+}
+.l2-fb-select:hover { border-color: var(--ember) }
+.l2-fb-select:focus { border-color: var(--ember) }
 
 .l2-fb-sort {
   height: 30px;
