@@ -38,6 +38,33 @@ module Api
         render json: { error: e.message }, status: :service_unavailable
       end
 
+      # GET /api/v1/properties/similar_by_image?property_id=&position=0&k=20
+      # k-ANN vs stored image embeddings (pgvector HNSW + cosine). Requires pgvector migration + embeddings.
+      def similar_by_image
+        pid = params.require(:property_id).to_i
+        pos = params.fetch(:position, 0).to_i
+        k   = [[params.fetch(:k, 20).to_i, 1].max, 50].min
+
+        hits = PropertyImageEmbeddingSearch.similar_properties(property_id: pid, position: pos, limit: k)
+        props = Property.where(id: hits.map { |h| h[:property_id] }).index_by(&:id)
+
+        render json: {
+          anchor: { property_id: pid, position: pos },
+          matches: hits.map { |h|
+            p = props[h[:property_id]]
+            next unless p
+
+            property_summary(p).merge(
+              image_similarity_distance: h[:neighbor_distance],
+              matched_image_position: h[:image_position]
+            )
+          }.compact
+        }
+      rescue PropertyImageEmbeddingSearch::AnchorMissingError,
+             PropertyImageEmbeddingSearch::VectorMissingError => e
+        render json: { error: e.message }, status: :not_found
+      end
+
       # GET /api/v1/properties/heatmap
       def heatmap
         points = Property

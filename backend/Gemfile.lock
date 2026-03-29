@@ -256,6 +256,8 @@ GEM
     multi_xml (0.8.1)
       bigdecimal (>= 3.1, < 5)
     multipart-post (2.4.1)
+    neighbor (0.6.0)
+      activerecord (>= 7.1)
     net-http (0.9.1)
       uri (>= 0.11.1)
     net-imap (0.6.3)
@@ -492,6 +494,7 @@ DEPENDENCIES
   madmin (~> 1.2)
   minitest (~> 5.25)
   mocha
+  neighbor
   pg
   pry
   puma (>= 5.0)

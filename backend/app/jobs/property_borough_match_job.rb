@@ -3,10 +3,22 @@
 # and writing the borough_id foreign key.
 #
 # Enqueued by RightmoveScrapeJob after a new property is created.
-# Rate-limited by Nominatim policy (~1 req/s) — the :default queue is fine for
-# background use; avoid bursting many jobs simultaneously.
+#
+# Nominatim's public instance enforces ~1 req/s. BoroughBackfillJob staggers
+# jobs at 2-second intervals so they don't pile up. On a 429 this job reschedules
+# itself 60 seconds later rather than burning Sidekiq's exponential retry budget.
 class PropertyBoroughMatchJob < ApplicationJob
   queue_as :default
+
+  # On 429 reschedule once per minute for up to 10 attempts before giving up.
+  retry_on Gateways::HousePriceGrowthGateway::RateLimitError,
+           wait: 60.seconds,
+           attempts: 10
+
+  # Other gateway errors (network, 5xx): standard exponential backoff.
+  retry_on Gateways::HousePriceGrowthGateway::Error,
+           wait: :polynomially_longer,
+           attempts: 5
 
   def perform(property_id)
     property = Property.find_by(id: property_id)
@@ -32,8 +44,5 @@ class PropertyBoroughMatchJob < ApplicationJob
 
     property.update_columns(borough_id: borough.id)
     Rails.logger.info("[PropertyBoroughMatchJob] Property #{property_id} → borough '#{canonical}'")
-  rescue Gateways::HousePriceGrowthGateway::Error => e
-    Rails.logger.error("[PropertyBoroughMatchJob] Nominatim error for property #{property_id}: #{e.message}")
-    raise
   end
 end

@@ -9,6 +9,7 @@ module PropertyImageEmbeddingsTaskHelpers
       rec = property.property_image_embeddings.find_by(position: position)
       return false if rec.nil? || rec.fingerprint != fp
       return false unless rec.embedding.is_a?(Array) && rec.embedding.size == PropertyImageEmbedder::EXPECTED_DIM
+      return false unless rec.embedding_vector.present?
     end
 
     true

@@ -17,7 +17,9 @@ class PropertyImageEmbedJob < ApplicationJob
     needed_indices = urls.each_with_index.filter_map do |url, position|
       fp = PropertyImageEmbedder.fingerprint_for_slot(position, url)
       rec = existing_by_position[position]
-      next nil if rec&.fingerprint == fp && rec.embedding.is_a?(Array) && rec.embedding.size == PropertyImageEmbedder::EXPECTED_DIM
+      next nil if rec&.fingerprint == fp &&
+        rec.embedding.is_a?(Array) && rec.embedding.size == PropertyImageEmbedder::EXPECTED_DIM &&
+        rec.embedding_vector.present?
 
       position
     end
